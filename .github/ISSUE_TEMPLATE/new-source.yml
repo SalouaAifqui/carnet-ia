@@ -1,0 +1,18 @@
+name: New source
+description: Ask the agent to turn a web page into a note (it opens a pull request for review).
+title: "Source: "
+labels: ["source"]
+body:
+  - type: input
+    id: url
+    attributes:
+      label: URL
+      description: The page to learn from (article, lesson, documentation…).
+      placeholder: https://
+    validations:
+      required: true
+  - type: textarea
+    id: notes
+    attributes:
+      label: Notes (optional)
+      description: Anything the agent should know. It is not used yet; it's kept for future versions.
