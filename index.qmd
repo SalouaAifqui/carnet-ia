@@ -10,7 +10,6 @@ listing:
       - "agents/*/*.qmd"
       - "llms/*/*.qmd"
       - "evaluation/*/*.qmd"
-      - "guardrails/*/*.qmd"
     type: grid
     grid-columns: 3
     sort: ["date desc", "lesson desc"]
@@ -22,7 +21,7 @@ listing:
 <section class="hero">
   <p class="hero-eyebrow">A learning notebook on applied AI</p>
   <h1 class="hero-title">Understand the models.<br>Build with them. Use them well.</h1>
-  <p class="hero-lede">Notes, code and practical tips, written while learning: how LLMs work, how to build agents, how to evaluate them, and how to keep them safe.</p>
+  <p class="hero-lede">Notes, code and practical tips, written while learning: how LLMs work, how to build agents, and how to evaluate and safeguard them.</p>
 </section>
 
 <section class="topics" aria-label="Topics">
@@ -48,19 +47,11 @@ listing:
     <span class="topic-icon" aria-hidden="true">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/><path d="m14.5 8 2 2 4-4"/></svg>
     </span>
-    <span class="topic-name">Evaluation</span>
-    <span class="topic-desc">Assess LLMs and AI agents: what to measure, how to build test sets, and how to compare versions.</span>
-    <span class="topic-tags"><span>LLMs</span><span>Agents</span></span>
+    <span class="topic-name">Evaluation &amp; Guardrails</span>
+    <span class="topic-desc">Measure whether models and agents are good enough, and stop bad answers before anyone sees them.</span>
+    <span class="topic-tags"><span>Evaluating LLMs</span><span>Evaluating agents</span><span>Guardrails</span></span>
   </a>
 
-  <a class="topic-card t-guardrails" href="guardrails/index.html">
-    <span class="topic-icon" aria-hidden="true">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2.5 4.5 5.5v6c0 4.7 3.2 8.4 7.5 10 4.3-1.6 7.5-5.3 7.5-10v-6z"/><path d="m8.8 12 2.2 2.2 4.4-4.4"/></svg>
-    </span>
-    <span class="topic-name">Guardrails</span>
-    <span class="topic-desc">The safeguards that keep AI systems on track: what each one protects against and how to implement it.</span>
-    <span class="topic-tags"><span>Validation</span><span>Safety</span><span>Implementation</span></span>
-  </a>
 
 </section>
 ```

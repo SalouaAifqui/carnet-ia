@@ -88,8 +88,8 @@ def services(root, model, review_model, tool=None, today="2026-11-15"):
 
 NOTES = SourceNotes(title="Input validation for LLM apps", content_type="article",
                     summary="How to validate inputs.", key_points=["Validate inputs"])
-ROUTE = Route(concept="input validation", reasoning="New guardrail subject.", action="create", topic="guardrails",
-              folder="Input Validation", folder_title="Input validation", target_path="",
+ROUTE = Route(concept="input validation", reasoning="New guardrail subject.", action="create", topic="evaluation",
+              folder="Guardrails", folder_title="Guardrails", target_path="",
               title="Validating LLM inputs", subtitle="Check what goes into the model.")
 PLAN = ResearchPlan(gaps=["What is prompt injection?"],
                     queries=[Query(query="prompt injection definition", why="term not explained")])
@@ -109,7 +109,7 @@ def test_pause_then_approve_creates_page():
     graph = CarnetAgent(services(root, planner, FakeModel())).build()
     state, paused = run(graph, {"url": "https://source.example.com/article"}, new_thread())
     assert paused, "the graph must stop before writing"
-    assert not (root / "guardrails/input-validation").exists(), "nothing is written before approval"
+    assert not list((root / "evaluation").glob("guardrails/*.qmd")), "nothing is written before approval"
     comment = hitl.plan_comment(state)
     assert "Validating LLM inputs" in comment and "What a guardrail is" in comment
     assert "not-in-results.com" not in comment, "invented source dropped by code"
@@ -138,17 +138,19 @@ def test_pause_then_approve_creates_page():
     page = (root / final["page_path"]).read_text()
     front_matter, body = split_front_matter(page)
     _, sources = split_sources(body)
-    assert final["page_path"] == "guardrails/input-validation/validating-llm-inputs.qmd"
+    assert final["page_path"] == "evaluation/guardrails/validating-llm-inputs.qmd"
     assert final["revision_number"] == 2
     assert tool.calls == [{"query": "x"}]
     assert front_matter["title"] == "Validating LLM inputs"
     assert [u for _, u in sources] == ["https://source.example.com/article", "https://docs.example.com/injection"]
-    assert "https://x.com" not in page and "[Guardrails]{.pill .t-guardrails}" in page
-    index = (root / "guardrails/index.qmd").read_text()
-    assert "{#input-validation}" in index and "empty-state" not in index
+    assert "https://x.com" not in page and "[Evaluation & Guardrails]{.pill .t-eval} [Guardrails]{.pill .muted}" in page
+    index = (root / "evaluation/index.qmd").read_text()
+    guard_part = index.split('data-folder="guardrails"')[1]
+    assert "{#guardrails}" in guard_part and "empty-state" not in guard_part, "the empty Guardrails section is filled"
+    assert "empty-state" in index.split('data-folder="agents"')[0], "Evaluating LLMs is still waiting for its first page"
     sidebar = yaml.safe_load((root / "_quarto.yml").read_text())["website"]["sidebar"]
-    guard = next(s for s in sidebar if s["id"] == "guardrails")
-    assert {"section": "Input validation", "contents": "guardrails/input-validation/*.qmd"} in guard["contents"]
+    ev = next(s for s in sidebar if s["id"] == "evaluation")
+    assert {"section": "Guardrails", "contents": "evaluation/guardrails/*.qmd"} in ev["contents"]
     print("✓ pause → plan comment → /approve in a new process → page, sources, menus")
 
 
@@ -158,7 +160,7 @@ def test_replan_redoes_the_plan_with_instructions():
              "sources": [Source(title="Input validation", url="https://source.example.com/article",
                                 role="primary")],
              "findings": [GOOD], "outline": OUTLINE}
-    new_route = ROUTE.model_copy(update={"topic": "agents", "folder": "safety", "folder_title": "Safety"})
+    new_route = ROUTE.model_copy(update={"topic": "agents", "folder": "control", "folder_title": "Control"})
     model = FakeModel(structured={Route: [new_route], ResearchPlan: [ResearchPlan(gaps=[], queries=[])],
                                   PageOutline: [OUTLINE]})
     graph = CarnetAgent(services(root, model, FakeModel())).build()

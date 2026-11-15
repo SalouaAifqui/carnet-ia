@@ -3,14 +3,14 @@ title: Evaluating AI Agents
 subtitle: How to assess, debug, and improve agents with traces, component tests, trajectory metrics, and structured experiments.
 date: '2026-11-15'
 categories:
-- Evaluation
-- Agents
+- Evaluation & Guardrails
+- Evaluating agents
 aliases:
 - /evaluation/agent-evaluation/evaluating-ai-agents.html
 ---
 
 ::: {.lesson-meta}
-[Evaluation]{.pill .t-eval} [Agents]{.pill .muted}
+[Evaluation & Guardrails]{.pill .t-eval} [Evaluating agents]{.pill .muted}
 :::
 
 ::: {.tldr}

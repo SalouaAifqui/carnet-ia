@@ -21,14 +21,14 @@ including EMPTY sections that are waiting for their first page, with what each o
 Topics:
 - llms: how LLMs work, foundation models, open-source models, model comparisons.
 - agents: building agents, agent frameworks (LangGraph…), tools, memory, multi-agent systems.
-- evaluation: assessing LLMs (folder `llms`) and AI agents (folder `agents`): benchmarks, test sets,
-  metrics, LLM-as-a-judge, trajectory and tool-use evaluation.
-- guardrails: safeguards for AI systems: validation, safety, what each guardrail protects against, implementation.
+- evaluation: "Evaluation & Guardrails". Measuring quality (evaluating LLMs: folder `llms`;
+  evaluating agents: folder `agents`) AND runtime safeguards (folder `guardrails`: input/output
+  checks, prompt injection, jailbreaks, sensitive data, thresholds, guardrail frameworks).
 
 Decide step by step:
 1. Concept: what does the content mainly teach? Name the concept, not the source's title.
 2. Topic: which topic is that concept about? (How models work → llms. Building agents → agents.
-   Measuring quality → evaluation. Safeguards → guardrails.)
+   Measuring quality or safeguarding outputs → evaluation.)
 3. Section: read the section descriptions of that topic and pick the one that fits.
    Empty sections are valid choices: they exist precisely to receive their first page.
    Use the section id EXACTLY as written in the site map.
@@ -50,6 +50,7 @@ Examples:
 - LangGraph documentation on checkpointers → agents / memory, update agents/memory/short-term-memory.qmd.
 - A guide to LLM-as-a-judge → evaluation / llms, create.
 - Measuring an agent's tool calls and trajectory → evaluation / agents, update the page there if it covers it.
+- Defending against prompt injection, or filtering a model's outputs → evaluation / guardrails, create.
 
 Current site:
 {site}"""

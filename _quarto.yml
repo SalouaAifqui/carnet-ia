@@ -7,7 +7,7 @@ project:
   - '!agent/'
 website:
   title: Carnet IA
-  description: Notes on how LLMs work, how to build agents, how to evaluate them, and how to keep them safe.
+  description: Notes on how LLMs work, how to build agents, and how to evaluate and safeguard them.
   site-url: https://salouaaifqui.github.io/carnet-ia/
   repo-url: https://github.com/SalouaAifqui/carnet-ia
   favicon: assets/logo.svg
@@ -23,9 +23,7 @@ website:
     - href: agents/index.qmd
       text: Agents
     - href: evaluation/index.qmd
-      text: Evaluation
-    - href: guardrails/index.qmd
-      text: Guardrails
+      text: Evaluation & Guardrails
     right:
     - icon: github
       href: https://github.com/SalouaAifqui/carnet-ia
@@ -56,17 +54,12 @@ website:
     - llms/index.qmd
     - section: How LLMs work
       contents: llms/how-llms-work/*.qmd
-  - id: guardrails
-    title: Guardrails
-    style: docked
-    contents:
-    - guardrails/index.qmd
   - id: evaluation
-    title: Evaluation
+    title: Evaluation & Guardrails
     style: docked
     contents:
     - evaluation/index.qmd
-    - section: Agents
+    - section: Evaluating agents
       contents: evaluation/agents/*.qmd
   page-footer:
     left: Carnet IA · notes written while learning
