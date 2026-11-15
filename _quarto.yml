@@ -54,6 +54,8 @@ website:
     style: docked
     contents:
     - llms/index.qmd
+    - section: Foundations
+      contents: llms/foundations/*.qmd
   - id: guardrails
     title: Guardrails
     style: docked
