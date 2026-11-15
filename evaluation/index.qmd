@@ -42,15 +42,12 @@ How to know whether a model or an agent is good enough, and how to stop a bad an
 
 The two use the same tools in opposite directions. A guardrail is often an evaluator running live, like an LLM-as-a-judge that scores each answer before it is shown. And guardrails are themselves evaluated: choosing a threshold means counting false positives (good answers blocked) and false negatives (bad answers let through).
 
-## Evaluating LLMs {.group-title data-folder="llms"}
+## Evaluating LLMs {.group-title .planned data-folder="llms"}
 
 ::: {.group-meta}
 Evaluating models: benchmarks, test sets, metrics, LLM-as-a-judge, and comparing models for a given task.
 :::
 
-::: {.empty-state}
-Methods to evaluate the quality of a model's answers, from benchmarks to task-specific test sets. **First notes coming soon.**
-:::
 
 ## Evaluating agents {.group-title data-folder="agents"}
 
@@ -61,12 +58,8 @@ Evaluating agents: final answers, the path they took, tool use, and behaviour ov
 ::: {#agents}
 :::
 
-## Guardrails {.group-title data-folder="guardrails"}
+## Guardrails {.group-title .planned data-folder="guardrails"}
 
 ::: {.group-meta}
 Runtime safeguards: checking inputs and outputs, prompt injection and jailbreaks, sensitive data, choosing thresholds, and the frameworks that implement them.
-:::
-
-::: {.empty-state}
-What each guardrail protects against, how it works, and how to implement it. **First notes coming soon.**
 :::

@@ -344,3 +344,24 @@ body:has(.pill.t-guardrails) main.content { --t: #{$t-guardrails}; --t-soft: #{$
 svg .cluster .nodeLabel, svg .cluster-label .nodeLabel, svg .cluster-label span, svg .cluster text {
   color: $muted !important; fill: $muted !important; font-weight: 600; font-size: .85em;
 }
+
+/* ---------- lighter page header: breadcrumb, title, subtitle, nothing else ---------- */
+.quarto-categories, .quarto-title-meta { display: none !important; }
+main.content .lesson-meta { display: none; }           /* the breadcrumb already says where we are */
+#title-block-header { margin-bottom: 1.75rem; }
+
+/* ---------- planned (empty) sections on topic pages: one compact line ---------- */
+section.planned {
+  display: flex; flex-wrap: wrap; align-items: baseline; gap: .25rem .6rem;
+  padding: .55rem 0; border-top: 1px dashed $line; margin: 0;
+  h2 { font-size: 1.02rem !important; margin: 0 !important; color: $muted; }
+  h2::after {
+    content: "Coming soon"; margin-left: .55rem; vertical-align: middle;
+    font-family: $font-family-sans-serif; font-size: .66rem; font-weight: 600; letter-spacing: .08em;
+    text-transform: uppercase; padding: .18rem .5rem; border-radius: 999px;
+    background: var(--t-soft, #{$accent-soft}); color: var(--t, #{$accent});
+  }
+  .group-meta { flex-basis: 100%; margin: 0 !important; font-size: .88rem; }
+  .group-meta p { margin: 0; }
+}
+section.planned + section.planned { border-top-style: none; padding-top: 0; }

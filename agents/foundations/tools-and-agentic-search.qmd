@@ -56,7 +56,7 @@ The result sent back to the model, linked to the call by `tool_call_id`.
 :::
 :::
 
-## Writing a tool
+### Writing a tool
 
 ```python
 from langchain_core.tools import tool
@@ -112,7 +112,7 @@ reply.tool_calls
 ```
 :::
 
-## Parallel and sequential calls
+### Parallel and sequential calls
 
 The model can ask for several tools in one turn when the calls are independent, and spread them over several turns when one depends on another.
 
@@ -130,7 +130,7 @@ flowchart LR
 
 This is why the code that runs tools must **loop over all `tool_calls`**, not just the first one.
 
-## Don't reinvent: ready-made tools
+## Ready-made tools and prompts
 
 Before writing a tool, check whether it already exists. There are three places to look.
 
@@ -187,7 +187,7 @@ tools = await client.get_tools()             # regular LangChain tools
 agent = create_agent("openai:gpt-5.4-mini", tools=tools)
 ```
 
-## Don't reinvent: ready-made prompts
+### Prompts from the LangChain Hub
 
 Prompts can be shared too. The **LangChain Hub**, now part of LangSmith, hosts prompts contributed by the community, addressed as `owner/name`.
 
@@ -213,7 +213,7 @@ prompt.input_variables          # e.g. ['agent_scratchpad', 'input', 'tool_names
 A prompt manifest can carry model settings and references that are loaded when it is pulled. LangSmith's own documentation says pulled prompts should be treated as **executable configuration, not plain text**: only pull public prompts from authors you trust, and pin a version.
 :::
 
-## Why agents need search
+## Agentic search
 
 A model only knows what it saw during training. Without search it has **no fresh information** (today's weather, last night's results) and **can't cite sources**, so its mistakes are harder to catch.
 

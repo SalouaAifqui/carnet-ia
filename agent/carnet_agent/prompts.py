@@ -83,6 +83,7 @@ from a weak source, drop it."""
 OUTLINE = """You are planning a page for Carnet IA, a website of study notes on applied AI.
 Before anything is written, a human will approve this plan, so make it concrete:
 the sections in order, what each will say, and the code examples that will be shown.
+Use at most 4 main sections; put details in sub-sections inside them.
 For EVERY section, name its concrete example (taken from the source, from a related page of the
 site, or from a research finding) and its visual element. A section without an example or a
 visual is not acceptable. Follow the page structure of the style guide.
@@ -104,6 +105,7 @@ The approved outline gives the STRUCTURE of the page, not a limit on its content
 details from the full source text you are given: keep the important specifics (numbers,
 conditions, caveats, parameter names, steps, the source's examples). A longer page that keeps
 what matters is better than a short one that drops it.
+Keep it digestible: at most 4 main '##' parts (plus Remember and Sources), details in '###'.
 Make the page visual and concrete, as the style guide requires: every section gets its example
 (in an example box) and the page uses at least three kinds of visual elements. Reuse the running
 examples of the related site pages when they fit, so the site reads as one whole.

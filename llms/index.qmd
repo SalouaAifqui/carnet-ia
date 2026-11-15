@@ -30,22 +30,15 @@ What happens inside a model: tokens, embeddings, the transformer architecture, a
 ::: {#how-llms-work}
 :::
 
-## Foundation models {.group-title data-folder="foundation-models"}
+## Foundation models {.group-title .planned data-folder="foundation-models"}
 
 ::: {.group-meta}
 The large proprietary models (GPT, Claude, Gemini…): what each family is good at, how they compare, comparative dashboards.
 :::
 
-::: {.empty-state}
-Comparisons and profiles of the main proprietary models. **First notes coming soon.**
-:::
 
-## Open-source models {.group-title data-folder="open-source-models"}
+## Open-source models {.group-title .planned data-folder="open-source-models"}
 
 ::: {.group-meta}
 Open-weight models you can run or fine-tune yourself (Llama, Mistral, Qwen…): what they offer and how they stack up.
-:::
-
-::: {.empty-state}
-Open-weight models and how to use them. **First notes coming soon.**
 :::

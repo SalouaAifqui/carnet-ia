@@ -34,7 +34,6 @@ flowchart LR
   K --> M[Feature transformation]
 ```
 
-## Key ideas
 
 ::: {.concepts}
 ::: {.concept}
@@ -68,7 +67,9 @@ A KV cache stores key and value tensors from earlier tokens during generation. R
 :::
 :::
 
-## From words to tokens to embeddings
+## From text to vectors
+
+### From words to tokens to embeddings
 
 Before transformers, language models often used **bag-of-words**. This method treats text as an unordered collection of words. It ignores word order, so it loses a lot of meaning.
 
@@ -76,7 +77,7 @@ Then came **Word2Vec**, a word embedding method. An embedding is a learned vecto
 
 Transformers improved on this by keeping context. They do not just assign one fixed meaning to a word. They change the representation based on the surrounding tokens.
 
-## The transformer workflow
+### The transformer workflow
 
 The usual workflow is:
 
@@ -90,7 +91,9 @@ Positional information matters because attention alone does not know token order
 
 Most modern large language models use only the **decoder** side of the original transformer design. They are built for text generation, so they predict one next token at a time.
 
-## Self-attention, explained simply
+## Inside the transformer
+
+### Self-attention, explained simply
 
 Self-attention is the mechanism that tells the model which tokens matter to each other.
 
@@ -104,7 +107,7 @@ The model compares queries with keys to get relevance scores. It then uses those
 
 This helps transformers track relationships across distant words. For example, the model can connect a pronoun to the noun it refers to, even if several words separate them.
 
-## Inside a transformer block
+### Inside a transformer block
 
 A transformer block is the repeated core of the model. Standard blocks are stacked many times.
 
@@ -121,7 +124,7 @@ The feed-forward network acts on each token position separately. It transforms t
 
 Residual connections add the input of a sublayer back to its output. Layer normalization then helps stabilize the activations. These are standard support parts of the block, not optional extras.
 
-## Decoder-only vs encoder-decoder transformers
+### Decoder-only vs encoder-decoder transformers
 
 The original transformer had two stacks:
 
@@ -132,7 +135,7 @@ Both stacks used repeated layers. The decoder had one extra trick: it used **mas
 
 Modern LLMs usually keep only the decoder stack. This is enough for next-token prediction, which is the main task in text generation.
 
-## Inference optimizations for faster generation
+## Generating faster
 
 Generating text token by token can be expensive. Several techniques reduce that cost.
 
@@ -148,7 +151,7 @@ Grouped query attention is a middle ground between full multi-head attention and
 **Sparse attention**  
 Sparse attention attends only to selected tokens instead of all tokens. That lowers computation for long sequences.
 
-## Using transformer models in Hugging Face Transformers
+## In code: Hugging Face Transformers
 
 A practical way to explore transformers is with the Hugging Face Transformers library. For inference, the basic pattern is: load a tokenizer, load a causal language model, tokenize the prompt, generate tokens, then decode the output.
 

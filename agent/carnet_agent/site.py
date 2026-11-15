@@ -200,6 +200,21 @@ def _blocks_balanced(body: str) -> bool:
     return depth == 0
 
 
+def _main_parts(body: str) -> list[str]:
+    """The '##' headings of the page, without Remember, Watch out, Sources and callout titles."""
+    parts, previous, in_code = [], "", False
+    for line in body.split("\n"):
+        if line.startswith("```"):
+            in_code = not in_code
+        elif not in_code and line.startswith("## ") and not previous.startswith("::: {.callout"):
+            title = re.sub(r"\s*\{[^}]*\}\s*$", "", line[3:]).strip()
+            if title.lower() not in ("remember", "watch out", "sources", "key ideas"):
+                parts.append(title)
+        if line.strip():
+            previous = line
+    return parts
+
+
 def check_page(text: str, findings: list[Finding]) -> list[str]:
     """Mechanical checks. Each returned string is a problem the writer must fix."""
     errors = []
@@ -219,6 +234,10 @@ def check_page(text: str, findings: list[Finding]) -> list[str]:
         errors.append("A ::: block is opened and not closed (or closed twice): the page would render badly.")
     if len(body.split()) < 120:
         errors.append("The page is too short to be useful.")
+    main_parts = _main_parts(body)
+    if len(main_parts) > 4:
+        errors.append(f"Too many main parts ({len(main_parts)}: {', '.join(main_parts)}). Group them into at most "
+                      "4 '##' parts and use '###' inside.")
     kinds = [name for name, marker in VISUALS.items() if marker in body]
     if len(kinds) < 3:
         errors.append(f"Not visual enough: only {', '.join(kinds) or 'no'} visual elements. Use at least three "
@@ -259,7 +278,8 @@ def _add_listing_to_topic_page(index_file: Path, folder: str, folder_title: str,
             new_chunk = re.sub(r"::: \{\.empty-state\}.*?\n:::", placeholder, chunk, count=1, flags=re.S)
             if new_chunk == chunk:
                 new_chunk = chunk.rstrip() + "\n\n" + placeholder + "\n\n"
-            body = body[:section.end()] + new_chunk + body[end:]
+            heading = body[section.start():section.end()].replace(" .planned", "")   # no longer "coming soon"
+            body = body[:section.start()] + heading + new_chunk + body[end:]
             break
     else:
         # 2. Otherwise drop a lone "coming soon" box (topics with no sections yet) and add a section.

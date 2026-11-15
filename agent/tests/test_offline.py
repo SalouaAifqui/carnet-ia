@@ -148,8 +148,9 @@ def test_pause_then_approve_creates_page():
     assert "https://x.com" not in page and "[Evaluation & Guardrails]{.pill .t-eval} [Guardrails]{.pill .muted}" in page
     index = (root / "evaluation/index.qmd").read_text()
     guard_part = index.split('data-folder="guardrails"')[1]
-    assert "{#guardrails}" in guard_part and "empty-state" not in guard_part, "the empty Guardrails section is filled"
-    assert "empty-state" in index.split('data-folder="agents"')[0], "Evaluating LLMs is still waiting for its first page"
+    assert "{#guardrails}" in guard_part, "the Guardrails section now lists its page"
+    assert '## Guardrails {.group-title data-folder="guardrails"}' in index, "no longer marked as coming soon"
+    assert '.planned data-folder="llms"' in index, "Evaluating LLMs is still waiting for its first page"
     sidebar = yaml.safe_load((root / "_quarto.yml").read_text())["website"]["sidebar"]
     ev = next(s for s in sidebar if s["id"] == "evaluation")
     assert {"section": "Guardrails", "contents": "evaluation/guardrails/*.qmd"} in ev["contents"]
@@ -236,6 +237,8 @@ def test_page_must_be_visual():
     assert any("Not visual enough" in e for e in errors) and any("No concrete example" in e for e in errors)
     rich = "---\ntitle: T\n---\n\n" + LONG_BODY + "\n\n## Sources {.sources}\n\n- [a](https://a.com)\n"
     assert check_page(rich, []) == []
+    many = rich.replace("## Key ideas", "## A\n\n## B\n\n## C\n\n## D\n\n## E")
+    assert any("Too many main parts" in e for e in check_page(many, []))
     broken = rich.replace("::: {.example}\n**An example.** Text.\n:::", "::: {.example}\n**An example.** Text.")
     assert any("not closed" in e for e in check_page(broken, []))
     print("✓ a flat page is sent back to the writer, a visual one passes")

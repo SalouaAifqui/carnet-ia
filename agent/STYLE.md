@@ -24,6 +24,13 @@ The agent reads this file before writing and before reviewing. Edit it to change
 - Facts added from complementary research must stay consistent with the main source.
 - Do not invent facts, numbers, function names or URLs.
 
+## Keep pages digestible
+- **At most 4 main parts (`##`)** per page, not counting `Remember` and `Sources`.
+  Details go in sub-parts (`###`) inside them. Never go deeper than `###`.
+- Give main parts short, plain titles that show the page's logic at a glance
+  (e.g. "From text to vectors", "Inside the transformer", "Generating faster").
+- When updating a page, fit new material into its existing parts instead of adding new `##` parts.
+
 ## Make it visual and concrete
 Pages must not be walls of text. A reader should understand the idea from the visuals and the
 examples alone, then read the prose for details.
@@ -85,7 +92,7 @@ Use this structure (Quarto markdown), in this order, skipping sections that don'
 
 1. A one-paragraph summary in a `::: {.tldr}` block.
 2. A diagram in a ```` ```{mermaid} ```` block when there is a flow or architecture to show.
-3. `## Key ideas` as concept cards:
+3. Concept cards, right after the summary and without a heading:
    ```
    ::: {.concepts}
    ::: {.concept}

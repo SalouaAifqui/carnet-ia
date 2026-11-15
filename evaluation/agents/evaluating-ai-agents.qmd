@@ -33,7 +33,6 @@ flowchart TD
     M --> T
 ```
 
-## Key ideas
 
 ::: {.concepts}
 ::: {.concept}
@@ -80,7 +79,9 @@ So the evaluation method must match the kind of judgment you need. A rule that c
 A booking agent says, “Your reservation is confirmed.” One run used the right tool and created the booking in the downstream system. Another run produced the same text but never created the reservation. A good evaluation must fail the second run even though the final answer looks correct.
 :::
 
-## Break the agent into evaluable parts
+## Observe the agent
+
+### Break the agent into evaluable parts
 
 AI agents are often built from parts such as:
 
@@ -96,7 +97,7 @@ Testing these parts separately makes debugging faster. If the final answer is wr
 A text-to-SQL agent gets a query wrong because it chose the wrong table. That is a routing or planning issue. If it chose the right table but built the wrong SQL, that is a skill issue. Separate tests make that difference visible.
 :::
 
-## Use traces for observability
+### Use traces for observability
 
 A trace is a record of the steps taken by an agent during execution. Traces make the agent observable. That means you can inspect what happened step by step.
 
@@ -127,7 +128,9 @@ This is the basis for debugging agent behavior. Instead of only reading the fina
 In a traced notebook, a run shows the prompt, the model response, and two tool calls. The first tool call used the wrong search index. By looking at the trace, you can fix the routing logic instead of guessing from the final answer alone.
 :::
 
-## Choose the right evaluator
+## Evaluate each part and the whole
+
+### Choose the right evaluator
 
 Different kinds of judgment need different evaluators.
 
@@ -155,7 +158,7 @@ An unvalidated LLM judge can look confident while scoring inconsistently. Valida
 Suppose you want to score whether a support reply is safe and complete. A code rule can verify that a required disclaimer appears. An LLM judge can then score whether the explanation is actually helpful. Before using that judge in CI, compare its verdicts with trusted labels and measure precision, recall, and Cohen’s kappa.
 :::
 
-## Build evaluators you can trust
+### Build evaluators you can trust
 
 The source emphasizes that evaluators themselves need validation. That is especially important for LLM judges. If the judge is unreliable, the score is not trustworthy.
 
@@ -173,7 +176,7 @@ You can also validate an LLM judge by replaying known cases and comparing its ve
 A team builds a judge for harmful-output detection. They first check obvious policy violations with rules, then ask an LLM judge to score borderline cases, then sample results for human review. Before shipping, they replay a frozen set of attack prompts to make sure the judge still behaves the same way.
 :::
 
-## Test router and skill decisions with examples from traces
+### Test router and skill decisions with examples from traces
 
 Traces can become test cases. That is useful because they show real agent behavior, not just invented examples.
 
@@ -199,7 +202,7 @@ A trace shows that the agent called a calculator when it should have searched a 
 Example from the agentic-applications course and research finding: repeated trace failures are converted into a reusable test set, then rerun after changes to verify the fix and prevent regressions.
 :::
 
-## Evaluate full trajectories
+### Evaluate full trajectories
 
 A trajectory is the full sequence of steps from the user request to the final result. Trajectory evaluation checks the whole run, not just the last answer.
 
@@ -224,7 +227,9 @@ Use trajectory metrics when you want to compare the overall behavior of two agen
 A travel assistant gets the right hotel recommendation in both runs. In the first run, it asks for the city, checks availability, and confirms the booking. In the second run, it loops through the same search twice and never completes the reservation. The second trajectory should score worse even though the final text sounds fine.
 :::
 
-## Run structured experiments to improve the agent
+## Improve and monitor
+
+### Run structured experiments to improve the agent
 
 Structured experiments help you improve prompts, models, or agent logic. The key idea is to change one variable at a time and measure the effect.
 
@@ -259,7 +264,7 @@ You change one variable, rerun the same benchmark, and compare scores before and
 :::
 :::
 
-## Use CI and staged evals for LLM applications
+### Use CI and staged evals for LLM applications
 
 Automated testing for LLMOps adds another layer: continuous integration, or CI. CI means testing changes automatically as they are made so problems are caught early.
 
@@ -284,7 +289,7 @@ A pull request changes a support prompt. The CI pipeline first runs rules-based 
 5. **Repeat on every update**: Keep regressions out of the main branch.
 :::
 
-## Monitor and red-team after launch
+### Monitor and red-team after launch
 
 The same idea of evaluation continues after deployment. Behavior can drift, and new risks can appear.
 
