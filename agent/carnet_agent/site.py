@@ -12,7 +12,7 @@ from pathlib import Path
 
 import yaml
 
-from .config import TOPICS
+from .config import SELF_URLS, TOPICS
 from .state import Finding, Source
 
 SOURCES_HEADING = "## Sources {.sources}"
@@ -84,6 +84,11 @@ def describe_site(root: Path) -> str:
 
 # --- Sources ------------------------------------------------------------------
 
+def is_self(url: str) -> bool:
+    """True for pages of this website or its repository: the site never cites itself."""
+    return any(s.lower() in url.lower() for s in SELF_URLS)
+
+
 def split_sources(body: str) -> tuple[str, list[tuple[str, str]]]:
     """Separate the Sources section from the rest. Returns (body, [(title, url)])."""
     index = body.find("## Sources")
@@ -100,7 +105,7 @@ def merge_sources(existing: list[tuple[str, str]], new: list[Source]) -> list[tu
     merged, seen = [], set()
     for title, url in existing + [(s.title, s.url) for s in new]:
         key = url.rstrip("/")
-        if key not in seen:
+        if key not in seen and not is_self(url):
             seen.add(key)
             merged.append((title, url))
     return merged

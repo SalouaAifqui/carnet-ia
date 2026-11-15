@@ -76,7 +76,9 @@ def services(root, model, review_model, tool=None, today="2026-11-15"):
         root=root, model=model, review_model=review_model,
         fetch=lambda url: "page text",
         search=lambda qs: [{"query": qs[0], "title": "Injection docs",
-                            "url": "https://docs.example.com/injection", "content": "..."}],
+                            "url": "https://docs.example.com/injection", "content": "..."},
+                           {"query": qs[0], "title": "Our own site",
+                            "url": "https://salouaaifqui.github.io/carnet-ia/agents/", "content": "..."}],
         tools=[tool] if tool else [], today=today,
     )
 
@@ -91,6 +93,8 @@ PLAN = ResearchPlan(gaps=["What is prompt injection?"],
 GOOD = Finding(fact="Prompt injection hides instructions in user input.", why="definition",
                source_url="https://docs.example.com/injection", source_title="Injection docs")
 INVENTED = Finding(fact="Made up.", why="-", source_url="https://not-in-results.com", source_title="?")
+SELF = Finding(fact="From our own site.", why="-", source_url="https://salouaaifqui.github.io/carnet-ia/agents/",
+               source_title="Our own site")
 
 
 def test_pause_then_approve_creates_page():
@@ -98,7 +102,7 @@ def test_pause_then_approve_creates_page():
 
     # ---- Run 1: until the pause (like the GitHub "plan" step)
     planner = FakeModel(structured={SourceNotes: [NOTES], Route: [ROUTE], ResearchPlan: [PLAN],
-                                    Findings: [Findings(findings=[GOOD, INVENTED])], PageOutline: [OUTLINE]})
+                                    Findings: [Findings(findings=[GOOD, INVENTED, SELF])], PageOutline: [OUTLINE]})
     graph = CarnetAgent(services(root, planner, FakeModel())).build()
     state, paused = run(graph, {"url": "https://source.example.com/article"}, new_thread())
     assert paused, "the graph must stop before writing"
@@ -106,6 +110,7 @@ def test_pause_then_approve_creates_page():
     comment = hitl.plan_comment(state)
     assert "Validating LLM inputs" in comment and "What a guardrail is" in comment
     assert "not-in-results.com" not in comment, "invented source dropped by code"
+    assert "salouaaifqui.github.io" not in comment, "the site never cites itself"
 
     # ---- The state travels through the comment, then a NEW process resumes
     blob = comment.split(f"<!-- {hitl.MARKER}", 1)[1].split("-->", 1)[0].strip()

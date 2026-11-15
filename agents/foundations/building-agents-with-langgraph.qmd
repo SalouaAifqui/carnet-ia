@@ -329,17 +329,28 @@ email_agent = builder.compile(
 
 **Idea:** combine every level in one agent.
 
-**Example: the agent behind this website.** Given a URL, it **routes** the content to the right page (Level 2), **researches** what a learner would miss and **critiques** its draft in a bounded loop (Level 3), **pauses** for approval of its plan, and reads its writing rules from a file, a form of procedural memory (Level 4). Its code is documented step by step in the [Carnet IA agent README](https://github.com/SalouaAifqui/carnet-ia/blob/main/agent/README.md).
+**Example: a complete email assistant.** Each piece comes from a lower level:
+
+- a **router** triages every incoming email: ignore, notify or respond (Level 2);
+- a **tool loop** writes replies and manages the calendar (Level 1);
+- **long-term memory** gives it facts about people, past triage decisions as examples, and its own instructions (Level 4);
+- a **feedback loop** improves it over time: the user's comments are turned into better prompts by an optimizer running in the background, the same *critique → improve* idea as Level 3, applied to the agent itself;
+- a **human** can approve replies before they are sent (Level 4).
 
 ```{mermaid}
 flowchart LR
-  F[fetch] --> R[read] --> C{{categorize<br/>Level 2}}
-  C --> G[research<br/>Level 3] --> O[outline]
-  O --> H{{"⏸ approval<br/>Level 4"}}
-  H --> W[write] --> V[review<br/>Level 3]
-  V -- fix --> W
-  V -- ok --> P[pull request]
+  E[/new email/] --> T{{"triage<br/>Level 2"}}
+  T -- respond --> R["response agent<br/>Level 1"]
+  T -- "ignore / notify" --> X([END])
+  R --> H{{"⏸ approval<br/>Level 4"}}
+  H --> S[send]
+  M[("store<br/>facts · examples · prompts")] -.-> T
+  M <-.-> R
+  F[/user feedback/] --> O["prompt optimizer<br/>Level 3 idea"]
+  O -.-> M
 ```
+
+Each part is small and simple on its own. The system becomes powerful because they work together, and because each part can be tested and improved separately.
 
 ::: {.callout-tip}
 ## Remember
@@ -353,5 +364,4 @@ flowchart LR
 ## Sources {.sources}
 
 - [AI Agents in LangGraph](https://learn.deeplearning.ai/courses/ai-agents-in-langgraph/), DeepLearning.AI × LangChain: lessons [LangGraph Components](https://learn.deeplearning.ai/courses/ai-agents-in-langgraph/lesson/l7rgk/langgraph-components) and [Essay Writer](https://learn.deeplearning.ai/courses/ai-agents-in-langgraph/lesson/m0x4m/essay-writer)
-- [Long-Term Agentic Memory with LangGraph](https://www.deeplearning.ai/courses/long-term-agentic-memory-with-langgraph), DeepLearning.AI × LangChain: lesson [Baseline Email Assistant](https://learn.deeplearning.ai/courses/long-term-agentic-memory-with-langgraph/lesson/a0k5a/baseline-email-assistant)
-- [Carnet IA agent](https://github.com/SalouaAifqui/carnet-ia/tree/main/agent), source code
+- [Long-Term Agentic Memory with LangGraph](https://www.deeplearning.ai/courses/long-term-agentic-memory-with-langgraph), DeepLearning.AI × LangChain: lessons [Baseline Email Assistant](https://learn.deeplearning.ai/courses/long-term-agentic-memory-with-langgraph/lesson/a0k5a/baseline-email-assistant) and [Semantic + Episodic + Procedural Memory](https://learn.deeplearning.ai/courses/long-term-agentic-memory-with-langgraph/lesson/uubkz/email-assistant-with-semantic-%2B-episodic-%2B-procedural-memory)

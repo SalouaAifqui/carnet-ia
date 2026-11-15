@@ -27,6 +27,9 @@ TOPICS = {
     "daily-use": ("Daily Use", "t-daily"),
 }
 
+# The site never cites itself: these URLs are dropped from search results and sources.
+SELF_URLS = ["salouaaifqui.github.io/carnet-ia", "github.com/SalouaAifqui/carnet-ia"]
+
 # Sources we trust more when the agent searches the web.
 PREFERRED_DOMAINS = [
     "docs.langchain.com", "langchain-ai.github.io", "python.langchain.com",

@@ -15,6 +15,7 @@ The agent reads this file before writing and before reviewing. Edit it to change
 - Examples from the source (a demo agent, a case study…) go **inside the section they illustrate**,
   introduced with "**Example:**". Never a separate "Examples" page or section.
 - Courses and articles appear only in the Sources section.
+- Never cite or use as an example this website (Carnet IA) or its repository.
 
 ## Content
 - Only knowledge that lasts: concepts, patterns, current APIs.

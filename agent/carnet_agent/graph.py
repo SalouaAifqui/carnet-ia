@@ -27,7 +27,7 @@ from langgraph.graph import END, START, StateGraph
 
 from . import prompts
 from .config import MAX_QUERIES, MAX_REVISIONS, MAX_TOOL_CALLS, TOPICS
-from .site import (check_page, describe_site, ensure_listed, join_front_matter, list_pages,
+from .site import (check_page, describe_site, ensure_listed, is_self, join_front_matter, list_pages,
                    merge_sources, render_sources, slugify, split_front_matter, split_sources,
                    topic_pills)
 from .state import (AgentState, Findings, PageOutline, ResearchPlan, Review, Route, Source,
@@ -157,7 +157,7 @@ class CarnetAgent:
 
     def select(self, state: AgentState):
         """[LLM] keep what matters, [code] drop anything whose URL wasn't in the results."""
-        results = state.get("search_results") or []
+        results = [r for r in state.get("search_results") or [] if not is_self(r["url"])]
         if not results:
             return {"findings": []}
         listing = "\n\n".join(f"[{i}] {r['title']}\nURL: {r['url']}\n{r['content'][:1500]}"
