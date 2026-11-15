@@ -1,0 +1,12 @@
+---
+title: "Articles"
+subtitle: "Longer pieces, written to be shared."
+toc: false
+listing:
+  contents: "*.qmd"
+  type: default
+  sort: "date desc"
+  feed: true
+---
+
+No articles yet. The first ones will grow out of the notes.

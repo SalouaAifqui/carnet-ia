@@ -1,0 +1,22 @@
+---
+title: "Carnet IA"
+toc: false
+listing:
+  - id: latest-notes
+    contents: "notes/langgraph/*.qmd"
+    type: table
+    sort: "lesson desc"
+    fields: [title, subtitle]
+    field-display-names:
+      title: "Note"
+      subtitle: "In one line"
+---
+
+::: {.home-hero}
+A notebook kept while learning to build AI agents: one note per lesson, with the key ideas, working code and a short quiz. Longer articles will follow.
+:::
+
+## Latest notes
+
+::: {#latest-notes}
+:::

@@ -1,0 +1,47 @@
+/*-- scss:defaults --*/
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;600&display=swap');
+
+$primary: #2f54d6;
+$body-bg: #f7f9fc;
+$body-color: #1a2233;
+$font-family-sans-serif: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
+$font-family-monospace: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, monospace;
+$headings-font-family: "Space Grotesk", "Segoe UI", system-ui, sans-serif;
+$headings-font-weight: 700;
+$navbar-bg: #ffffff;
+$navbar-fg: #1a2233;
+$link-color: $primary;
+$code-color: #2f54d6;
+
+/*-- scss:rules --*/
+h1, h2, h3 { text-wrap: balance; }
+.title { letter-spacing: -0.01em; }
+
+.lesson-meta {
+  font-size: .8rem; font-weight: 600; letter-spacing: .1em; text-transform: uppercase;
+  color: $primary; margin-bottom: .25rem;
+}
+.tldr {
+  font-size: 1.15rem; line-height: 1.6; max-width: 65ch;
+  border-left: 3px solid $primary; padding-left: 1rem; margin: 1.5rem 0;
+}
+
+/* concept cards */
+.concepts {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: .75rem; margin: 1rem 0 1.5rem;
+}
+.concept {
+  border: 1px solid rgba(47, 84, 214, .18); border-radius: 10px; padding: .85rem 1rem; min-width: 0;
+  code { font-weight: 600; background: none; padding: 0; }
+  p { margin: .25rem 0 0; font-size: .92rem; opacity: .85; }
+}
+
+/* quiz */
+details.quiz {
+  border: 1px solid rgba(47, 84, 214, .18); border-radius: 10px; padding: .6rem 1rem; margin: .5rem 0;
+  summary { cursor: pointer; font-weight: 500; }
+  p { margin: .5rem 0 0; opacity: .85; }
+}
+
+.home-hero { padding: 1rem 0 .5rem; }
+.home-hero p { font-size: 1.15rem; max-width: 60ch; }

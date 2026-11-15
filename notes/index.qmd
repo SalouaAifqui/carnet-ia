@@ -1,0 +1,22 @@
+---
+title: "Notes"
+subtitle: "Study notes, one per lesson."
+toc: false
+listing:
+  - id: langgraph
+    contents: "langgraph/*.qmd"
+    type: table
+    sort: "lesson"
+    fields: [lesson, title, subtitle]
+    field-display-names:
+      lesson: "#"
+      title: "Lesson"
+      subtitle: "In one line"
+---
+
+## AI Agents in LangGraph
+
+Course by DeepLearning.AI and LangChain: [AI Agents in LangGraph](https://learn.deeplearning.ai/courses/ai-agents-in-langgraph/).
+
+::: {#langgraph}
+:::
