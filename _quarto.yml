@@ -66,6 +66,8 @@ website:
     style: docked
     contents:
     - evaluation/index.qmd
+    - section: Agent Evaluation
+      contents: evaluation/agent-evaluation/*.qmd
   page-footer:
     left: Carnet IA · notes written while learning
     right:
