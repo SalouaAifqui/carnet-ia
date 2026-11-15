@@ -336,3 +336,11 @@ body:has(.pill.t-guardrails) main.content { --t: #{$t-guardrails}; --t-soft: #{$
   }
   > li p { margin: 0; }
 }
+
+/* Mermaid groups (subgraphs): light, readable boxes instead of the default dark fill */
+.cell-output-display svg .cluster rect, svg[id^="mermaid"] .cluster rect, .mermaid .cluster rect {
+  fill: $bg !important; stroke: $line !important; stroke-width: 1px !important; rx: 10px; ry: 10px;
+}
+svg .cluster .nodeLabel, svg .cluster-label .nodeLabel, svg .cluster-label span, svg .cluster text {
+  color: $muted !important; fill: $muted !important; font-weight: 600; font-size: .85em;
+}
