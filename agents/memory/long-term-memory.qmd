@@ -1,0 +1,215 @@
+---
+title: "Long-term memory"
+subtitle: "The LangGraph store, and how to use it for semantic, episodic and procedural memory."
+order: 6
+date: 2026-11-15
+categories: [Agents, Memory, LangGraph, LangMem]
+aliases:
+  - /agents/long-term-memory/03-semantic-memory.html
+  - /agents/long-term-memory/04-episodic-memory.html
+  - /agents/long-term-memory/05-procedural-memory.html
+---
+
+::: {.lesson-meta}
+[Agents]{.pill .t-agents} [Memory]{.pill .muted}
+:::
+
+::: {.tldr}
+Long-term memory lives in a **store**: a database of memories organised in **namespaces** and searchable by meaning. The same store holds the three kinds of memory. **Facts** are saved and searched through tools, **examples** of past decisions are inserted into prompts, and **instructions** are kept as prompts that can be rewritten from feedback. The running example is an email assistant that gets better at its job over time.
+:::
+
+## The store
+
+```{mermaid}
+flowchart TB
+  subgraph Store
+    direction LR
+    N1["('email_assistant', 'lance', 'collection')<br/>facts"]
+    N2["('email_assistant', 'lance', 'examples')<br/>past decisions"]
+    N3["('lance',)<br/>prompts"]
+  end
+  T[response agent] <-->|"memory tools"| N1
+  R[triage step] -->|"similar examples"| N2
+  N3 -->|"read at every run"| T
+  N3 -->|"read at every run"| R
+  O[prompt optimizer] -->|"rewrites"| N3
+```
+
+::: {.concepts}
+::: {.concept}
+`Namespace`
+
+A tuple that works like a folder path. Put the **user id** in it so users never see each other's memories.
+:::
+::: {.concept}
+`Item`
+
+A memory: a `key` and a `value` (a dictionary), saved with `put`, read with `get`.
+:::
+::: {.concept}
+`Index`
+
+With an embedding model, memories become **searchable by meaning** with `search(namespace, query=…)`.
+:::
+::: {.concept}
+`LangMem`
+
+A library on top of LangGraph with ready-made memory tools and prompt optimizers.
+:::
+:::
+
+```python
+from langgraph.store.memory import InMemoryStore
+
+store = InMemoryStore(index={"embed": "openai:text-embedding-3-small", "dims": 1536})
+
+store.put(("email_assistant", "lance", "collection"), "jim", {"content": "Jim is John's friend"})
+store.get(("email_assistant", "lance", "collection"), "jim").value
+store.search(("email_assistant", "lance", "collection"), query="Who is Jim?")   # by meaning
+```
+
+`InMemoryStore` disappears when the process stops; use a database-backed store in production. To give every node access, compile the graph with it: `builder.compile(store=store)`. A node can then receive it as a parameter, along with the config that holds the user id:
+
+```python
+from langchain_core.runnables import RunnableConfig
+from langgraph.store.base import BaseStore
+
+def triage_router(state: State, config: RunnableConfig, store: BaseStore):
+    user_id = config["configurable"]["langgraph_user_id"]
+    ...
+```
+
+## Semantic memory: facts
+
+**Idea:** give the agent two tools, one to **save** facts and one to **search** them. The agent decides itself when to use them, so memory is written **in the hot path**.
+
+```python
+from langmem import create_manage_memory_tool, create_search_memory_tool
+from langchain.agents import create_agent
+
+namespace = ("email_assistant", "{langgraph_user_id}", "collection")   # filled from the config
+
+response_agent = create_agent(
+    "openai:gpt-5.4-mini",
+    tools=[write_email, schedule_meeting, check_calendar_availability,
+           create_manage_memory_tool(namespace=namespace),     # manage_memory: create / update / delete
+           create_search_memory_tool(namespace=namespace)],    # search_memory: query, limit…
+    system_prompt=agent_system_prompt_memory,
+    store=store,
+)
+```
+
+**Example:** the user says *"Jim is my friend"*: the agent calls `manage_memory(content="Jim is John Doe's friend")`. In a **new conversation**, *"Who is Jim?"* makes it call `search_memory(query="Jim")` and answer from the stored fact.
+
+```python
+config = {"configurable": {"langgraph_user_id": "lance"}}
+response_agent.invoke({"messages": [{"role": "user", "content": "Jim is my friend"}]}, config=config)
+response_agent.invoke({"messages": [{"role": "user", "content": "Who is Jim?"}]}, config=config)
+```
+
+In the full email workflow, the same mechanism lets the agent save *"follow-up needed on Alice's missing API endpoints"*, then find it when Alice writes again days later.
+
+## Episodic memory: examples
+
+**Idea:** store past decisions as **input + correct output**, and show the most similar ones to the model as **few-shot examples**. One stored example changes the behaviour for similar inputs, with no code change.
+
+**Example:** the triage step decides whether to ignore, notify or respond. Store one email with the right label:
+
+```python
+import uuid
+
+store.put(("email_assistant", "lance", "examples"), str(uuid.uuid4()),
+          {"email": tom_email, "label": "ignore"})
+```
+
+Before classifying a new email, the triage node retrieves the closest past examples and puts them in its prompt:
+
+```python
+def triage_router(state: State, config: RunnableConfig, store: BaseStore):
+    namespace = ("email_assistant", config["configurable"]["langgraph_user_id"], "examples")
+    examples = store.search(namespace, query=str(state["email_input"]))     # by similarity
+    system_prompt = triage_system_prompt.format(examples=format_few_shot_examples(examples), …)
+    ...
+```
+
+| Situation | Triage result |
+|---|---|
+| Tom's email, no examples stored | **respond** (default) |
+| Same email, after storing it as *ignore* | **ignore** |
+| A similar email, different wording | **ignore**: the example generalises |
+| Same email, another user | **respond**: examples are per user |
+
+In the course the examples are added by hand. In a real app they come from user corrections, written **in the background**.
+
+## Procedural memory: instructions
+
+**Idea:** the agent's prompts are its procedural memory. Keep them **in the store**, read them at every run, and let an **optimizer** rewrite them from feedback.
+
+**Reading prompts at runtime**, with a default for new users:
+
+```python
+def get_prompt(store, user_id, key, default):
+    item = store.get((user_id,), key)
+    if item is None:
+        store.put((user_id,), key, {"prompt": default})
+        return default
+    return item.value["prompt"]
+```
+
+The triage node reads its rules (`triage_ignore`, `triage_notify`, `triage_respond`) this way. The response agent builds its system prompt dynamically:
+
+```python
+from langchain.agents.middleware import dynamic_prompt, ModelRequest
+from langgraph.config import get_config, get_store
+
+@dynamic_prompt
+def agent_prompt(request: ModelRequest) -> str:
+    user_id = get_config()["configurable"]["langgraph_user_id"]
+    instructions = get_prompt(get_store(), user_id, "agent_instructions", default_agent_instructions)
+    return agent_system_prompt_memory.format(instructions=instructions)
+
+response_agent = create_agent("openai:gpt-5.4-mini", tools=[…], middleware=[agent_prompt], store=store)
+```
+
+**Rewriting prompts from feedback**, in the background:
+
+```python
+from langmem import create_multi_prompt_optimizer
+
+optimizer = create_multi_prompt_optimizer("anthropic:claude-sonnet-5-5", kind="prompt_memory")
+
+prompts = [
+    {"name": "main_agent", "prompt": get_prompt(store, "lance", "agent_instructions", ""),
+     "update_instructions": "keep the instructions short and to the point",
+     "when_to_update": "when there is feedback on how the agent should write emails or schedule events"},
+    {"name": "triage-ignore", "prompt": get_prompt(store, "lance", "triage_ignore", ""),
+     "update_instructions": "keep the instructions short and to the point",
+     "when_to_update": "when there is feedback on which emails should be ignored"},
+    # … triage-notify, triage-respond
+]
+updated = optimizer.invoke({
+    "trajectories": [(response["messages"], "Always sign your emails `John Doe`")],
+    "prompts": prompts,
+})
+```
+
+The optimizer reads each `when_to_update` to decide **which** prompts the feedback concerns, then applies `update_instructions` to rewrite only those. Write the changed ones back to the store, and the next run uses them.
+
+| Feedback | Prompt rewritten | Next run |
+|---|---|---|
+| *"Always sign your emails John Doe"* | `agent_instructions` | Emails end with the signature |
+| *"Ignore any emails from Alice Jones"* | `triage_ignore` | Alice's emails are ignored |
+
+::: {.callout-tip}
+## Remember
+- The **store** holds long-term memory, in **namespaces** that include the user id.
+- With an embedding index, memories are found **by meaning**, not by exact words.
+- **Semantic** → memory tools, hot path. **Episodic** → few-shot examples in a prompt. **Procedural** → prompts stored as data, rewritten in the background.
+- Always give stored prompts a **default**, so new users work with no setup.
+- Behaviour changes by **adding data**, not by changing code.
+:::
+
+## Sources {.sources}
+
+- [Long-Term Agentic Memory with LangGraph](https://www.deeplearning.ai/courses/long-term-agentic-memory-with-langgraph), DeepLearning.AI × LangChain: lessons [Semantic Memory](https://learn.deeplearning.ai/courses/long-term-agentic-memory-with-langgraph/lesson/oeqme/email-assistant-with-semantic-memory), [Semantic + Episodic Memory](https://learn.deeplearning.ai/courses/long-term-agentic-memory-with-langgraph/lesson/ucvjj/email-assistant-with-semantic-%2B-episodic-memory) and [Semantic + Episodic + Procedural Memory](https://learn.deeplearning.ai/courses/long-term-agentic-memory-with-langgraph/lesson/uubkz/email-assistant-with-semantic-%2B-episodic-%2B-procedural-memory)
+- [LangMem documentation](https://langchain-ai.github.io/langmem/)

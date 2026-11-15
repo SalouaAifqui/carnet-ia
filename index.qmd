@@ -40,8 +40,8 @@ listing:
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="5" cy="12" r="2.5"/><circle cx="19" cy="5" r="2.5"/><circle cx="19" cy="19" r="2.5"/><path d="M7.3 11 16.8 6.1M7.3 13l9.5 4.9M19 7.5v9"/></svg>
     </span>
     <span class="topic-name">Agents</span>
-    <span class="topic-desc">Implementing agents and the frameworks behind them: tools, state, memory, human in the loop.</span>
-    <span class="topic-tags"><span>LangGraph</span><span>ReAct</span><span>Tools</span></span>
+    <span class="topic-desc">From a simple tool loop to full systems with LangGraph: tools, memory, and keeping a human in control.</span>
+    <span class="topic-tags"><span>LangGraph</span><span>Memory</span><span>Human in the loop</span></span>
   </a>
 
   <a class="topic-card t-guardrails" href="guardrails/index.html">

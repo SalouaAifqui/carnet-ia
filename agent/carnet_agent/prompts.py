@@ -19,11 +19,12 @@ Topics:
 - daily-use: practical tips for using AI apps day to day.
 
 Rules:
-- Choose "update" ONLY if an existing page covers the same subject and the new content
-  extends it. Give its path exactly as listed.
-- Otherwise choose "create". Reuse an existing folder when the content fits it
-  (for example a new lesson of a course that already has a folder).
-  Otherwise propose a new short folder name in lowercase-with-dashes.
+- The site is organised by CONCEPT (e.g. agents/foundations, agents/memory, agents/control),
+  never by course, lesson or article. Never create a folder named after a course or a source.
+- Prefer "update": if an existing page covers the concept this content is about, merge into it,
+  even if the source is a different course. Give its path exactly as listed.
+- Choose "create" only for a concept no page covers yet. Put it in the existing concept folder
+  where it fits best; propose a new folder (a concept name, lowercase-with-dashes) only if none fits.
 
 Current site:
 {site}"""
@@ -67,6 +68,8 @@ Write the page following the style guide exactly.
 
 You may call web_search or fetch_url to check that an API or function is current.
 Use them only when you need to; most pages need no tool call.
+Examples from the source go inside the section they illustrate, not in a separate part.
+When updating a page, keep its structure and integrate the new material where it belongs.
 When you are done, answer with the full page body in markdown and nothing else."""
 
 REVIEW = """You are a demanding reviewer. Check the page below before it is published.

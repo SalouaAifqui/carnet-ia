@@ -1,0 +1,94 @@
+---
+title: "Short-term memory"
+subtitle: "Checkpointers and threads: how an agent keeps a conversation going."
+order: 5
+date: 2026-11-15
+categories: [Agents, Memory, LangGraph]
+aliases:
+  - /notes/langgraph/04-persistence-and-streaming.html
+  - /agents/langgraph/04-persistence-and-streaming.html
+---
+
+::: {.lesson-meta}
+[Agents]{.pill .t-agents} [Memory]{.pill .muted}
+:::
+
+::: {.tldr}
+A **checkpointer** saves the graph's state after every step, under a **thread id**. Call the agent again with the same thread id and it picks up where it left off, with the whole conversation. A new thread id starts from scratch. This is short-term memory, and it is also what makes pausing and resuming an agent possible.
+:::
+
+## Reducer vs checkpointer
+
+These two are easy to confuse, and they work together.
+
+| | Reducer (`operator.add` on `messages`) | Checkpointer |
+|---|---|---|
+| Answers | *How* to merge updates into the state | *Where* to keep the state between calls |
+| Lasts | One run (`invoke`) | Every run with the same `thread_id` |
+
+Without a checkpointer, each `invoke` starts from an empty state: the reducer appends to a list that starts empty every time.
+
+```{mermaid}
+flowchart LR
+  C1["Call 1<br/>[] + [weather in SF?]"] --> R1["… answer"]
+  R1 -- "saved under thread 1" --> C2["Call 2<br/>[SF?, …, answer] + [what about LA?]"]
+  C2 --> R2["understands 'LA' = weather"]
+```
+
+## Adding a checkpointer
+
+```python
+from langgraph.checkpoint.memory import MemorySaver
+
+checkpointer = MemorySaver()                     # in memory: for learning and tests
+app = graph.compile(checkpointer=checkpointer)
+```
+
+| Checkpointer | Keeps data | Use for |
+|---|---|---|
+| `MemorySaver` | Until the process stops | Notebooks, tests |
+| SQLite (`langgraph-checkpoint-sqlite`) | In a file | Local apps, prototypes |
+| Postgres (`langgraph-checkpoint-postgres`) | In a database | Production, several users |
+
+## Threads
+
+A **thread** is one conversation. The thread id goes in the config of every call.
+
+```python
+thread = {"configurable": {"thread_id": "1"}}
+
+app.invoke({"messages": [HumanMessage(content="What is the weather in SF?")]}, thread)
+app.invoke({"messages": [HumanMessage(content="What about in LA?")]}, thread)
+```
+
+**Example:** on thread `"1"`, *"What about in LA?"* is understood as a weather question, because the SF exchange is in the saved history. Asked on a new thread `"2"`, the same follow-up, or *"Which one is warmer?"*, makes the agent ask for clarification: that thread has no history.
+
+Give **one thread per user or per conversation** so histories never mix.
+
+## What is saved
+
+After each node, the checkpointer stores a **snapshot** of the full state, with an id. You can read it at any time:
+
+```python
+snapshot = app.get_state(thread)
+snapshot.values["messages"]      # the conversation so far
+snapshot.next                    # the node that will run next, () when finished
+
+for past in app.get_state_history(thread):   # every snapshot, newest first
+    print(past.config["configurable"]["checkpoint_id"], past.next)
+```
+
+These snapshots are what make it possible to pause, inspect, edit and rewind an agent: see [Controlling a running agent](../control/controlling-a-running-agent.qmd).
+
+::: {.callout-tip}
+## Remember
+- The checkpointer saves the state **after every node**, per `thread_id`.
+- Same thread id = the conversation continues. New thread id = fresh start.
+- `MemorySaver` for learning; a database checkpointer in production.
+- A checkpointer is required for human-in-the-loop and time travel.
+- For memory that must outlive a conversation, use the **store**: [Long-term memory](long-term-memory.qmd).
+:::
+
+## Sources {.sources}
+
+- [AI Agents in LangGraph](https://learn.deeplearning.ai/courses/ai-agents-in-langgraph/), DeepLearning.AI × LangChain: lesson [Persistence and Streaming](https://learn.deeplearning.ai/courses/ai-agents-in-langgraph/lesson/nj9ok/persistence-and-streaming)

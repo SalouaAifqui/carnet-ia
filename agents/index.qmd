@@ -3,17 +3,23 @@ title: "Agents"
 body-classes: "topic t-agents"
 toc: false
 listing:
-  - id: langgraph
-    contents: "langgraph/*.qmd"
+  - id: foundations
+    contents: "foundations/*.qmd"
     type: grid
-    grid-columns: 2
-    sort: "lesson"
+    grid-columns: 3
+    sort: "order"
     fields: [title, subtitle]
   - id: memory
-    contents: "long-term-memory/*.qmd"
+    contents: "memory/*.qmd"
     type: grid
-    grid-columns: 2
-    sort: "lesson"
+    grid-columns: 3
+    sort: "order"
+    fields: [title, subtitle]
+  - id: control
+    contents: "control/*.qmd"
+    type: grid
+    grid-columns: 3
+    sort: "order"
     fields: [title, subtitle]
 ---
 
@@ -22,23 +28,32 @@ listing:
 
 # Agents: implementation & frameworks {.topic-h1}
 
-How to build agents around LLMs, from a hand-written loop to full frameworks: tools, state, memory, streaming and human control.
+How to build agents around LLMs: what an agent is, how to build one with LangGraph from the simplest loop to a full system, how it remembers, and how to keep control of it.
 :::
 
-## AI Agents in LangGraph {.group-title}
+## Foundations {.group-title}
 
 ::: {.group-meta}
-Course by DeepLearning.AI and LangChain · 6 lessons · [Course page](https://learn.deeplearning.ai/courses/ai-agents-in-langgraph/)
+What an agent is, the LangGraph building blocks, and agent designs from level 1 to level 5.
 :::
 
-::: {#langgraph}
+::: {#foundations}
 :::
 
-## Long-Term Agentic Memory with LangGraph {.group-title}
+## Memory {.group-title}
 
 ::: {.group-meta}
-Course by DeepLearning.AI and LangChain, taught by Harrison Chase · 5 lessons · [Course page](https://www.deeplearning.ai/courses/long-term-agentic-memory-with-langgraph)
+Short-term memory with checkpointers, long-term memory with the store: facts, examples and instructions.
 :::
 
 ::: {#memory}
+:::
+
+## Control {.group-title}
+
+::: {.group-meta}
+Streaming, human in the loop and time travel.
+:::
+
+::: {#control}
 :::

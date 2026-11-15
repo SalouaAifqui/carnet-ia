@@ -1,0 +1,156 @@
+---
+title: "Tools and agentic search"
+subtitle: "How a model calls functions, and why agents need search built for machines."
+order: 3
+date: 2026-11-15
+categories: [Agents, Foundations, Tools]
+aliases:
+  - /notes/langgraph/03-agentic-search.html
+  - /agents/langgraph/03-agentic-search.html
+---
+
+::: {.lesson-meta}
+[Agents]{.pill .t-agents} [Foundations]{.pill .muted}
+:::
+
+::: {.tldr}
+A **tool** is a function the model can ask to run. The model never executes it: it returns a structured **tool call** (name + arguments), your code runs it and sends the result back. The most useful tool for many agents is **search**, ideally a search engine designed for agents, which returns clean data instead of pages of links.
+:::
+
+## How tool calling works
+
+```{mermaid}
+sequenceDiagram
+  participant Code as Your code
+  participant LLM
+  participant Tool
+  Code->>LLM: messages + list of available tools
+  LLM-->>Code: AIMessage with tool_calls [{name, args, id}]
+  Code->>Tool: run name(args)
+  Tool-->>Code: result
+  Code->>LLM: ToolMessage(result, tool_call_id=id)
+  LLM-->>Code: final answer (no tool_calls)
+```
+
+## Key ideas
+
+::: {.concepts}
+::: {.concept}
+`@tool`
+
+Turns a Python function into a tool. Its name, type hints and docstring become the description the model reads.
+:::
+::: {.concept}
+`bind_tools`
+
+Tells the model which tools exist. Without it, the model can't call them.
+:::
+::: {.concept}
+`tool_calls`
+
+What the model returns when it wants a tool: a list of `{name, args, id}`.
+:::
+::: {.concept}
+`ToolMessage`
+
+The result sent back to the model, linked to the call by `tool_call_id`.
+:::
+:::
+
+## Defining and binding tools
+
+```python
+from langchain_core.tools import tool
+from langchain_openai import ChatOpenAI
+
+@tool
+def check_calendar_availability(day: str) -> str:
+    """Check calendar availability for a given day."""
+    return f"Available times on {day}: 9:00 AM, 2:00 PM, 4:00 PM"
+
+model = ChatOpenAI(model="gpt-5.4-mini").bind_tools([check_calendar_availability])
+reply = model.invoke("Am I free on Tuesday?")
+reply.tool_calls
+# [{'name': 'check_calendar_availability', 'args': {'day': 'Tuesday'}, 'id': 'call_…'}]
+```
+
+The **docstring matters**: it is the only explanation the model gets of when and how to use the tool.
+
+## Parallel and sequential calls
+
+The model can ask for several tools in one turn when the calls are independent, and spread them over several turns when one depends on another.
+
+| Question | What the model does |
+|---|---|
+| *"What's the weather in SF and in LA?"* | **Two searches in the same turn**: they don't depend on each other |
+| *"Who won the 2024 Super Bowl, and what is the GDP of that team's state?"* | **One search, then another**: the second query needs the first answer |
+
+This is why the code that runs tools must **loop over all `tool_calls`**, not just the first one.
+
+## Why agents need search
+
+A model only knows what it saw during training. Without search:
+
+- it has **no fresh information** (today's weather, last night's results);
+- it **can't cite sources**, so its mistakes are harder to catch.
+
+## Regular search vs agentic search
+
+| | Regular search engine | Agentic search (e.g. Tavily) |
+|---|---|---|
+| Returns | Links and raw HTML | Structured JSON, already filtered |
+| Built for | A person reading a page | An agent processing data |
+| Work left to do | Scrape, clean, extract | Little or none |
+
+**Inside an agentic search tool**, four steps happen before anything reaches your agent:
+
+::: {.concepts}
+::: {.concept}
+`1 · Decompose`
+
+Split a complex question into sub-questions.
+:::
+::: {.concept}
+`2 · Route`
+
+Send each one to the best source: a weather question to a weather API.
+:::
+::: {.concept}
+`3 · Extract`
+
+Chunk each source and keep the most relevant pieces (vector search).
+:::
+::: {.concept}
+`4 · Score & filter`
+
+Rank the results and drop the weak ones.
+:::
+:::
+
+## Using Tavily
+
+```python
+from langchain_tavily import TavilySearch   # needs TAVILY_API_KEY
+
+search = TavilySearch(max_results=4, include_answer=True)
+result = search.invoke({"query": "What is in Nvidia's new Blackwell GPU?"})
+
+result["answer"]                    # a short answer
+[r["url"] for r in result["results"]]   # the sources, to cite
+```
+
+The same object is a tool: pass it to an agent and the model decides when to search. For example, asked *"What's the weather in SF?"*, the agent calls `tavily_search` with `{"query": "current weather San Francisco"}` and answers from the result.
+
+::: {.callout-tip}
+## Remember
+- The model **requests** tools, your code **runs** them.
+- Name, type hints and docstring are the tool's instructions: write them carefully.
+- Loop over every `tool_calls` entry: calls can be parallel.
+- Search gives agents fresh facts and citable sources. Agentic search returns data ready for a model.
+:::
+
+## Sources {.sources}
+
+- [AI Agents in LangGraph](https://learn.deeplearning.ai/courses/ai-agents-in-langgraph/), DeepLearning.AI × LangChain: lessons [LangGraph Components](https://learn.deeplearning.ai/courses/ai-agents-in-langgraph/lesson/l7rgk/langgraph-components) and [Agentic Search Tools](https://learn.deeplearning.ai/courses/ai-agents-in-langgraph/lesson/oj6p9/agentic-search-tools)
+- [Long-Term Agentic Memory with LangGraph](https://www.deeplearning.ai/courses/long-term-agentic-memory-with-langgraph), DeepLearning.AI × LangChain: lesson [Baseline Email Assistant](https://learn.deeplearning.ai/courses/long-term-agentic-memory-with-langgraph/lesson/a0k5a/baseline-email-assistant)
+- [Tavily documentation](https://docs.tavily.com)

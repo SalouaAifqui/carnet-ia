@@ -1,0 +1,353 @@
+---
+title: "Building agents with LangGraph"
+subtitle: "The building blocks, then five levels of agent design, from a simple tool loop to a full system."
+order: 2
+date: 2026-11-15
+categories: [Agents, Foundations, LangGraph, Design patterns]
+aliases:
+  - /notes/langgraph/02-langgraph-components.html
+  - /agents/langgraph/02-langgraph-components.html
+  - /notes/langgraph/06-essay-writer.html
+  - /agents/langgraph/06-essay-writer.html
+  - /agents/long-term-memory/02-baseline-email-assistant.html
+---
+
+::: {.lesson-meta}
+[Agents]{.pill .t-agents} [Foundations]{.pill .muted}
+:::
+
+::: {.tldr}
+LangGraph describes an agent as a **graph**: **nodes** do the work, **edges** decide what runs next, and a shared **state** flows between them. With these few blocks you can build anything from a simple tool loop to a multi-step system that plans, researches, critiques itself and asks a human for approval. This page gives the blocks, then climbs the design patterns **level by level**.
+:::
+
+## The building blocks
+
+::: {.concepts}
+::: {.concept}
+`State`
+
+A typed dictionary shared by every node. Each node reads it and returns **only the fields it changes**.
+:::
+::: {.concept}
+`Reducer`
+
+How an update is merged into a field. `operator.add` appends to a list; without a reducer the value is replaced.
+:::
+::: {.concept}
+`Node`
+
+A Python function `state → update`. It can call a model, a tool, or anything else.
+:::
+::: {.concept}
+`Edge`
+
+A fixed path: after node A, always run node B.
+:::
+::: {.concept}
+`Conditional edge`
+
+A function looks at the state and picks the next node.
+:::
+::: {.concept}
+`Command`
+
+A node can return `Command(goto=…, update=…)`: update the state **and** choose the next node in one step.
+:::
+:::
+
+```python
+import operator
+from typing import TypedDict, Annotated
+from langchain_core.messages import AnyMessage
+from langgraph.graph import StateGraph, START, END
+
+class AgentState(TypedDict):
+    messages: Annotated[list[AnyMessage], operator.add]   # appended, never overwritten
+
+graph = StateGraph(AgentState)
+graph.add_node("llm", call_model)                        # nodes are plain functions
+graph.add_node("action", take_action)
+graph.add_edge(START, "llm")
+graph.add_conditional_edges("llm", has_tool_calls, {True: "action", False: END})
+graph.add_edge("action", "llm")
+app = graph.compile()                                     # a runnable: invoke, stream…
+```
+
+**Reducers in one example:** a node returns `{"messages": [new_message]}`. With `operator.add`, LangGraph **appends** it to the history. Without it, the history would be replaced by that single message, and the model would lose the question as soon as a tool answered.
+
+| Message type | Produced by |
+|---|---|
+| `SystemMessage` | Your instructions |
+| `HumanMessage` | The user |
+| `AIMessage` | The model: an answer, or `tool_calls` |
+| `ToolMessage` | The result of a tool |
+
+## The levels
+
+```{mermaid}
+flowchart LR
+  L1["Level 1<br/>Tool loop"] --> L2["Level 2<br/>Router"]
+  L2 --> L3["Level 3<br/>Plan & reflect"]
+  L3 --> L4["Level 4<br/>Memory & human"]
+  L4 --> L5["Level 5<br/>Full system"]
+```
+
+Each level keeps everything from the previous one and adds **one idea**. Start at the lowest level that solves your problem: every level adds cost, latency and things that can go wrong.
+
+---
+
+### [Level 1]{.level-tag} The tool loop
+
+**Idea:** one model in a loop with tools, the [ReAct loop](what-is-an-agent.qmd) as a graph.
+**Use it when:** the task is one question that may need a few lookups.
+
+```{mermaid}
+flowchart LR
+  S([START]) --> L[llm]
+  L -- "tool_calls" --> A[action]
+  L -- "answer" --> E([END])
+  A --> L
+```
+
+**Example: a research assistant with web search.**
+
+```python
+from langchain_core.messages import SystemMessage, ToolMessage, HumanMessage
+from langchain_openai import ChatOpenAI
+from langchain_tavily import TavilySearch
+
+class Agent:
+    def __init__(self, model, tools, system=""):
+        self.system = system
+        self.tools = {t.name: t for t in tools}
+        self.model = model.bind_tools(tools)
+        graph = StateGraph(AgentState)
+        graph.add_node("llm", self.call_model)
+        graph.add_node("action", self.take_action)
+        graph.add_conditional_edges("llm", self.has_tool_calls, {True: "action", False: END})
+        graph.add_edge("action", "llm")
+        graph.set_entry_point("llm")
+        self.graph = graph.compile()
+
+    def has_tool_calls(self, state: AgentState):
+        return len(state["messages"][-1].tool_calls) > 0
+
+    def call_model(self, state: AgentState):
+        messages = [SystemMessage(content=self.system)] + state["messages"]
+        return {"messages": [self.model.invoke(messages)]}
+
+    def take_action(self, state: AgentState):
+        results = []
+        for call in state["messages"][-1].tool_calls:          # may be several, in parallel
+            tool = self.tools.get(call["name"])
+            output = tool.invoke(call["args"]) if tool else "Unknown tool, retry."
+            results.append(ToolMessage(tool_call_id=call["id"], name=call["name"], content=str(output)))
+        return {"messages": results}
+
+bot = Agent(ChatOpenAI(model="gpt-5.4-mini"), [TavilySearch(max_results=4)],
+            system="You are a smart research assistant. Use the search engine to look up information.")
+result = bot.graph.invoke({"messages": [HumanMessage(content="What is the weather in SF?")]})
+result["messages"][-1].content
+```
+
+**The same loop in one line.** Once you understand it, use the prebuilt version:
+
+```python
+from langchain.agents import create_agent
+
+bot = create_agent("openai:gpt-5.4-mini", tools=[TavilySearch(max_results=4)],
+                   system_prompt="You are a smart research assistant.")
+```
+
+---
+
+### [Level 2]{.level-tag} The router
+
+**Idea:** classify first, then send the input down the right path. A cheap, structured decision before any expensive work.
+**Use it when:** inputs are of different kinds and need different handling, or many need no action at all.
+
+```{mermaid}
+flowchart LR
+  S([START]) --> T[triage<br/>structured output]
+  T -- respond --> R[response agent<br/>Level 1 loop]
+  T -- "ignore / notify" --> E([END])
+  R --> E
+```
+
+**Example: an email assistant.** Each incoming email is classified *ignore*, *notify* or *respond*. Only emails worth answering reach an agent with email and calendar tools.
+
+The router returns **data, not text**, thanks to structured output. Asking for the reasoning first tends to give better decisions, and makes them easy to inspect:
+
+```python
+from typing import Literal
+from pydantic import BaseModel, Field
+
+class Router(BaseModel):
+    reasoning: str = Field(description="Step-by-step reasoning behind the classification.")
+    classification: Literal["ignore", "respond", "notify"]
+
+llm_router = ChatOpenAI(model="gpt-5.4-mini").with_structured_output(Router)
+```
+
+The triage node uses `Command` to route and update the state at the same time. The response agent, a full Level 1 agent, is added to the graph **as a single node**:
+
+```python
+from langgraph.types import Command
+from langgraph.graph.message import add_messages
+
+class State(TypedDict):
+    email_input: dict
+    messages: Annotated[list, add_messages]
+
+def triage_router(state: State) -> Command[Literal["response_agent", "__end__"]]:
+    result = llm_router.invoke([
+        {"role": "system", "content": triage_system_prompt},
+        {"role": "user", "content": triage_user_prompt.format(**state["email_input"])},
+    ])
+    if result.classification == "respond":
+        return Command(goto="response_agent",
+                       update={"messages": [{"role": "user", "content": f"Respond to the email {state['email_input']}"}]})
+    return Command(goto=END)          # ignore / notify (a real app would alert the user)
+
+response_agent = create_agent("openai:gpt-5.4-mini",
+                              tools=[write_email, schedule_meeting, check_calendar_availability],
+                              system_prompt=agent_system_prompt)
+
+builder = StateGraph(State)
+builder.add_node(triage_router)
+builder.add_node("response_agent", response_agent)      # an agent inside a graph
+builder.add_edge(START, "triage_router")
+email_agent = builder.compile()
+```
+
+A sales spam is classified *ignore* and stops there. A colleague's question is classified *respond*: the agent calls `write_email` and summarises what it sent.
+
+---
+
+### [Level 3]{.level-tag} Plan, act, reflect
+
+**Idea:** split a big task into **specialised steps** sharing a rich state, and let the agent **critique and improve its own work** in a loop with a stopping rule.
+**Use it when:** the output must be good, not just correct: a report, an essay, code.
+
+```{mermaid}
+flowchart LR
+  S([START]) --> P[planner]
+  P --> RP[research]
+  RP --> G[write]
+  G -- "revisions left" --> R[critique]
+  G -- "limit reached" --> E([END])
+  R --> RC[research the critique]
+  RC --> G
+```
+
+**Example: an essay writer.** The state is no longer just messages: each step reads the fields it needs and writes its own.
+
+```python
+from typing import List
+
+class EssayState(TypedDict):
+    task: str               # the topic
+    plan: str               # outline from the planner
+    draft: str              # current essay (replaced at each revision)
+    critique: str           # latest feedback
+    content: List[str]      # research snippets
+    revision_number: int
+    max_revisions: int
+```
+
+Each role is the same model with a **different system prompt**: planner, researcher, writer, teacher. The researcher uses structured output to produce search queries:
+
+```python
+class Queries(BaseModel):
+    queries: List[str]
+
+def research_plan_node(state: EssayState):
+    queries = model.with_structured_output(Queries).invoke([
+        SystemMessage(content=RESEARCH_PLAN_PROMPT), HumanMessage(content=state["task"])])
+    content = state.get("content") or []
+    for q in queries.queries:
+        for r in search.invoke({"query": q})["results"]:
+            content.append(r["content"])
+    return {"content": content}
+
+def generation_node(state: EssayState):
+    response = model.invoke([
+        SystemMessage(content=WRITER_PROMPT.format(content="\n\n".join(state["content"]))),
+        HumanMessage(content=f"{state['task']}\n\nHere is my plan:\n\n{state['plan']}")])
+    return {"draft": response.content, "revision_number": state.get("revision_number", 1) + 1}
+
+def should_continue(state: EssayState):           # the stopping rule
+    return END if state["revision_number"] > state["max_revisions"] else "reflect"
+```
+
+```python
+builder = StateGraph(EssayState)
+for name, fn in [("planner", plan_node), ("research_plan", research_plan_node),
+                 ("generate", generation_node), ("reflect", reflection_node),
+                 ("research_critique", research_critique_node)]:
+    builder.add_node(name, fn)
+builder.set_entry_point("planner")
+builder.add_edge("planner", "research_plan")
+builder.add_edge("research_plan", "generate")
+builder.add_conditional_edges("generate", should_continue, {END: END, "reflect": "reflect"})
+builder.add_edge("reflect", "research_critique")
+builder.add_edge("research_critique", "generate")
+graph = builder.compile()
+```
+
+With `max_revisions = 2`, the agent writes a draft, critiques it, researches what the critique asks for, and rewrites: two drafts in total. `draft` and `critique` have **no reducer** on purpose, so each new version replaces the previous one.
+
+---
+
+### [Level 4]{.level-tag} Memory and a human in the loop
+
+**Idea:** the agent **remembers** across conversations, and **pauses** for a person before sensitive steps.
+**Use it when:** the agent works for someone over time, or its actions have consequences.
+
+Two independent additions to any graph from the previous levels:
+
+- **Memory**: compile with a **checkpointer** to keep each conversation, and give the agent a **store** to remember facts, examples and instructions across conversations. → [Agent memory](../memory/memory-overview.qmd)
+- **Human in the loop**: compile with `interrupt_before=[…]`, or call `interrupt()` inside a node, to stop and wait for approval or edits. → [Controlling a running agent](../control/controlling-a-running-agent.qmd)
+
+**Example:** the email assistant from Level 2 learns that *"Jim is my friend"* (semantic memory), that emails like Tom's should be ignored (episodic memory), and to always sign *John Doe* (procedural memory), without any code change.
+
+```python
+email_agent = builder.compile(
+    checkpointer=checkpointer,              # short-term memory, per thread
+    store=store,                            # long-term memory, across threads
+    interrupt_before=["response_agent"],    # a human approves before the agent replies
+)
+```
+
+---
+
+### [Level 5]{.level-tag .boss} The full system
+
+**Idea:** combine every level in one agent.
+
+**Example: the agent behind this website.** Given a URL, it **routes** the content to the right page (Level 2), **researches** what a learner would miss and **critiques** its draft in a bounded loop (Level 3), **pauses** for approval of its plan, and reads its writing rules from a file, a form of procedural memory (Level 4). Its code is documented step by step in the [Carnet IA agent README](https://github.com/SalouaAifqui/carnet-ia/blob/main/agent/README.md).
+
+```{mermaid}
+flowchart LR
+  F[fetch] --> R[read] --> C{{categorize<br/>Level 2}}
+  C --> G[research<br/>Level 3] --> O[outline]
+  O --> H{{"⏸ approval<br/>Level 4"}}
+  H --> W[write] --> V[review<br/>Level 3]
+  V -- fix --> W
+  V -- ok --> P[pull request]
+```
+
+::: {.callout-tip}
+## Remember
+- Three blocks do everything: **state** (with reducers), **nodes**, **edges** (fixed, conditional, or `Command`).
+- A node returns **only the fields it changes**.
+- Climb the levels only as needed: tool loop → router → plan & reflect → memory & human → full system.
+- Structured output turns model decisions into data your graph can route on.
+- Every loop needs a stopping rule.
+:::
+
+## Sources {.sources}
+
+- [AI Agents in LangGraph](https://learn.deeplearning.ai/courses/ai-agents-in-langgraph/), DeepLearning.AI × LangChain: lessons [LangGraph Components](https://learn.deeplearning.ai/courses/ai-agents-in-langgraph/lesson/l7rgk/langgraph-components) and [Essay Writer](https://learn.deeplearning.ai/courses/ai-agents-in-langgraph/lesson/m0x4m/essay-writer)
+- [Long-Term Agentic Memory with LangGraph](https://www.deeplearning.ai/courses/long-term-agentic-memory-with-langgraph), DeepLearning.AI × LangChain: lesson [Baseline Email Assistant](https://learn.deeplearning.ai/courses/long-term-agentic-memory-with-langgraph/lesson/a0k5a/baseline-email-assistant)
+- [Carnet IA agent](https://github.com/SalouaAifqui/carnet-ia/tree/main/agent), source code

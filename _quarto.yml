@@ -2,74 +2,86 @@ project:
   type: website
   output-dir: _site
   render:
-    - "*.qmd"
-    - "**/*.qmd"
-    - "!agent/"
-
+  - '*.qmd'
+  - '**/*.qmd'
+  - '!agent/'
 website:
-  title: "Carnet IA"
-  description: "Notes on how LLMs work, how to build agents, how to keep them safe, and how to use AI every day."
-  site-url: "https://salouaaifqui.github.io/carnet-ia/"
-  repo-url: "https://github.com/SalouaAifqui/carnet-ia"
+  title: Carnet IA
+  description: Notes on how LLMs work, how to build agents, how to keep them safe, and how to use AI every day.
+  site-url: https://salouaaifqui.github.io/carnet-ia/
+  repo-url: https://github.com/SalouaAifqui/carnet-ia
   favicon: assets/logo.svg
   search: true
   page-navigation: true
   bread-crumbs: true
   navbar:
     logo: assets/logo.svg
-    title: "Carnet IA"
+    title: Carnet IA
     left:
-      - href: llms/index.qmd
-        text: LLMs
-      - href: agents/index.qmd
-        text: Agents
-      - href: guardrails/index.qmd
-        text: Guardrails
-      - href: daily-use/index.qmd
-        text: Daily Use
+    - href: llms/index.qmd
+      text: LLMs
+    - href: agents/index.qmd
+      text: Agents
+    - href: guardrails/index.qmd
+      text: Guardrails
+    - href: daily-use/index.qmd
+      text: Daily Use
     right:
-      - icon: github
-        href: "https://github.com/SalouaAifqui/carnet-ia"
-        aria-label: GitHub
+    - icon: github
+      href: https://github.com/SalouaAifqui/carnet-ia
+      aria-label: GitHub
   sidebar:
-    - id: agents
-      title: "Agents"
-      style: docked
+  - id: agents
+    title: Agents
+    style: docked
+    contents:
+    - agents/index.qmd
+    - section: Foundations
       contents:
-        - agents/index.qmd
-        - section: "AI Agents in LangGraph"
-          contents: "agents/langgraph/*.qmd"
-        - section: "Long-Term Agentic Memory"
-          contents: "agents/long-term-memory/*.qmd"
-    - id: llms
-      title: "LLMs"
-      style: docked
+      - agents/foundations/what-is-an-agent.qmd
+      - agents/foundations/building-agents-with-langgraph.qmd
+      - agents/foundations/tools-and-agentic-search.qmd
+    - section: Memory
       contents:
-        - llms/index.qmd
-    - id: guardrails
-      title: "Guardrails"
-      style: docked
+      - agents/memory/memory-overview.qmd
+      - agents/memory/short-term-memory.qmd
+      - agents/memory/long-term-memory.qmd
+    - section: Control
       contents:
-        - guardrails/index.qmd
-    - id: daily-use
-      title: "Daily Use"
-      style: docked
-      contents:
-        - daily-use/index.qmd
+      - agents/control/controlling-a-running-agent.qmd
+  - id: llms
+    title: LLMs
+    style: docked
+    contents:
+    - llms/index.qmd
+  - id: guardrails
+    title: Guardrails
+    style: docked
+    contents:
+    - guardrails/index.qmd
+  - id: daily-use
+    title: Daily Use
+    style: docked
+    contents:
+    - daily-use/index.qmd
   page-footer:
-    left: "Carnet IA · notes written while learning"
+    left: Carnet IA · notes written while learning
     right:
-      - icon: github
-        href: "https://github.com/SalouaAifqui/carnet-ia"
-        aria-label: GitHub
-
+    - icon: github
+      href: https://github.com/SalouaAifqui/carnet-ia
+      aria-label: GitHub
 format:
   html:
     theme:
-      light: [cosmo, assets/theme.scss]
-      dark: [cosmo, assets/theme.scss, assets/theme-dark.scss]
+      light:
+      - cosmo
+      - assets/theme.scss
+      dark:
+      - cosmo
+      - assets/theme.scss
+      - assets/theme-dark.scss
     toc: true
-    toc-title: "On this page"
+    toc-title: On this page
     code-copy: true
     code-overflow: wrap
     highlight-style: dracula

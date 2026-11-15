@@ -164,14 +164,14 @@ def test_replan_redoes_the_plan_with_instructions():
 
 def test_update_existing_page():
     root = make_site_copy()
-    target = "agents/langgraph/02-langgraph-components.qmd"
+    target = "agents/foundations/building-agents-with-langgraph.qmd"
     old_front_matter, old_body = split_front_matter((root / target).read_text())
     _, old_sources = split_sources(old_body)
     notes = SourceNotes(title="LangGraph docs: Graph API", content_type="documentation",
                         summary="Nodes and edges.", key_points=["Nodes", "Edges"])
-    route = Route(reasoning="Same subject.", action="update", topic="agents", folder="langgraph",
-                  folder_title="AI Agents in LangGraph", target_path=target,
-                  title="LangGraph Components", subtitle="...")
+    route = Route(reasoning="Same concept.", action="update", topic="agents", folder="foundations",
+                  folder_title="Foundations", target_path=target,
+                  title="Building agents with LangGraph", subtitle="...")
     model = FakeModel(
         structured={SourceNotes: [notes], Route: [route], ResearchPlan: [ResearchPlan(gaps=[], queries=[])],
                     PageOutline: [OUTLINE]},
