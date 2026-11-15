@@ -28,8 +28,6 @@ website:
       - href: daily-use/index.qmd
         text: Daily Use
     right:
-      - href: add-source.qmd
-        text: "+ Add a source"
       - icon: github
         href: "https://github.com/SalouaAifqui/carnet-ia"
         aria-label: GitHub
