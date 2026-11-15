@@ -8,9 +8,7 @@ listing:
     type: grid
     grid-columns: 2
     sort: "lesson"
-    fields: [lesson, title, subtitle]
-    field-display-names:
-      lesson: "Lesson"
+    fields: [title, subtitle]
 ---
 
 ## AI Agents in LangGraph

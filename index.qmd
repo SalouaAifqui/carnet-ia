@@ -8,9 +8,7 @@ listing:
     grid-columns: 3
     sort: "lesson desc"
     max-items: 3
-    fields: [lesson, title, subtitle]
-    field-display-names:
-      lesson: "Lesson"
+    fields: [title, subtitle]
 ---
 
 ::: {.home-hero}
