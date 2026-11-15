@@ -19,7 +19,11 @@ concurrency:
 
 jobs:
   plan:
-    if: github.event_name == 'issues' && github.event.label.name == 'source'
+    # Only when YOU add the label (the site is public: strangers must not spend your API credits).
+    if: >-
+      github.event_name == 'issues' &&
+      github.event.label.name == 'source' &&
+      github.event.sender.login == github.repository_owner
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
