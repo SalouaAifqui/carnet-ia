@@ -18,7 +18,6 @@ Topics:
 - evaluation: assessing LLMs (folder `llms`) and AI agents (folder `agents`): benchmarks, test sets,
   metrics, LLM-as-a-judge, trajectory and tool-use evaluation.
 - guardrails: safeguards for AI systems: validation, safety, what each guardrail protects against, implementation.
-- daily-use: practical tips for using AI apps day to day.
 
 Rules:
 - The site is organised by CONCEPT (e.g. agents/foundations, agents/memory, agents/control),

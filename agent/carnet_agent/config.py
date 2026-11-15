@@ -25,7 +25,6 @@ TOPICS = {
     "agents": ("Agents", "t-agents"),
     "evaluation": ("Evaluation", "t-eval"),
     "guardrails": ("Guardrails", "t-guardrails"),
-    "daily-use": ("Daily Use", "t-daily"),
 }
 
 # The site never cites itself: these URLs are dropped from search results and sources.

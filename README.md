@@ -8,6 +8,5 @@ A learning notebook on applied AI, published at https://salouaaifqui.github.io/c
 | `agents/` | Agent implementation and frameworks (e.g. `agents/langgraph/`) |
 | `evaluation/` | Assessing LLMs and AI agents |
 | `guardrails/` | Guardrails: what they protect against and how to implement them |
-| `daily-use/` | Practical tips for using AI apps every day |
 
 Each note lives in a subfolder of its topic (a course or a theme). The site is built with [Quarto](https://quarto.org), and every push to `main` rebuilds and publishes it through GitHub Actions.

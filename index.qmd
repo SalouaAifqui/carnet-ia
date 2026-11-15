@@ -11,7 +11,6 @@ listing:
       - "llms/*/*.qmd"
       - "evaluation/*/*.qmd"
       - "guardrails/*/*.qmd"
-      - "daily-use/*/*.qmd"
     type: grid
     grid-columns: 3
     sort: ["date desc", "lesson desc"]
@@ -23,7 +22,7 @@ listing:
 <section class="hero">
   <p class="hero-eyebrow">A learning notebook on applied AI</p>
   <h1 class="hero-title">Understand the models.<br>Build with them. Use them well.</h1>
-  <p class="hero-lede">Notes, code and practical tips, written while learning: how LLMs work, how to build agents, how to evaluate them, how to keep them safe, and how to use AI every day.</p>
+  <p class="hero-lede">Notes, code and practical tips, written while learning: how LLMs work, how to build agents, how to evaluate them, and how to keep them safe.</p>
 </section>
 
 <section class="topics" aria-label="Topics">
@@ -63,14 +62,6 @@ listing:
     <span class="topic-tags"><span>Validation</span><span>Safety</span><span>Implementation</span></span>
   </a>
 
-  <a class="topic-card t-daily" href="daily-use/index.html">
-    <span class="topic-icon" aria-hidden="true">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2 4.5 13.5H12L11 22l8.5-11.5H12z"/></svg>
-    </span>
-    <span class="topic-name">Daily Use</span>
-    <span class="topic-desc">Tips and shortcuts to get more out of AI apps every day: work faster, and look like a wizard doing it.</span>
-    <span class="topic-tags"><span>Apps</span><span>Shortcuts</span><span>Prompts</span></span>
-  </a>
 </section>
 ```
 
