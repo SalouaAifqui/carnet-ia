@@ -1,23 +1,70 @@
 ---
-title: "Carnet IA"
+pagetitle: "Carnet IA"
+body-classes: home
+sidebar: false
 toc: false
+page-layout: full
 listing:
-  - id: latest-notes
-    contents: "notes/langgraph/*.qmd"
+  - id: latest
+    contents:
+      - "agents/*/*.qmd"
+      - "llms/*/*.qmd"
+      - "guardrails/*/*.qmd"
+      - "daily-use/*/*.qmd"
     type: grid
     grid-columns: 3
-    sort: "lesson desc"
+    sort: ["date desc", "lesson desc"]
     max-items: 3
-    fields: [title, subtitle]
+    fields: [categories, title, subtitle]
 ---
 
-::: {.home-hero}
-A notebook kept while learning to build AI agents: one note per lesson, with the key ideas, working code and a short quiz. Longer articles will follow.
+```{=html}
+<section class="hero">
+  <p class="hero-eyebrow">A learning notebook on applied AI</p>
+  <h1 class="hero-title">Understand the models.<br>Build with them. Use them well.</h1>
+  <p class="hero-lede">Notes, code and practical tips, written while learning: how LLMs work, how to build agents, how to keep them safe, and how to use AI every day.</p>
+</section>
+
+<section class="topics" aria-label="Topics">
+  <a class="topic-card t-llms" href="llms/index.html">
+    <span class="topic-icon" aria-hidden="true">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="5" width="14" height="14" rx="3"/><path d="M9 2v3M15 2v3M9 19v3M15 19v3M2 9h3M2 15h3M19 9h3M19 15h3"/><path d="M9.5 12h5M12 9.5v5"/></svg>
+    </span>
+    <span class="topic-name">LLMs</span>
+    <span class="topic-desc">How large language models work, foundation vs open-source models, and side-by-side comparisons.</span>
+    <span class="topic-tags"><span>Foundation models</span><span>Open-source models</span></span>
+  </a>
+
+  <a class="topic-card t-agents" href="agents/index.html">
+    <span class="topic-icon" aria-hidden="true">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="5" cy="12" r="2.5"/><circle cx="19" cy="5" r="2.5"/><circle cx="19" cy="19" r="2.5"/><path d="M7.3 11 16.8 6.1M7.3 13l9.5 4.9M19 7.5v9"/></svg>
+    </span>
+    <span class="topic-name">Agents</span>
+    <span class="topic-desc">Implementing agents and the frameworks behind them: tools, state, memory, human in the loop.</span>
+    <span class="topic-tags"><span>LangGraph</span><span>ReAct</span><span>Tools</span></span>
+  </a>
+
+  <a class="topic-card t-guardrails" href="guardrails/index.html">
+    <span class="topic-icon" aria-hidden="true">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2.5 4.5 5.5v6c0 4.7 3.2 8.4 7.5 10 4.3-1.6 7.5-5.3 7.5-10v-6z"/><path d="m8.8 12 2.2 2.2 4.4-4.4"/></svg>
+    </span>
+    <span class="topic-name">Guardrails</span>
+    <span class="topic-desc">The safeguards that keep AI systems on track: what each one protects against and how to implement it.</span>
+    <span class="topic-tags"><span>Validation</span><span>Safety</span><span>Implementation</span></span>
+  </a>
+
+  <a class="topic-card t-daily" href="daily-use/index.html">
+    <span class="topic-icon" aria-hidden="true">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2 4.5 13.5H12L11 22l8.5-11.5H12z"/></svg>
+    </span>
+    <span class="topic-name">Daily Use</span>
+    <span class="topic-desc">Tips and shortcuts to get more out of AI apps every day: work faster, and look like a wizard doing it.</span>
+    <span class="topic-tags"><span>Apps</span><span>Shortcuts</span><span>Prompts</span></span>
+  </a>
+</section>
+```
+
+## Latest notes {.section-title}
+
+::: {#latest}
 :::
-
-## Latest notes
-
-::: {#latest-notes}
-:::
-
-[All notes →](notes/index.qmd)

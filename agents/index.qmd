@@ -1,0 +1,29 @@
+---
+title: "Agents"
+body-classes: "topic t-agents"
+toc: false
+listing:
+  - id: langgraph
+    contents: "langgraph/*.qmd"
+    type: grid
+    grid-columns: 2
+    sort: "lesson"
+    fields: [title, subtitle]
+---
+
+::: {.topic-hero}
+[Topic]{.topic-kicker}
+
+# Agents: implementation & frameworks {.topic-h1}
+
+How to build agents around LLMs, from a hand-written loop to full frameworks: tools, state, memory, streaming and human control.
+:::
+
+## AI Agents in LangGraph {.group-title}
+
+::: {.group-meta}
+Course by DeepLearning.AI and LangChain · 6 lessons · [Course page](https://learn.deeplearning.ai/courses/ai-agents-in-langgraph/)
+:::
+
+::: {#langgraph}
+:::

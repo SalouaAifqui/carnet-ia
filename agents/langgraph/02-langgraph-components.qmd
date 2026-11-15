@@ -2,12 +2,15 @@
 title: "LangGraph Components"
 subtitle: "The same agent, rebuilt as a graph of nodes, edges and shared state."
 lesson: 2
+course: "AI Agents in LangGraph"
+aliases:
+  - /notes/langgraph/02-langgraph-components.html
 date: 2026-11-15
-categories: [LangGraph, agents, tools]
+categories: [Agents, LangGraph]
 ---
 
 ::: {.lesson-meta}
-[Lesson 2]{.pill} [AI Agents in LangGraph]{.pill .muted}
+[Agents]{.pill .t-agents} [AI Agents in LangGraph · Lesson 2]{.pill .muted}
 :::
 
 ::: {.tldr}

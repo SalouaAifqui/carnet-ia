@@ -1,0 +1,25 @@
+---
+title: "LLMs"
+body-classes: "topic t-llms"
+toc: false
+---
+
+::: {.topic-hero}
+[Topic]{.topic-kicker}
+
+# LLMs {.topic-h1}
+
+How large language models work under the hood, how the main models compare, and how to choose between them.
+:::
+
+## Foundation models {.group-title}
+
+::: {.empty-state}
+The large proprietary models (GPT, Claude, Gemini…): how they are trained, what they're good at, and comparative dashboards. **First notes coming soon.**
+:::
+
+## Open-source models {.group-title}
+
+::: {.empty-state}
+Open-weight models you can run or fine-tune yourself (Llama, Mistral, Qwen…), and how they stack up. **First notes coming soon.**
+:::

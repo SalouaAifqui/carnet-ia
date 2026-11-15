@@ -1,0 +1,17 @@
+---
+title: "Guardrails"
+body-classes: "topic t-guardrails"
+toc: false
+---
+
+::: {.topic-hero}
+[Topic]{.topic-kicker}
+
+# Guardrails {.topic-h1}
+
+The safeguards that keep AI systems reliable and safe: what each guardrail protects against, how it works, and how to implement it.
+:::
+
+::: {.empty-state}
+Lessons on the different kinds of guardrails, with explanations and implementation examples. **First notes coming soon.**
+:::

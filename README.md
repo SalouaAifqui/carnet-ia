@@ -1,8 +1,12 @@
 # Carnet IA
 
-Study notes and articles on building AI agents, published at https://salouaaifqui.github.io/carnet-ia/
+A learning notebook on applied AI, published at https://salouaaifqui.github.io/carnet-ia/
 
-- `notes/`: one note per lesson, grouped by course
-- `articles/`: longer pieces meant to be shared
+| Folder | Topic |
+|---|---|
+| `llms/` | How LLMs work: foundation models, open-source models, comparisons |
+| `agents/` | Agent implementation and frameworks (e.g. `agents/langgraph/`) |
+| `guardrails/` | Guardrails: what they protect against and how to implement them |
+| `daily-use/` | Practical tips for using AI apps every day |
 
-The site is built with [Quarto](https://quarto.org). Every push to `main` rebuilds and publishes it through GitHub Actions (`.github/workflows/publish.yml`).
+Each note lives in a subfolder of its topic (a course or a theme). The site is built with [Quarto](https://quarto.org), and every push to `main` rebuilds and publishes it through GitHub Actions.

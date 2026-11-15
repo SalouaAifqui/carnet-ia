@@ -2,12 +2,15 @@
 title: "Human in the Loop"
 subtitle: "Pause before actions, approve or edit them, and travel back in time."
 lesson: 5
+course: "AI Agents in LangGraph"
+aliases:
+  - /notes/langgraph/05-human-in-the-loop.html
 date: 2026-11-15
-categories: [LangGraph, human-in-the-loop, state]
+categories: [Agents, LangGraph]
 ---
 
 ::: {.lesson-meta}
-[Lesson 5]{.pill} [AI Agents in LangGraph]{.pill .muted}
+[Agents]{.pill .t-agents} [AI Agents in LangGraph · Lesson 5]{.pill .muted}
 :::
 
 ::: {.tldr}

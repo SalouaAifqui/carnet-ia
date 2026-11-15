@@ -2,12 +2,15 @@
 title: "Persistence and Streaming"
 subtitle: "Memory across calls with checkpointers, and live output with streaming."
 lesson: 4
+course: "AI Agents in LangGraph"
+aliases:
+  - /notes/langgraph/04-persistence-and-streaming.html
 date: 2026-11-15
-categories: [LangGraph, memory, streaming]
+categories: [Agents, LangGraph]
 ---
 
 ::: {.lesson-meta}
-[Lesson 4]{.pill} [AI Agents in LangGraph]{.pill .muted}
+[Agents]{.pill .t-agents} [AI Agents in LangGraph · Lesson 4]{.pill .muted}
 :::
 
 ::: {.tldr}

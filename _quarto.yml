@@ -4,32 +4,58 @@ project:
 
 website:
   title: "Carnet IA"
-  description: "Study notes and articles on building AI agents."
+  description: "Notes on how LLMs work, how to build agents, how to keep them safe, and how to use AI every day."
   site-url: "https://salouaaifqui.github.io/carnet-ia/"
   repo-url: "https://github.com/SalouaAifqui/carnet-ia"
+  favicon: assets/logo.svg
   search: true
   page-navigation: true
+  bread-crumbs: true
   navbar:
+    logo: assets/logo.svg
+    title: "Carnet IA"
     left:
-      - href: index.qmd
-        text: Home
-      - href: notes/index.qmd
-        text: Notes
-      - href: articles/index.qmd
-        text: Articles
+      - href: llms/index.qmd
+        text: LLMs
+      - href: agents/index.qmd
+        text: Agents
+      - href: guardrails/index.qmd
+        text: Guardrails
+      - href: daily-use/index.qmd
+        text: Daily Use
     right:
       - icon: github
         href: "https://github.com/SalouaAifqui/carnet-ia"
         aria-label: GitHub
   sidebar:
-    - title: "Notes"
+    - id: agents
+      title: "Agents"
       style: docked
       contents:
-        - notes/index.qmd
+        - agents/index.qmd
         - section: "AI Agents in LangGraph"
-          contents: "notes/langgraph/*.qmd"
+          contents: "agents/langgraph/*.qmd"
+    - id: llms
+      title: "LLMs"
+      style: docked
+      contents:
+        - llms/index.qmd
+    - id: guardrails
+      title: "Guardrails"
+      style: docked
+      contents:
+        - guardrails/index.qmd
+    - id: daily-use
+      title: "Daily Use"
+      style: docked
+      contents:
+        - daily-use/index.qmd
   page-footer:
-    center: "Carnet IA · notes written while learning"
+    left: "Carnet IA · notes written while learning"
+    right:
+      - icon: github
+        href: "https://github.com/SalouaAifqui/carnet-ia"
+        aria-label: GitHub
 
 format:
   html:

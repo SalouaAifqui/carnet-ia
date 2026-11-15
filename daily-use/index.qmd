@@ -1,0 +1,17 @@
+---
+title: "Daily Use"
+body-classes: "topic t-daily"
+toc: false
+---
+
+::: {.topic-hero}
+[Topic]{.topic-kicker}
+
+# LLMs for daily use {.topic-h1}
+
+Practical tips to get more out of AI apps every day: faster workflows, clever shortcuts, and tricks that make people ask "wait, how did you do that?"
+:::
+
+::: {.empty-state}
+Short, practical tips for the AI apps you already use. **First tips coming soon.**
+:::

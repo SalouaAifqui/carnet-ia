@@ -2,12 +2,15 @@
 title: "Build an Agent from Scratch"
 subtitle: "The ReAct loop in plain Python: think, act, observe, repeat."
 lesson: 1
+course: "AI Agents in LangGraph"
+aliases:
+  - /notes/langgraph/01-agent-from-scratch.html
 date: 2026-11-15
-categories: [agents, ReAct, Python]
+categories: [Agents, LangGraph]
 ---
 
 ::: {.lesson-meta}
-[Lesson 1]{.pill} [AI Agents in LangGraph]{.pill .muted}
+[Agents]{.pill .t-agents} [AI Agents in LangGraph · Lesson 1]{.pill .muted}
 :::
 
 ::: {.tldr}

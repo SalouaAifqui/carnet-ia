@@ -2,12 +2,15 @@
 title: "Agentic Search Tools"
 subtitle: "Why agents need search built for machines, not for people."
 lesson: 3
+course: "AI Agents in LangGraph"
+aliases:
+  - /notes/langgraph/03-agentic-search.html
 date: 2026-11-15
-categories: [search, tools, Tavily]
+categories: [Agents, LangGraph]
 ---
 
 ::: {.lesson-meta}
-[Lesson 3]{.pill} [AI Agents in LangGraph]{.pill .muted}
+[Agents]{.pill .t-agents} [AI Agents in LangGraph · Lesson 3]{.pill .muted}
 :::
 
 ::: {.tldr}
