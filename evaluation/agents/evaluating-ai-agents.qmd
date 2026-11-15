@@ -7,6 +7,7 @@ categories:
 - Evaluating agents
 aliases:
 - /evaluation/agent-evaluation/evaluating-ai-agents.html
+date-modified: '2026-11-15'
 ---
 
 ::: {.lesson-meta}
@@ -14,7 +15,7 @@ aliases:
 :::
 
 ::: {.tldr}
-AI agents need evaluation methods that go beyond traditional software testing. Their behavior is more open-ended, so you need observability: collect and visualize traces of each step, inspect the agent’s components, and judge both the final answer and the path taken to get there. The workflow on this page is: evaluate parts of the agent, evaluate full trajectories, then run structured experiments to improve and monitor the system.
+AI agents need evaluation methods that go beyond traditional software testing. Their behavior is open-ended, so you need observability: collect and visualize traces of each step, inspect component behavior, and judge both the final answer and the path taken to get there. The workflow on this page is: evaluate parts of the agent, evaluate full trajectories, turn recurring failures into a reusable test set, then run structured experiments and monitor the system over time.
 :::
 
 ```{mermaid}
@@ -27,7 +28,8 @@ flowchart TD
     C --> E[Choose evaluator<br/>code, LLM-as-a-judge, human]
     J --> E
     E --> X[Structured experiment]
-    X --> M[Production monitoring]
+    X --> B[Reusable benchmark<br/>from recurring failures]
+    B --> M[Production monitoring]
     M --> T
 ```
 
@@ -68,9 +70,15 @@ That means output-only checks are not enough. You also need to ask:
 - Did the agent use the right tool?
 - Did it route the request well?
 - Did it follow a useful path?
+- Did instructions hold across the whole conversation?
+- Did it actually complete the task in the downstream system?
 - Did it waste steps or loop?
 
-So the evaluation method must match the kind of judgment you need. A rule that can be checked exactly should use a code-based evaluator. A semantic judgment should use an LLM or a human.
+So the evaluation method must match the kind of judgment you need. A rule that can be checked exactly should use a code-based evaluator. A semantic judgment should use an LLM judge or a human.
+
+::: {.example}
+A booking agent says, “Your reservation is confirmed.” One run used the right tool and created the booking in the downstream system. Another run produced the same text but never created the reservation. A good evaluation must fail the second run even though the final answer looks correct.
+:::
 
 ## Break the agent into evaluable parts
 
@@ -85,12 +93,24 @@ AI agents are often built from parts such as:
 Testing these parts separately makes debugging faster. If the final answer is wrong, you do not need to guess. You can check which component made the wrong decision.
 
 ::: {.example}
-If a router sends a search request to the wrong tool, a router test can catch that without waiting for the full agent to fail.
+A text-to-SQL agent gets a query wrong because it chose the wrong table. That is a routing or planning issue. If it chose the right table but built the wrong SQL, that is a skill issue. Separate tests make that difference visible.
 :::
 
 ## Use traces for observability
 
 A trace is a record of the steps taken by an agent during execution. Traces make the agent observable. That means you can inspect what happened step by step.
+
+A concrete workflow looks like this: a user asks, “Find the Q3 invoice total for Acme.” The trace shows the router chose a finance tool, the tool returned no rows, the agent asked a follow-up question, and then it retried with a date filter. If the final answer is wrong, the trace shows where the chain broke.
+
+The W&B debugging course adds a practical layer here:
+- instrument the notebook;
+- log runs and artifacts;
+- version data and models;
+- trace prompts and responses in complex interactions.
+
+That kind of workflow helps you reproduce what happened and compare runs over time. W&B also distinguishes between tools for different jobs:
+- **Weave Traces** for inspecting and debugging LLMs;
+- **Evaluations** for rigorous evaluation of GenAI and agentic systems.
 
 Traces help you see:
 
@@ -98,12 +118,13 @@ Traces help you see:
 - routing choices,
 - repeated loops,
 - missing information,
-- unnecessary steps.
+- unnecessary steps,
+- prompt and response history in multi-step interactions.
 
 This is the basis for debugging agent behavior. Instead of only reading the final response, you inspect the path that produced it.
 
 ::: {.example}
-Capture the agent’s inputs, tool calls, and outputs at each step, then review the sequence to find where the run went off track.
+In a traced notebook, a run shows the prompt, the model response, and two tool calls. The first tool call used the wrong search index. By looking at the trace, you can fix the routing logic instead of guessing from the final answer alone.
 :::
 
 ## Choose the right evaluator
@@ -113,17 +134,43 @@ Different kinds of judgment need different evaluators.
 | Evaluator | Best for | Why it fits |
 |---|---|---|
 | Code-based evaluator | Exact rules | It is precise and repeatable. |
-| LLM-as-a-judge | Meaning, quality, relevance | It can handle open-ended judgments. |
-| Human annotations | Ambiguous or expert tasks | People can review edge cases and nuance. |
+| LLM judge | Meaning, quality, relevance | It can handle open-ended judgments. |
+| Human review | Ambiguous or expert tasks | People can review edge cases and nuance. |
 
 A code-based evaluator uses explicit program logic or rules to score behavior. It is best when the criterion is clear, such as whether a field exists or a format is valid.
 
-LLM-as-a-judge means using an LLM to evaluate another model’s output or decisions. It is useful when the task needs semantic judgment, like whether an answer is relevant or helpful.
+An LLM judge is an LLM used as an evaluator for another model’s output or behavior. It is useful when the task needs semantic judgment, like whether an answer is relevant or helpful.
 
 Human annotations are evaluations made by people. Use them when the task is ambiguous, high-stakes, or needs expert review.
 
+The trusted-evaluator workflow is: build a code check first, add an LLM judge where meaning matters, then validate that judge before you rely on it. The agentic-applications course recommends checking judge reliability with **precision, recall, and Cohen’s kappa**. That tells you whether the judge agrees with trusted labels often enough to use it in a benchmark or CI gate.
+
+::: {.callout-warning}
+## Watch out
+
+An unvalidated LLM judge can look confident while scoring inconsistently. Validate the judge before you rely on it, especially if you will compare versions or gate releases with its scores.
+:::
+
 ::: {.example}
-If you want to check whether an answer mentions the correct policy detail, an LLM-based judgment may work better than a strict string match.
+Suppose you want to score whether a support reply is safe and complete. A code rule can verify that a required disclaimer appears. An LLM judge can then score whether the explanation is actually helpful. Before using that judge in CI, compare its verdicts with trusted labels and measure precision, recall, and Cohen’s kappa.
+:::
+
+## Build evaluators you can trust
+
+The source emphasizes that evaluators themselves need validation. That is especially important for LLM judges. If the judge is unreliable, the score is not trustworthy.
+
+A practical setup is to combine evaluators:
+
+| Order | What it checks | Why start here |
+|---|---|---|
+| 1 | Code-based rules | Fast, exact, easy to rerun |
+| 2 | LLM judge | Handles meaning and nuance |
+| 3 | Human review | Resolves ambiguous or high-stakes cases |
+
+You can also validate an LLM judge by replaying known cases and comparing its verdicts with trusted labels. In red-teaming workflows, this can include freezing expected verdicts and checking that evaluator behavior does not regress in CI.
+
+::: {.example}
+A team builds a judge for harmful-output detection. They first check obvious policy violations with rules, then ask an LLM judge to score borderline cases, then sample results for human review. Before shipping, they replay a frozen set of attack prompts to make sure the judge still behaves the same way.
 :::
 
 ## Test router and skill decisions with examples from traces
@@ -137,7 +184,19 @@ For skill tests, check whether the selected action was performed well.
 This separates “did the agent choose the right thing?” from “did the agent do it well?” That distinction is important when you debug agents.
 
 ::: {.example}
-A trace shows that the agent called a calculator when it should have searched a document. That trace can become a router test case.
+A trace shows that the agent called a calculator when it should have searched a document. That trace can become a router test case. The next time the same request appears, you can check whether the agent now chooses the search tool.
+:::
+
+::: {.steps}
+1. **Find a recurring failure**: Read traces and group the same mistake, such as the wrong tool call or a skipped step.
+2. **Turn it into a reusable test set**: Save the request, context, and expected behavior so you can rerun it later after every change.
+3. **Change one thing**: Update the prompt, router, tool logic, or memory.
+4. **Rerun the same cases**: Compare the new run against the old one on the same test set.
+5. **Check for regressions**: Make sure the fix helped without breaking other cases.
+:::
+
+::: {.example}
+Example from the agentic-applications course and research finding: repeated trace failures are converted into a reusable test set, then rerun after changes to verify the fix and prevent regressions.
 :::
 
 ## Evaluate full trajectories
@@ -146,53 +205,140 @@ A trajectory is the full sequence of steps from the user request to the final re
 
 This matters because an agent can be correct but inefficient. It may reach the right result after too many steps, unnecessary tool calls, or a long detour.
 
+For agentic systems, trajectory evaluation also checks whether instructions hold across a conversation and whether the task was actually completed in the downstream system. That is the core difference from output-only scoring.
+
+A useful way to think about it is to compare these two questions:
+
+| Question | What trajectory evaluation checks |
+|---|---|
+| Did the agent follow the right order? | The sequence of actions and tool calls |
+| Did it solve the task efficiently? | Step count, detours, loops |
+| Did it actually complete the task? | Downstream outcome in the system |
+| Did it obey instructions over the whole conversation? | Consistency across multiple turns |
+
 Trajectory metrics help measure that efficiency. One example is convergence score, which measures whether an agent can respond to a query in an efficient number of steps.
 
 Use trajectory metrics when you want to compare the overall behavior of two agent versions.
 
 ::: {.example}
-Two agents both answer correctly, but one reaches the answer in fewer steps. The one with the better trajectory score is usually the better design.
+A travel assistant gets the right hotel recommendation in both runs. In the first run, it asks for the city, checks availability, and confirms the booking. In the second run, it loops through the same search twice and never completes the reservation. The second trajectory should score worse even though the final text sounds fine.
 :::
 
 ## Run structured experiments to improve the agent
 
 Structured experiments help you improve prompts, models, or agent logic. The key idea is to change one variable at a time and measure the effect.
 
-A simple workflow is:
+The accuracy-improvement course gives a clear loop for this kind of work: evaluation, prompting, self-reflection, and fine-tuning. The course uses a text-to-SQL agent with Llama 3-8B and a custom schema as a concrete example.
 
-1. Choose one metric.
+A simple experiment loop is:
+
+1. Form a hypothesis.
 2. Change one thing, such as the prompt or model.
 3. Run the same test set.
 4. Compare the results.
+5. Keep the change only if it improves the metric and does not regress elsewhere.
 
 This is how you turn evaluation into improvement. Component tests tell you where the problem is. Trajectory metrics tell you how the whole agent behaves. Structured experiments tell you which change helped.
 
+The source also names fine-tuning methods that can follow the evaluation loop, including LoRA and memory tuning. Memory tuning is meant to embed facts into model weights to reduce hallucinations.
+
 ::: {.example}
-Compare two prompt versions on the same trace-derived test cases, then measure whether one improves router accuracy or trajectory efficiency.
+A team builds a text-to-SQL agent on Llama 3-8B. It hallucinates a column name in a custom schema. They first evaluate the failure, then improve the prompt, then add self-reflection, then fine-tune with LoRA. After each step, they rerun the same SQL test cases to see whether accuracy improved.
 :::
 
-## Use the same methods in production monitoring
+::: {.compare}
+::: {.col .bad}
+**Without a structured experiment**
 
-The same traces and evaluators used during development can also be used after deployment. That lets you monitor the agent over time.
+You edit the prompt, test one or two examples by hand, and cannot tell whether the change really helped.
+:::
+::: {.col .good}
+**With a structured experiment**
 
-Production monitoring helps you detect:
+You change one variable, rerun the same benchmark, and compare scores before and after.
+:::
+:::
 
-- drift,
-- regressions,
-- performance drops,
-- new failure patterns.
+## Use CI and staged evals for LLM applications
 
-This makes evaluation a continuous loop. You do not test once and stop. You keep collecting traces, scoring behavior, and improving the system as conditions change.
+Automated testing for LLMOps adds another layer: continuous integration, or CI. CI means testing changes automatically as they are made so problems are caught early.
+
+The source is specific about two kinds of evaluation here:
+
+| Eval type | Best stage | Example use |
+|---|---|---|
+| Rules-based tests | Early, exact checks | Format, required fields, simple safety rules |
+| Model-graded evals | Later, semantic checks | Relevance, helpfulness, harmfulness, hallucination-like behavior |
+
+The point is not to run every test everywhere. It is to run the right evals at the right stage in the development workflow. That makes LLM development faster, safer, and more efficient.
+
+::: {.example}
+A pull request changes a support prompt. The CI pipeline first runs rules-based tests to check the output format and block obvious policy violations. Then it runs model-graded evals on a smaller set of cases to judge helpfulness and harmfulness before the change is merged.
+:::
+
+::: {.steps}
+1. **Add a fast rule check**: Run exact tests on every change.
+2. **Add a model-graded eval**: Score semantic quality with an evaluation model.
+3. **Choose stages**: Run cheap checks early and heavier checks later.
+4. **Gate changes**: Block merges when evals fail.
+5. **Repeat on every update**: Keep regressions out of the main branch.
+:::
+
+## Monitor and red-team after launch
+
+The same idea of evaluation continues after deployment. Behavior can drift, and new risks can appear.
+
+The Quality and Safety course highlights these failure modes:
+
+| Failure mode | What it looks like |
+|---|---|
+| Hallucination | The agent invents facts |
+| Prompt injection | A malicious instruction changes behavior |
+| Jailbreak | A prompt pushes the model to bypass safety rules |
+| Toxic output | The response is offensive or harmful |
+| Data leakage | Sensitive information appears in the output |
+
+Monitoring can be passive, by watching behavior over time, or active, by sending targeted tests. Red teaming is the active side. It is adversarial testing meant to discover vulnerabilities before attackers or users do.
+
+The red-teaming course adds two practical details: it uses both manual and automated methods, and it offers an open-source Giskard-based approach. Giskard also describes a concrete workflow for AI agents:
+- synthetic data generation,
+- business annotation,
+- test execution automation,
+- continuous red teaming.
+
+Giskard’s red teaming playground also lets users manually create test cases by interacting with the LLM app and sending those cases into a test dataset.
+
+That makes monitoring an input to the next evaluation cycle. The failures become new traces and new benchmark cases.
+
+::: {.example}
+A customer-facing assistant starts showing prompt-injection failures after a new tool is added. A manual red-team prompt tries to override the system instruction, while an automated test suite replays similar attacks. The failures become new trace examples and new benchmark cases for the next iteration.
+:::
+
+```{mermaid}
+flowchart LR
+    P[Production traffic] --> D[Passive monitoring]
+    A[Targeted tests / red teaming] --> F[Find failures]
+    D --> F
+    F --> R[New traces and benchmark cases]
+    R --> E[Evaluators]
+    E --> X[Next experiment]
+    X --> P
+```
+
+::: {.example}
+To evaluate an LLM judge, a team freezes expected verdicts for a set of attack traces, replays them in CI, and checks for evaluator regressions. If the judge starts disagreeing with the frozen labels, the pipeline flags it before the judge is used again.
+:::
 
 ::: {.callout-tip}
 ## Remember
 
-- AI agents need more than traditional software tests because their behavior is open-ended.
-- Collect traces so you can inspect the agent step by step.
+- AI systems need more than traditional software tests because their behavior is open-ended.
+- Connect agent evaluation to LLM quality and safety: hallucinations, jailbreaks, prompt injections, toxic outputs, and data leakage.
+- Collect traces so you can inspect the agent step by step, including prompt and response history.
 - Break the agent into parts like routers, skills, and memory for targeted testing.
-- Use the right evaluator for the job: code, LLM-as-a-judge, or human review.
-- Test both correctness and efficiency.
-- Reuse the same evaluation methods in production monitoring.
+- Use the right evaluator for the job: code, LLM judge, or human review.
+- Reuse recurring failures as a reusable test set and rerun it after every change.
+- Keep monitoring after launch, and use red teaming to probe weaknesses proactively.
 :::
 
 ::: {.callout-warning}
@@ -202,8 +348,19 @@ This makes evaluation a continuous loop. You do not test once and stop. You keep
 - Do not use one evaluator for every task. Different judgments need different methods.
 - Do not mix component bugs with trajectory issues. Separate them when you can.
 - Do not treat evaluation as a one-time step. Agents change, and their behavior can drift over time.
+- Do not trust an LLM judge until you have checked how reliable it is.
 :::
 
 ## Sources {.sources}
 
 - [Evaluating AI Agents](https://www.deeplearning.ai/courses/evaluating-ai-agents)
+- [Quality and Safety for LLM Applications](https://www.deeplearning.ai/courses/quality-safety-llm-applications)
+- [Evaluating and Debugging Generative AI](https://www.deeplearning.ai/courses/evaluating-debugging-generative-ai)
+- [Improving Accuracy of LLM Applications](https://www.deeplearning.ai/courses/improving-accuracy-of-llm-applications)
+- [Automated Testing for LLMOps](https://www.deeplearning.ai/courses/automated-testing-llmops)
+- [Red Teaming LLM Applications](https://www.deeplearning.ai/courses/red-teaming-llm-applications)
+- [Evaluating and Improving Agentic Applications](https://www.deeplearning.ai/courses/evaluating-and-improving-agentic-applications)
+- [Evaluating and Improving Agentic Applications - DeepLearning.AI](https://learn.deeplearning.ai/courses/evaluating-and-improving-agentic-applications/lesson/jcmx7u/evaluating-trajectories)
+- [Enhanced LLM fine-tuning with Weights & Biases tools](https://wandb.ai/site/solutions/llm-fine-tuning)
+- [How to implement LLM as a Judge to test AI Agents? (Part 1) | Giskard](https://www.giskard.ai/knowledge/how-to-implement-llm-as-a-judge-to-test-ai-agents-part-1)
+- [AI Security Resources | LLM Testing & Red Teaming | Giskard](https://www.giskard.ai/knowledge)
