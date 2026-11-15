@@ -1,7 +1,16 @@
 ---
-title: "LLMs"
-body-classes: "topic t-llms"
+title: LLMs
+body-classes: topic t-llms
 toc: false
+listing:
+- id: foundations
+  contents: foundations/*.qmd
+  type: grid
+  grid-columns: 2
+  sort: date desc
+  fields:
+  - title
+  - subtitle
 ---
 
 ::: {.topic-hero}
@@ -22,4 +31,9 @@ The large proprietary models (GPT, Claude, Gemini…): how they are trained, wha
 
 ::: {.empty-state}
 Open-weight models you can run or fine-tune yourself (Llama, Mistral, Qwen…), and how they stack up. **First notes coming soon.**
+:::
+
+## Foundations {.group-title}
+
+::: {#foundations}
 :::
