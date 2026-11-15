@@ -290,3 +290,49 @@ section#sources a, h2.sources + ul a { word-break: break-word; }
 }
 .level-tag.boss { background: linear-gradient(135deg, $t-daily, $t-llms); }
 h3:has(.level-tag) { margin-top: 1.5rem; }
+
+/* ---------- visual building blocks for notes ---------- */
+
+/* Example box: ::: {.example} … ::: */
+.example {
+  position: relative; margin: 1.25rem 0 1.5rem; padding: 1.1rem 1.2rem .9rem;
+  border: 1px solid $line; border-left: 4px solid var(--t, #{$accent}); border-radius: 10px;
+  background: $paper;
+  &::before {
+    content: "Example"; display: inline-block; margin-bottom: .45rem;
+    font-size: .7rem; font-weight: 700; letter-spacing: .1em; text-transform: uppercase;
+    color: var(--t, #{$accent});
+  }
+  > :last-child { margin-bottom: 0; }
+  div.sourceCode { margin-bottom: .5rem; }
+}
+body:not(.topic) main.content { --t: #{$accent}; --t-soft: #{$accent-soft}; }
+body:has(.pill.t-llms) main.content { --t: #{$t-llms}; --t-soft: #{$t-llms-soft}; }
+body:has(.pill.t-eval) main.content { --t: #{$t-eval}; --t-soft: #{$t-eval-soft}; }
+body:has(.pill.t-guardrails) main.content { --t: #{$t-guardrails}; --t-soft: #{$t-guardrails-soft}; }
+
+/* Side-by-side comparison: ::: {.compare} with two ::: {.col} … ::: inside */
+.compare {
+  display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .9rem; margin: 1rem 0 1.5rem;
+  > .col { border: 1px solid $line; border-radius: 10px; padding: .9rem 1rem; min-width: 0; background: $paper; }
+  > .col > p:first-child strong { display: block; font-family: $headings-font-family; font-size: 1rem; margin-bottom: .2rem; }
+  > .col.bad { border-top: 3px solid $warn; }
+  > .col.good { border-top: 3px solid $ok; }
+  @media (max-width: 700px) { grid-template-columns: minmax(0, 1fr); }
+}
+
+/* Numbered steps: ::: {.steps} with a markdown numbered list inside */
+.steps > ol {
+  list-style: none; counter-reset: step; padding: 0; margin: 1rem 0 1.5rem;
+  display: flex; flex-direction: column; gap: .6rem;
+  > li {
+    counter-increment: step; position: relative; padding: .7rem 1rem .7rem 3.2rem;
+    border: 1px solid $line; border-radius: 10px; background: $paper;
+  }
+  > li::before {
+    content: counter(step); position: absolute; left: .9rem; top: .7rem;
+    width: 1.6rem; height: 1.6rem; border-radius: 50%; display: grid; place-items: center;
+    background: var(--t-soft, #{$accent-soft}); color: var(--t, #{$accent}); font-weight: 700; font-size: .8rem;
+  }
+  > li p { margin: 0; }
+}

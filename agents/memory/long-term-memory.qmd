@@ -99,7 +99,9 @@ response_agent = create_agent(
 )
 ```
 
-**Example:** the user says *"Jim is my friend"*: the agent calls `manage_memory(content="Jim is John Doe's friend")`. In a **new conversation**, *"Who is Jim?"* makes it call `search_memory(query="Jim")` and answer from the stored fact.
+::: {.example}
+The user says *"Jim is my friend"*: the agent calls `manage_memory(content="Jim is John Doe's friend")`. In a **new conversation**, *"Who is Jim?"* makes it call `search_memory(query="Jim")` and answer from the stored fact.
+:::
 
 ```python
 config = {"configurable": {"langgraph_user_id": "lance"}}
@@ -113,7 +115,9 @@ In the full email workflow, the same mechanism lets the agent save *"follow-up n
 
 **Idea:** store past decisions as **input + correct output**, and show the most similar ones to the model as **few-shot examples**. One stored example changes the behaviour for similar inputs, with no code change.
 
-**Example:** the triage step decides whether to ignore, notify or respond. Store one email with the right label:
+::: {.example}
+The triage step decides whether to ignore, notify or respond. Store one email with the right label:
+:::
 
 ```python
 import uuid

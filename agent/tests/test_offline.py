@@ -22,7 +22,9 @@ from carnet_agent.state import (Finding, Findings, OutlineSection, PageOutline, 
                                 ResearchPlan, Review, Route, Source, SourceNotes)
 
 REPO = Path(__file__).resolve().parents[2]
-LONG_BODY = "::: {.tldr}\nSummary.\n:::\n\n## Key ideas\n\n" + "Words to make the page long enough. " * 30
+LONG_BODY = ("::: {.tldr}\nSummary.\n:::\n\n```{mermaid}\nflowchart LR\n  A --> B\n```\n\n"
+             "| a | b |\n|---|---|\n| 1 | 2 |\n\n::: {.example}\n**An example.** Text.\n:::\n\n## Key ideas\n\n"
+             + "Words to make the page long enough. " * 30)
 OUTLINE = PageOutline(sections=[OutlineSection(heading="Key ideas", points=["What a guardrail is"])],
                       code_examples=["A minimal input check"])
 
@@ -223,6 +225,18 @@ def test_routing_uses_existing_sections():
     print("✓ routing: empty sections usable, titles mapped to ids, new sections flagged")
 
 
+def test_page_must_be_visual():
+    from carnet_agent.site import check_page
+    flat = "---\ntitle: T\n---\n\n" + "Just words. " * 150 + "\n\n## Sources {.sources}\n\n- [a](https://a.com)\n"
+    errors = check_page(flat, [])
+    assert any("Not visual enough" in e for e in errors) and any("No concrete example" in e for e in errors)
+    rich = "---\ntitle: T\n---\n\n" + LONG_BODY + "\n\n## Sources {.sources}\n\n- [a](https://a.com)\n"
+    assert check_page(rich, []) == []
+    broken = rich.replace("::: {.example}\n**An example.** Text.\n:::", "::: {.example}\n**An example.** Text.")
+    assert any("not closed" in e for e in check_page(broken, []))
+    print("✓ a flat page is sent back to the writer, a visual one passes")
+
+
 def test_parse_command():
     assert hitl.parse_command("/approve") == ("approve", "")
     assert hitl.parse_command("/replan put it in agents") == ("replan", "put it in agents")
@@ -233,6 +247,7 @@ def test_parse_command():
 
 if __name__ == "__main__":
     test_parse_command()
+    test_page_must_be_visual()
     test_routing_uses_existing_sections()
     test_pause_then_approve_creates_page()
     test_replan_redoes_the_plan_with_instructions()

@@ -30,7 +30,9 @@ flowchart LR
   T --> R([Answer])
 ```
 
-**Example:** asked *"What is the combined weight of a Border Collie and a Scottish Terrier?"*, the model looks up the first breed (37 lbs), then the second (20 lbs), then calls a calculator with `37 + 20`, and answers **57 lbs**. Three actions, chosen one after the other by the model.
+::: {.example}
+Asked *"What is the combined weight of a Border Collie and a Scottish Terrier?"*, the model looks up the first breed (37 lbs), then the second (20 lbs), then calls a calculator with `37 + 20`, and answers **57 lbs**. Three actions, chosen one after the other by the model.
+:::
 
 ## Who does what
 

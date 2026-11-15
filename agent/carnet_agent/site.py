@@ -167,7 +167,38 @@ def topic_pills(topic: str, folder_title: str) -> str:
     return f"::: {{.lesson-meta}}\n[{label}]{{.pill .{css}}} [{folder_title}]{{.pill .muted}}\n:::"
 
 
+def related_pages(root: Path, topic: str, folder: str, exclude: str = "", limit: int = 2,
+                  chars: int = 2500) -> str:
+    """Excerpts of other pages of the same section, so the writer can reuse their examples."""
+    parts = []
+    for page in [p for p in list_pages(root) if p.topic == topic and p.folder == folder and p.path != exclude][:limit]:
+        _, body = split_front_matter((root / page.path).read_text())
+        parts.append(f"<page path='{page.path}' title='{page.title}'>\n{split_sources(body)[0][:chars]}\n</page>")
+    return "\n".join(parts)
+
+
+VISUALS = {
+    "diagram": "```{mermaid}", "table": "|---", "concept cards": "{.concepts}",
+    "example box": "{.example}", "comparison": "{.compare}", "steps": "{.steps}", "callout": "{.callout-",
+}
+
+
 # --- Checks done by code in the review step -------------------------------------
+
+def _blocks_balanced(body: str) -> bool:
+    """Every '::: {…}' opening has its ':::' closing (code blocks are ignored)."""
+    depth, in_code = 0, False
+    for line in body.split("\n"):
+        if line.startswith("```"):
+            in_code = not in_code
+        elif not in_code and re.match(r"^:::+\s*\{", line):
+            depth += 1
+        elif not in_code and re.match(r"^:::+\s*$", line):
+            depth -= 1
+            if depth < 0:
+                return False
+    return depth == 0
+
 
 def check_page(text: str, findings: list[Finding]) -> list[str]:
     """Mechanical checks. Each returned string is a problem the writer must fix."""
@@ -184,8 +215,16 @@ def check_page(text: str, findings: list[Finding]) -> list[str]:
             errors.append(f"Finding from {f.source_url} is not listed in Sources.")
     if body.count("```") % 2:
         errors.append("A code block is not closed (odd number of ```).")
+    if not _blocks_balanced(body):
+        errors.append("A ::: block is opened and not closed (or closed twice): the page would render badly.")
     if len(body.split()) < 120:
         errors.append("The page is too short to be useful.")
+    kinds = [name for name, marker in VISUALS.items() if marker in body]
+    if len(kinds) < 3:
+        errors.append(f"Not visual enough: only {', '.join(kinds) or 'no'} visual elements. Use at least three "
+                      "kinds (diagram, table, concept cards, example box, comparison, steps, callout).")
+    if "{.example}" not in body:
+        errors.append("No concrete example: put at least one example in a ::: {.example} box.")
     return errors
 
 

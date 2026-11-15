@@ -110,8 +110,8 @@ flowchart LR
   A --> L
 ```
 
-**Example: a research assistant with web search.**
-
+::: {.example}
+**A research assistant with web search.**
 ```python
 from langchain_core.messages import SystemMessage, ToolMessage, HumanMessage
 from langchain_openai import ChatOpenAI
@@ -150,6 +150,8 @@ bot = Agent(ChatOpenAI(model="gpt-5.4-mini"), [TavilySearch(max_results=4)],
 result = bot.graph.invoke({"messages": [HumanMessage(content="What is the weather in SF?")]})
 result["messages"][-1].content
 ```
+:::
+
 
 **The same loop in one line.** Once you understand it, use the prebuilt version:
 
@@ -176,8 +178,8 @@ flowchart LR
   R --> E
 ```
 
-**Example: an email assistant.** Each incoming email is classified *ignore*, *notify* or *respond*. Only emails worth answering reach an agent with email and calendar tools.
-
+::: {.example}
+**An email assistant.** Each incoming email is classified *ignore*, *notify* or *respond*. Only emails worth answering reach an agent with email and calendar tools.
 The router returns **data, not text**, thanks to structured output. Asking for the reasoning first tends to give better decisions, and makes them easy to inspect:
 
 ```python
@@ -223,6 +225,8 @@ email_agent = builder.compile()
 ```
 
 A sales spam is classified *ignore* and stops there. A colleague's question is classified *respond*: the agent calls `write_email` and summarises what it sent.
+:::
+
 
 ---
 
@@ -243,8 +247,8 @@ flowchart LR
   RC --> G
 ```
 
-**Example: an essay writer.** The state is no longer just messages: each step reads the fields it needs and writes its own.
-
+::: {.example}
+**An essay writer.** The state is no longer just messages: each step reads the fields it needs and writes its own.
 ```python
 from typing import List
 
@@ -299,6 +303,8 @@ graph = builder.compile()
 ```
 
 With `max_revisions = 2`, the agent writes a draft, critiques it, researches what the critique asks for, and rewrites: two drafts in total. `draft` and `critique` have **no reducer** on purpose, so each new version replaces the previous one.
+:::
+
 
 ---
 
@@ -313,7 +319,9 @@ Two independent additions to any graph from the previous levels:
 - **Memory**: compile with a **checkpointer** to keep each conversation, and give the agent a **store** to remember facts, examples and instructions across conversations. → [Agent memory](../memory/memory-overview.qmd)
 - **Human in the loop**: compile with `interrupt_before=[…]`, or call `interrupt()` inside a node, to stop and wait for approval or edits. → [Controlling a running agent](../control/controlling-a-running-agent.qmd)
 
-**Example:** the email assistant from Level 2 learns that *"Jim is my friend"* (semantic memory), that emails like Tom's should be ignored (episodic memory), and to always sign *John Doe* (procedural memory), without any code change.
+::: {.example}
+The email assistant from Level 2 learns that *"Jim is my friend"* (semantic memory), that emails like Tom's should be ignored (episodic memory), and to always sign *John Doe* (procedural memory), without any code change.
+:::
 
 ```python
 email_agent = builder.compile(
@@ -329,8 +337,8 @@ email_agent = builder.compile(
 
 **Idea:** combine every level in one agent.
 
-**Example: a complete email assistant.** Each piece comes from a lower level:
-
+::: {.example}
+**A complete email assistant.** Each piece comes from a lower level:
 - a **router** triages every incoming email: ignore, notify or respond (Level 2);
 - a **tool loop** writes replies and manages the calendar (Level 1);
 - **long-term memory** gives it facts about people, past triage decisions as examples, and its own instructions (Level 4);
@@ -351,6 +359,8 @@ flowchart LR
 ```
 
 Each part is small and simple on its own. The system becomes powerful because they work together, and because each part can be tested and improved separately.
+:::
+
 
 ::: {.callout-tip}
 ## Remember

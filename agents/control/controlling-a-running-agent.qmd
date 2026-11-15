@@ -44,7 +44,9 @@ async for event in app.astream_events({"messages": messages}, thread, version="v
             print(content, end="|")
 ```
 
-**Example:** asked about the weather in SF, `stream()` shows three steps: the model asks for `tavily_search`, the search result comes back, the model answers. `astream_events()` then shows the answer appearing word by word.
+::: {.example}
+Asked about the weather in SF, `stream()` shows three steps: the model asks for `tavily_search`, the search result comes back, the model answers. `astream_events()` then shows the answer appearing word by word.
+:::
 
 ## Pausing: human in the loop
 
@@ -90,7 +92,9 @@ app.invoke(Command(resume="weather LA"), thread)      # resumes with the person'
 
 While paused, the state can be changed with `update_state`. Each change is a **new snapshot**; nothing is erased.
 
-**Example:** the agent is about to search for the weather in **LA**; you change it to **Louisiana** before it runs.
+::: {.example}
+The agent is about to search for the weather in **LA**; you change it to **Louisiana** before it runs.
+:::
 
 ```python
 current = app.get_state(thread)
@@ -146,7 +150,9 @@ for event in app.stream(None, earlier.config):    # replay from that point
     print(event)
 ```
 
-**Example:** rewind to the moment before the LA search, change the query to use AccuWeather, and resume: a new branch with a different answer, while the first run is still in the history.
+::: {.example}
+Rewind to the moment before the LA search, change the query to use AccuWeather, and resume: a new branch with a different answer, while the first run is still in the history.
+:::
 
 ::: {.callout-tip}
 ## Remember

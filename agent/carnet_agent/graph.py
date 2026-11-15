@@ -28,7 +28,7 @@ from langgraph.graph import END, START, StateGraph
 from . import prompts
 from .config import MAX_QUERIES, MAX_REVISIONS, MAX_TOOL_CALLS, TOPICS
 from .site import (check_page, describe_site, ensure_listed, is_self, join_front_matter, list_pages,
-                   list_sections,
+                   list_sections, related_pages,
                    merge_sources, render_sources, slugify, split_front_matter, split_sources,
                    topic_pills)
 from .state import (AgentState, Findings, PageOutline, ResearchPlan, Review, Route, Source,
@@ -218,6 +218,10 @@ class CarnetAgent:
         if state.get("findings"):
             parts.append("Complementary findings to integrate where they help understanding:\n" +
                          "\n".join(f"- {f.fact} (from {f.source_url})" for f in state["findings"]))
+        related = related_pages(self.s.root, route.topic, route.folder, exclude=route.target_path)
+        if related:
+            parts.append("Related pages of the same section (reuse their running examples when they fit; "
+                         f"do not repeat their content):\n{related}")
         if state.get("existing_body"):
             parts.append("Current page to extend. Keep what is still right, merge the new content in, "
                          f"do not duplicate:\n<current_page>\n{state['existing_body']}\n</current_page>")
@@ -376,12 +380,17 @@ def describe_plan(state: AgentState) -> str:
     for section in outline.sections:
         lines.append(f"- **{section.heading}**")
         lines += [f"  - {p}" for p in section.points]
+        if section.example:
+            lines.append(f"  - 💡 *Example:* {section.example}")
+        if section.visual:
+            lines.append(f"  - 🎨 *Visual:* {section.visual}")
     if outline.code_examples:
         lines += ["", "### Code examples", *[f"- {c}" for c in outline.code_examples]]
     lines += ["", "### Added from research"]
     lines += [f"- {f.fact} — [{f.source_title}]({f.source_url})" for f in state.get("findings") or []] \
         or ["- (nothing added)"]
-    lines += ["", "### Sources", *[f"- [{s.title}]({s.url})" for s in state.get("sources") or []]]
+    unique = {s.url.rstrip("/"): s for s in state.get("sources") or []}.values()
+    lines += ["", "### Sources", *[f"- [{s.title}]({s.url})" for s in unique]]
     return "\n".join(lines)
 
 

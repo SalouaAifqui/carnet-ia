@@ -82,7 +82,9 @@ All three live in the store. They differ in **what** is saved and **where it is 
 | Cons | More work for the agent, slower replies | Two components to run, memories arrive later |
 | Typical use | Semantic facts mentioned by the user | Learning examples and instructions from feedback |
 
-**Example: one email assistant, all memory types.** The response agent saves facts in the hot path ("Jim is my friend"). The triage step reads past decisions as examples. A background optimizer rewrites the prompts from the user's feedback. Each mechanism is shown in [Long-term memory](long-term-memory.qmd).
+::: {.example}
+**One email assistant, all memory types.** The response agent saves facts in the hot path ("Jim is my friend"). The triage step reads past decisions as examples. A background optimizer rewrites the prompts from the user's feedback. Each mechanism is shown in [Long-term memory](long-term-memory.qmd).
+:::
 
 ::: {.callout-tip}
 ## Remember

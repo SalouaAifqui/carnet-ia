@@ -61,7 +61,9 @@ app.invoke({"messages": [HumanMessage(content="What is the weather in SF?")]}, t
 app.invoke({"messages": [HumanMessage(content="What about in LA?")]}, thread)
 ```
 
-**Example:** on thread `"1"`, *"What about in LA?"* is understood as a weather question, because the SF exchange is in the saved history. Asked on a new thread `"2"`, the same follow-up, or *"Which one is warmer?"*, makes the agent ask for clarification: that thread has no history.
+::: {.example}
+On thread `"1"`, *"What about in LA?"* is understood as a weather question, because the SF exchange is in the saved history. Asked on a new thread `"2"`, the same follow-up, or *"Which one is warmer?"*, makes the agent ask for clarification: that thread has no history.
+:::
 
 Give **one thread per user or per conversation** so histories never mix.
 

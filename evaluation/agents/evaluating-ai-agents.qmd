@@ -84,7 +84,9 @@ AI agents are often built from parts such as:
 
 Testing these parts separately makes debugging faster. If the final answer is wrong, you do not need to guess. You can check which component made the wrong decision.
 
-**Example:** if a router sends a search request to the wrong tool, a router test can catch that without waiting for the full agent to fail.
+::: {.example}
+If a router sends a search request to the wrong tool, a router test can catch that without waiting for the full agent to fail.
+:::
 
 ## Use traces for observability
 
@@ -100,7 +102,9 @@ Traces help you see:
 
 This is the basis for debugging agent behavior. Instead of only reading the final response, you inspect the path that produced it.
 
-**Example:** capture the agent’s inputs, tool calls, and outputs at each step, then review the sequence to find where the run went off track.
+::: {.example}
+Capture the agent’s inputs, tool calls, and outputs at each step, then review the sequence to find where the run went off track.
+:::
 
 ## Choose the right evaluator
 
@@ -118,7 +122,9 @@ LLM-as-a-judge means using an LLM to evaluate another model’s output or decisi
 
 Human annotations are evaluations made by people. Use them when the task is ambiguous, high-stakes, or needs expert review.
 
-**Example:** if you want to check whether an answer mentions the correct policy detail, an LLM-based judgment may work better than a strict string match.
+::: {.example}
+If you want to check whether an answer mentions the correct policy detail, an LLM-based judgment may work better than a strict string match.
+:::
 
 ## Test router and skill decisions with examples from traces
 
@@ -130,7 +136,9 @@ For skill tests, check whether the selected action was performed well.
 
 This separates “did the agent choose the right thing?” from “did the agent do it well?” That distinction is important when you debug agents.
 
-**Example:** a trace shows that the agent called a calculator when it should have searched a document. That trace can become a router test case.
+::: {.example}
+A trace shows that the agent called a calculator when it should have searched a document. That trace can become a router test case.
+:::
 
 ## Evaluate full trajectories
 
@@ -142,7 +150,9 @@ Trajectory metrics help measure that efficiency. One example is convergence scor
 
 Use trajectory metrics when you want to compare the overall behavior of two agent versions.
 
-**Example:** two agents both answer correctly, but one reaches the answer in fewer steps. The one with the better trajectory score is usually the better design.
+::: {.example}
+Two agents both answer correctly, but one reaches the answer in fewer steps. The one with the better trajectory score is usually the better design.
+:::
 
 ## Run structured experiments to improve the agent
 
@@ -157,7 +167,9 @@ A simple workflow is:
 
 This is how you turn evaluation into improvement. Component tests tell you where the problem is. Trajectory metrics tell you how the whole agent behaves. Structured experiments tell you which change helped.
 
-**Example:** compare two prompt versions on the same trace-derived test cases, then measure whether one improves router accuracy or trajectory efficiency.
+::: {.example}
+Compare two prompt versions on the same trace-derived test cases, then measure whether one improves router accuracy or trajectory efficiency.
+:::
 
 ## Use the same methods in production monitoring
 

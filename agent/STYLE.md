@@ -24,6 +24,62 @@ The agent reads this file before writing and before reviewing. Edit it to change
 - Facts added from complementary research must stay consistent with the main source.
 - Do not invent facts, numbers, function names or URLs.
 
+## Make it visual and concrete
+Pages must not be walls of text. A reader should understand the idea from the visuals and the
+examples alone, then read the prose for details.
+
+- **Every main section has a concrete example**: real names, real inputs and outputs, numbers,
+  a short scenario ("Asked *X*, the agent calls *Y* with *Z* and answers *W*"). Abstract
+  statements alone are not enough.
+- **Where examples come from**, in this order: the source; examples already used on the site
+  (reuse the site's running examples, such as the email assistant or the research assistant,
+  so pages connect); research findings from reliable sources. Never invent facts or numbers
+  presented as real.
+- **At least three different visual elements per page**, chosen to fit the content:
+  - a ```` ```{mermaid} ```` diagram (flowchart for a process, sequenceDiagram for exchanges);
+  - a table to compare options or map concepts;
+  - concept cards (below);
+  - an example box, a before/after comparison, or numbered steps (below);
+  - a `::: {.callout-tip}` or `::: {.callout-warning}`.
+- Prefer showing over telling: a diagram instead of a paragraph describing a flow, a table
+  instead of a list of "X does…, Y does…", a before/after instead of "you should avoid…".
+
+### Visual components (Quarto markdown)
+
+Example box: put each concrete example in one, including its code:
+```
+::: {.example}
+**A title for the example.** The scenario, in two or three sentences.
+
+(optional code block)
+:::
+```
+
+Before/after or side-by-side comparison:
+```
+::: {.compare}
+::: {.col .bad}
+**Without it**
+
+What goes wrong.
+:::
+::: {.col .good}
+**With it**
+
+What changes.
+:::
+:::
+```
+(`.bad` / `.good` are optional: use plain `{.col}` for neutral options.)
+
+Numbered steps, for a procedure:
+```
+::: {.steps}
+1. **First step**: what happens.
+2. **Second step**: what happens.
+:::
+```
+
 ## Page structure
 Use this structure (Quarto markdown), in this order, skipping sections that don't apply. No quiz.
 
@@ -39,7 +95,7 @@ Use this structure (Quarto markdown), in this order, skipping sections that don'
    :::
    :::
    ```
-4. Sections with explanations, tables and ```` ```python ```` code blocks.
+4. Sections with explanations, each with its concrete example, tables, diagrams and ```` ```python ```` code blocks.
 5. A `::: {.callout-tip}` block titled `## Remember` with 3–6 bullet points.
 6. Optionally a `::: {.callout-warning}` block titled `## Watch out` for general pitfalls.
 

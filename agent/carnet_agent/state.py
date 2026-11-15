@@ -71,6 +71,10 @@ class Findings(BaseModel):
 class OutlineSection(BaseModel):
     heading: str = Field(description="Section heading as it will appear on the page.")
     points: list[str] = Field(description="What this section will say, one short bullet per idea.")
+    example: str = Field(default="", description="The concrete example this section will show, and where it "
+                                                 "comes from (source, existing site page, or research finding).")
+    visual: str = Field(default="", description="The visual element of this section: mermaid diagram, table, "
+                                                "example box, before/after comparison, steps, concept cards…")
 
 
 class PageOutline(BaseModel):

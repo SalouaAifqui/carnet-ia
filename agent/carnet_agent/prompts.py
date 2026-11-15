@@ -55,7 +55,9 @@ missing prerequisites, terms used without explanation, things that have changed 
 (new versions, deprecated APIs), or important context.
 {existing}
 Then write at most {max_queries} web search queries that would fill the MOST important gaps.
-If the source is already complete, return no queries."""
+If the source has few concrete examples, use one query to find a real-world example, use case or
+worked case from a reliable source (official documentation, engineering blogs of the vendors,
+papers). If the source is already complete and concrete, return no queries."""
 
 RESEARCH_CRITIQUE = """You are a researcher. A reviewer found that a study page is missing the
 topics below. Write at most {max_queries} web search queries to fill them."""
@@ -73,7 +75,9 @@ from a weak source, drop it."""
 OUTLINE = """You are planning a page for Carnet IA, a website of study notes on applied AI.
 Before anything is written, a human will approve this plan, so make it concrete:
 the sections in order, what each will say, and the code examples that will be shown.
-Follow the page structure of the style guide.
+For EVERY section, name its concrete example (taken from the source, from a related page of the
+site, or from a research finding) and its visual element. A section without an example or a
+visual is not acceptable. Follow the page structure of the style guide.
 
 <style_guide>
 {style}
@@ -88,6 +92,9 @@ Write the page following the style guide exactly.
 
 You may call web_search or fetch_url to check that an API or function is current.
 Use them only when you need to; most pages need no tool call.
+Make the page visual and concrete, as the style guide requires: every section gets its example
+(in an example box) and the page uses at least three kinds of visual elements. Reuse the running
+examples of the related site pages when they fit, so the site reads as one whole.
 Examples from the source go inside the section they illustrate, not in a separate part.
 When updating a page, keep its structure and integrate the new material where it belongs.
 When you are done, answer with the full page body in markdown and nothing else."""
@@ -102,6 +109,9 @@ Check that:
 3. The code uses current APIs (you may call web_search / fetch_url to verify).
 4. It follows the style guide.
 5. A learner would understand it without other material.
+6. It is concrete and visual: every main section has a concrete example, and the page uses at
+   least three kinds of visual elements (diagram, table, concept cards, example box, comparison,
+   steps, callout). A section that only states ideas in the abstract is an issue.
 
 <style_guide>
 {style}

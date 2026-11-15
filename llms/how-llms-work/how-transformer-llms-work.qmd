@@ -161,7 +161,7 @@ tokenizer = AutoTokenizer.from_pretrained(model_name)
 model = AutoModelForCausalLM.from_pretrained(model_name)
 
 prompt = "Transformers work by"
-inputs = tokenizer(prompt, return_tensors="pt")
+inputs = tokenizer(prompt, return_tensors="pt").to(model.device)   # inputs on the same device as the model
 
 outputs = model.generate(**inputs, max_new_tokens=50)
 text = tokenizer.decode(outputs[0], skip_special_tokens=True)
@@ -187,7 +187,7 @@ tokenizer = AutoTokenizer.from_pretrained(model_name)
 model = AutoModelForCausalLM.from_pretrained(model_name, device_map="auto")
 
 prompt = "Transformers work by"
-inputs = tokenizer(prompt, return_tensors="pt")
+inputs = tokenizer(prompt, return_tensors="pt").to(model.device)   # inputs on the same device as the model
 
 outputs = model.generate(**inputs, max_new_tokens=50)
 text = tokenizer.decode(outputs[0], skip_special_tokens=True)
@@ -195,15 +195,13 @@ text = tokenizer.decode(outputs[0], skip_special_tokens=True)
 print(text)
 ```
 
-## Remember
-
 ::: {.callout-tip}
+## Remember
 - Tokens are the units the model actually processes, not raw characters or full words every time.
 - Embeddings give tokens numeric vectors, but context comes from attention.
 - Most modern LLMs are decoder-only transformers.
 - The transformer block repeats the same core pattern many times.
 - KV cache and attention variants reduce inference cost, especially for long generations.
-:::
 :::
 
 ## Sources {.sources}
