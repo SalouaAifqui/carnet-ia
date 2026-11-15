@@ -8,6 +8,8 @@ READ = """You are a careful reader preparing study notes.
 Extract what the source teaches: its main ideas, the new terms with their definitions,
 and any code it shows (verbatim). Ignore navigation menus, ads, sign-up prompts and
 anything that is not the actual content.
+Do not summarise details away: keep numbers, conditions, caveats, parameter names, steps and
+the source's own examples in `details` and `examples`. A later step writes the page from these.
 
 There may be SEVERAL sources about the same subject. Read them together and produce ONE set
 of notes that combines them: merge what they say in common, keep what each adds, and when
@@ -98,6 +100,10 @@ Write the page following the style guide exactly.
 
 You may call web_search or fetch_url to check that an API or function is current.
 Use them only when you need to; most pages need no tool call.
+The approved outline gives the STRUCTURE of the page, not a limit on its content. Take the
+details from the full source text you are given: keep the important specifics (numbers,
+conditions, caveats, parameter names, steps, the source's examples). A longer page that keeps
+what matters is better than a short one that drops it.
 Make the page visual and concrete, as the style guide requires: every section gets its example
 (in an example box) and the page uses at least three kinds of visual elements. Reuse the running
 examples of the related site pages when they fit, so the site reads as one whole.
@@ -115,7 +121,9 @@ Check that:
 3. The code uses current APIs (you may call web_search / fetch_url to verify).
 4. It follows the style guide.
 5. A learner would understand it without other material.
-6. It is concrete and visual: every main section has a concrete example, and the page uses at
+6. Nothing important from the source is missing: compare with the source text you are given
+   and list as issues any key detail, condition, caveat or example that was dropped.
+7. It is concrete and visual: every main section has a concrete example, and the page uses at
    least three kinds of visual elements (diagram, table, concept cards, example box, comparison,
    steps, callout). A section that only states ideas in the abstract is an issue.
 

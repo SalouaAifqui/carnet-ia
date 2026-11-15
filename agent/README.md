@@ -88,15 +88,15 @@ Le graphe est construit dans `carnet_agent/graph.py`, méthode `CarnetAgent.buil
 | Nœud | Type | Ce qu'il fait | Où |
 |---|---|---|---|
 | `fetch` | 🔧 code | Récupère le texte de la page avec Tavily Extract (téléchargement simple en secours). Chaque site est différent : on ne lit pas le HTML nous-mêmes. | `graph.py` → `fetch`, `web.py` → `fetch_source` |
-| `read` | 🧠 LLM | Transforme la page en `SourceNotes` : titre, résumé, idées clés, définitions, code. | `graph.py` → `read` |
+| `read` | 🧠 LLM | Transforme la ou les pages en `SourceNotes` : titre, résumé, idées clés, **détails à ne pas perdre** (chiffres, conditions, mises en garde, paramètres, étapes), **exemples de la source**, définitions, code. | `graph.py` → `read` |
 | `categorize` | 🔧 → 🧠 → 🔧 | **Code** : construit la carte du site (thèmes → sections, même vides → pages). **LLM** : remplit un `Route` en suivant une procédure (notion → thème → section → page). **Code** : vérifie que la page et la section existent, et signale toute nouvelle section. Voir « Le routage » plus bas. | `graph.py` → `categorize`, `site.py` → `describe_site`, `list_sections` |
 | `find_gaps` | 🧠 LLM | Liste ce qu'un apprenant ne comprendrait pas, et propose 3 recherches maximum (`ResearchPlan`), dont une pour trouver **un exemple réel** si la source en manque. | `graph.py` → `find_gaps` |
 | `search` | 🔧 code | Lance les recherches Tavily et classe en premier les sites de confiance (docs officielles, papiers…). | `web.py` → `run_searches` |
 | `select` | 🧠 → 🔧 | **LLM** : garde les informations utiles, chacune avec son URL (`Findings`). **Code** : supprime toute information dont l'URL n'était pas dans les résultats, ce qui empêche les sources inventées. | `graph.py` → `select` |
 | `outline` | 🧠 LLM | Écrit le plan de la page (`PageOutline`) : pour chaque section, ses points, **son exemple concret** (et d'où il vient) et **son visuel**. C'est ce que tu valides. | `graph.py` → `outline` |
 | `human_approval` | ⏸ | Ne fait rien : le graphe **s'arrête avant ce nœud** et attend ta réponse. | `graph.py` → `human_approval` |
-| `write` | 🧠 + 🛠️ | Rédige la page en suivant le plan approuvé et le guide de style : **un exemple concret par section** (encadré Example) et **au moins trois types de visuels**. Reçoit des extraits des pages voisines de la même section, pour réutiliser les exemples fil rouge du site. Peut appeler `web_search` / `fetch_url`. | `graph.py` → `write`, `run_with_tools`, `site.py` → `related_pages` |
-| `review` | 🔧 → 🧠 + 🛠️ | **Code** : vérifications mécaniques (titre, sources, blocs bien fermés, longueur, **au moins 3 types de visuels**, **au moins un exemple**). **LLM** : relecture critique (fidélité, API à jour, page concrète et visuelle), peut vérifier sur le web, rend un `Review`. | `graph.py` → `review`, `site.py` → `check_page` |
+| `write` | 🧠 + 🛠️ | Rédige la page. Reçoit **le plan approuvé (la structure)** et **le texte complet des sources (les détails)**, plus les notes de lecture, les compléments de recherche, tes consignes et des extraits des pages voisines. Consigne : le plan n'est pas une limite de contenu, il faut garder chiffres, conditions, mises en garde et exemples. Un exemple concret par section, au moins 3 types de visuels. Peut appeler `web_search` / `fetch_url`. | `graph.py` → `write`, `source_text`, `run_with_tools` |
+| `review` | 🔧 → 🧠 + 🛠️ | **Code** : vérifications mécaniques (titre, sources, blocs bien fermés, longueur, au moins 3 types de visuels, au moins un exemple). **LLM** : relecture critique **en comparant avec le texte complet des sources** (fidélité, détails importants oubliés, API à jour, page concrète et visuelle), peut vérifier sur le web, rend un `Review`. | `graph.py` → `review`, `site.py` → `check_page` |
 | `should_continue` | 🔧 code | Après la relecture : publier, réécrire, ou chercher plus. | `graph.py` → `should_continue` |
 | `research_critique` | 🧠 LLM | Transforme les « sujets manquants » du relecteur en recherches. | `graph.py` → `research_critique` |
 | `finalize` | 🔧 code | Assemble le fichier final : front matter, pastilles, texte, **section Sources**. Ajoute le dossier au menu si c'est un nouveau. | `graph.py` → `assemble`, `finalize`, `site.py` → `ensure_listed` |
@@ -158,7 +158,7 @@ Tout ce que l'agent sait circule dans un seul dictionnaire, `AgentState` (`state
 | Champ | Rempli par | Contenu |
 |---|---|---|
 | `url` | toi | La source |
-| `raw_text` | `fetch` | Le texte brut de la page |
+| `raw_text` | `fetch` | Le texte complet des sources. Donné au rédacteur et au relecteur. Après une pause sur GitHub, il est retéléchargé, car il n'est pas sauvegardé dans le commentaire. |
 | `notes` | `read` | `SourceNotes` |
 | `route` | `categorize` | `Route` : la décision de rangement |
 | `existing_body` | `categorize` | Le texte actuel de la page, si c'est une mise à jour |

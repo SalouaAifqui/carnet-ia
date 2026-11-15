@@ -135,6 +135,8 @@ def test_pause_then_approve_creates_page():
     assert not paused
     assert "Keep it short." in writer.prompts[0], "the human's instructions reach the writer"
     assert "Approved outline" in writer.prompts[0], "the approved outline reaches the writer"
+    assert "<sources>\n=== Source 1: https://source.example.com/article ===\npage text" in writer.prompts[0], \
+        "the writer gets the FULL source text, fetched again after the pause"
     page = (root / final["page_path"]).read_text()
     front_matter, body = split_front_matter(page)
     _, sources = split_sources(body)

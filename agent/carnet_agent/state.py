@@ -29,6 +29,11 @@ class SourceNotes(BaseModel):
     content_type: Literal["course lesson", "article", "documentation", "tip", "video transcript", "other"]
     summary: str = Field(description="Two or three sentences: what the source teaches.")
     key_points: list[str] = Field(description="The important ideas, one sentence each.")
+    details: list[str] = Field(default_factory=list, description=(
+        "Important specifics that must not be lost: numbers, thresholds, conditions, caveats, "
+        "limitations, parameter and function names, steps of a procedure, comparisons."))
+    examples: list[str] = Field(default_factory=list, description=(
+        "The concrete examples and use cases the source gives, with their inputs and outputs."))
     definitions: list[str] = Field(default_factory=list, description="'term: definition' for each new concept.")
     code_snippets: list[str] = Field(default_factory=list, description="Code shown in the source, verbatim.")
 

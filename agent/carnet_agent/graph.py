@@ -220,13 +220,22 @@ class CarnetAgent:
         (update_state) and the run resumes."""
         return {}
 
+    def source_text(self, state: AgentState) -> str:
+        """[code] The full text of the sources. After a pause on GitHub the run restarts in a
+        new process without it, so the pages are fetched again."""
+        if state.get("raw_text"):
+            return state["raw_text"]
+        return self.fetch({"urls": state.get("urls") or [state["url"]]})["raw_text"]
+
     # ---------------------------------------------------------------- 6. write
     def write(self, state: AgentState):
         """[LLM] + [tool] Write (or rewrite) the page body."""
         route = state["route"]
+        raw_text = self.source_text(state)
         parts = [
             f"Action: {route.action} the page '{route.title}' ({route.subtitle}).",
             f"Source notes:\n{state['notes'].model_dump_json(indent=2)}",
+            f"Full text of the source(s), the reference for details:\n<sources>\n{raw_text}\n</sources>",
         ]
         if state.get("outline"):
             parts.append("Approved outline (follow it):\n" + state["outline"].model_dump_json(indent=2))
@@ -249,7 +258,8 @@ class CarnetAgent:
             SystemMessage(prompts.WRITE.format(style=self.style)),
             HumanMessage("\n\n".join(parts) + feedback_block(state)),
         ])
-        return {"draft": clean_draft(text_of(reply)), "revision_number": state["revision_number"] + 1}
+        return {"draft": clean_draft(text_of(reply)), "revision_number": state["revision_number"] + 1,
+                "raw_text": raw_text}
 
     # ---------------------------------------------------------------- 7. review
     def review(self, state: AgentState):
@@ -260,6 +270,7 @@ class CarnetAgent:
         messages = [
             SystemMessage(prompts.REVIEW.format(style=self.style)),
             HumanMessage(f"Source notes:\n{state['notes'].model_dump_json(indent=2)}\n\n"
+                         f"Full text of the source(s):\n<sources>\n{self.source_text(state)[:40_000]}\n</sources>\n\n"
                          "Research findings (sourced, allowed on the page):\n"
                          + ("\n".join(f"- {f.fact} ({f.source_url})" for f in state.get("findings") or [])
                             or "(none)")
