@@ -176,3 +176,8 @@ Image(abot.graph.get_graph().draw_mermaid_png())
 <summary>Why does <code>take_action</code> loop over <code>tool_calls</code>?</summary>
 <p>Because the model can ask for several tools in one turn (parallel calls).</p>
 </details>
+
+## Sources {.sources}
+
+- [AI Agents in LangGraph](https://learn.deeplearning.ai/courses/ai-agents-in-langgraph/), DeepLearning.AI × LangChain
+- [Lesson: LangGraph Components](https://learn.deeplearning.ai/courses/ai-agents-in-langgraph/lesson/l7rgk/langgraph-components)

@@ -35,6 +35,8 @@ website:
         - agents/index.qmd
         - section: "AI Agents in LangGraph"
           contents: "agents/langgraph/*.qmd"
+        - section: "Long-Term Agentic Memory"
+          contents: "agents/long-term-memory/*.qmd"
     - id: llms
       title: "LLMs"
       style: docked

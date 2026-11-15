@@ -9,6 +9,12 @@ listing:
     grid-columns: 2
     sort: "lesson"
     fields: [title, subtitle]
+  - id: memory
+    contents: "long-term-memory/*.qmd"
+    type: grid
+    grid-columns: 2
+    sort: "lesson"
+    fields: [title, subtitle]
 ---
 
 ::: {.topic-hero}
@@ -26,4 +32,13 @@ Course by DeepLearning.AI and LangChain · 6 lessons · [Course page](https://le
 :::
 
 ::: {#langgraph}
+:::
+
+## Long-Term Agentic Memory with LangGraph {.group-title}
+
+::: {.group-meta}
+Course by DeepLearning.AI and LangChain, taught by Harrison Chase · 5 lessons · [Course page](https://www.deeplearning.ai/courses/long-term-agentic-memory-with-langgraph)
+:::
+
+::: {#memory}
 :::

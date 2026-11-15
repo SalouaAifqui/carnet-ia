@@ -176,3 +176,8 @@ for event in abot.graph.stream(None, thread):    # goes straight to the llm node
 <summary>Why use <code>as_node="action"</code> when injecting a fake tool result?</summary>
 <p>So the graph treats the update as the output of the action node. The next step is then the llm node, and the real tool never runs.</p>
 </details>
+
+## Sources {.sources}
+
+- [AI Agents in LangGraph](https://learn.deeplearning.ai/courses/ai-agents-in-langgraph/), DeepLearning.AI × LangChain
+- [Lesson: Human in the loop](https://learn.deeplearning.ai/courses/ai-agents-in-langgraph/lesson/k87e1/human-in-the-loop)

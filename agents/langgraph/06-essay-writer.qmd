@@ -233,3 +233,8 @@ The lesson ends with a small GUI that pauses after each node. It reuses everythi
 <summary>Why isn't <code>draft</code> annotated with <code>operator.add</code>?</summary>
 <p>Each new draft should replace the previous one. With <code>operator.add</code>, the drafts would be glued together.</p>
 </details>
+
+## Sources {.sources}
+
+- [AI Agents in LangGraph](https://learn.deeplearning.ai/courses/ai-agents-in-langgraph/), DeepLearning.AI × LangChain
+- [Lesson: Essay Writer](https://learn.deeplearning.ai/courses/ai-agents-in-langgraph/lesson/m0x4m/essay-writer)

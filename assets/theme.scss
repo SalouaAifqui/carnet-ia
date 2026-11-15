@@ -271,3 +271,8 @@ body.topic .quarto-grid-item.card:hover { border-color: var(--t); }
 .quarto-grid-item .card-title, .quarto-grid-item .listing-title { font-size: 1.05rem; }
 .quarto-grid-item .listing-categories { margin-top: .75rem; }
 .topic-hero p { line-height: 1.6 !important; }
+
+/* sources block at the end of every page */
+h2.sources, #sources h2 { font-size: 1.1rem; margin-top: 3rem; padding-top: 1.25rem; border-top: 1px solid $line; color: $muted; }
+section#sources ul, h2.sources + ul { font-size: .9rem; color: $muted; padding-left: 1.1rem; }
+section#sources a, h2.sources + ul a { word-break: break-word; }

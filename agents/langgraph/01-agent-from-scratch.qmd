@@ -197,3 +197,10 @@ The model looks up each breed, then calls `calculate: 37 + 20`, then answers **5
 <summary>In this design, who decides to call <code>calculate</code>: the LLM or the code?</summary>
 <p>The LLM decides. The code only reads that decision and runs the function.</p>
 </details>
+
+## Sources {.sources}
+
+- [AI Agents in LangGraph](https://learn.deeplearning.ai/courses/ai-agents-in-langgraph/), DeepLearning.AI × LangChain
+- [Lesson: Build an Agent from Scratch](https://learn.deeplearning.ai/courses/ai-agents-in-langgraph/lesson/c1l2c/build-an-agent-from-scratch)
+- Simon Willison, *A simple Python implementation of the ReAct pattern for LLMs*: <https://til.simonwillison.net/llms/python-react-pattern>
+- Yao et al., *ReAct: Synergizing Reasoning and Acting in Language Models* (2022): <https://arxiv.org/abs/2210.03629>

@@ -117,3 +117,8 @@ async for event in abot.graph.astream_events({"messages": messages}, thread, ver
 <summary>Does <code>operator.add</code> on its own give memory between two <code>invoke</code> calls?</summary>
 <p>No. Each call starts from a fresh state. Only a checkpointer reloads the previous messages.</p>
 </details>
+
+## Sources {.sources}
+
+- [AI Agents in LangGraph](https://learn.deeplearning.ai/courses/ai-agents-in-langgraph/), DeepLearning.AI × LangChain
+- [Lesson: Persistence and Streaming](https://learn.deeplearning.ai/courses/ai-agents-in-langgraph/lesson/nj9ok/persistence-and-streaming)

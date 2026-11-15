@@ -1,0 +1,164 @@
+---
+title: "Episodic Memory"
+subtitle: "Past decisions stored as examples, retrieved by similarity, fed to the prompt."
+lesson: 4
+course: "Long-Term Agentic Memory with LangGraph"
+date: 2026-11-15
+categories: [Agents, Memory, Few-shot]
+---
+
+::: {.lesson-meta}
+[Agents]{.pill .t-agents} [Long-Term Agentic Memory · Lesson 4]{.pill .muted}
+:::
+
+::: {.tldr}
+Episodic memory turns past decisions into **few-shot examples**. Each time an email is triaged, the router searches the store for the **most similar past emails** and shows the model how they were handled. Adding one example changes the agent's behaviour, for that user only, with no code change.
+:::
+
+## How it fits
+
+```{mermaid}
+flowchart LR
+  E[New email] --> Q{{"search store<br/>(similar emails)"}}
+  S[("Store<br/>email_assistant / user_id / examples")] --> Q
+  Q -->|"few-shot examples"| T[triage_router]
+  T --> D["ignore / notify / respond"]
+```
+
+## Key ideas
+
+::: {.concepts}
+::: {.concept}
+`Example = input + label`
+
+An email together with the right triage decision for it.
+:::
+::: {.concept}
+`Similarity search`
+
+The new email is the query. The store returns the closest past examples.
+:::
+::: {.concept}
+`Per-user namespace`
+
+Examples live under `("email_assistant", user_id, "examples")`, separate from semantic facts (`"collection"`).
+:::
+::: {.concept}
+`Store in a node`
+
+A graph node can receive `config` and `store` as arguments, and read memory before calling the model.
+:::
+:::
+
+## Saving an example
+
+```python
+import uuid
+
+email = {
+    "author": "Tom Jones <tom.jones@bar.com>",
+    "to": "John Doe <john.doe@company.com>",
+    "subject": "Quick question about API documentation",
+    "email_thread": "Hi John - want to buy documentation?",
+}
+
+store.put(
+    ("email_assistant", "lance", "examples"),
+    str(uuid.uuid4()),                         # each example gets its own key
+    {"email": email, "label": "ignore"},
+)
+```
+
+## Finding similar examples
+
+```python
+results = store.search(
+    ("email_assistant", "lance", "examples"),
+    query=str(email),     # the email itself is the query
+    limit=1,              # the single closest example
+)
+```
+
+The match doesn't have to be exact. A slightly different email still retrieves this example.
+
+## Formatting examples for the prompt
+
+```python
+template = """Email Subject: {subject}
+Email From: {from_email}
+Email To: {to_email}
+Email Content:
+{content}
+> Triage Result: {result}"""
+
+def format_few_shot_examples(examples):
+    blocks = []
+    for eg in examples:
+        email = eg.value["email"]
+        blocks.append(template.format(
+            subject=email["subject"], to_email=email["to"], from_email=email["author"],
+            content=email["email_thread"][:400], result=eg.value["label"],
+        ))
+    return "\n\n------------\n\n".join(blocks)
+```
+
+The triage system prompt gets a section with these examples and an instruction to pay close attention to them.
+
+## The triage router with episodic memory
+
+```python
+from langchain_core.runnables import RunnableConfig
+from langgraph.store.base import BaseStore
+
+def triage_router(state: State, config: RunnableConfig, store: BaseStore) -> Command[Literal["response_agent", "__end__"]]:
+    email = state["email_input"]
+    namespace = ("email_assistant", config["configurable"]["langgraph_user_id"], "examples")
+
+    examples = store.search(namespace, query=str(email))
+    system_prompt = triage_system_prompt.format(
+        examples=format_few_shot_examples(examples), **profile, **triage_rules
+    )
+    ...   # same as before: call llm_router, return a Command
+```
+
+LangGraph passes `config` and `store` automatically when the node asks for them.
+
+## What changes in practice
+
+| Situation | Result |
+|---|---|
+| Tom's email, no examples stored | **respond** (default behaviour) |
+| Same email, after storing it as "ignore" for this user | **ignore** |
+| A similar email (other wording, other name) | **ignore**: the example generalises |
+| Same email, different user id | **respond**: examples are per user |
+
+::: {.callout-tip}
+## Remember
+- Episodic memory = **examples of past decisions**, used as few-shot prompts.
+- Retrieval by **similarity** means one example also covers emails that look like it.
+- The namespace includes the user id: each user teaches the agent their own preferences.
+- Behaviour changes by **adding data**, not by changing code.
+- In the course, examples are added by hand. In a real app they'd come from user corrections, written in the **background**.
+:::
+
+## Quiz
+
+<details class="quiz">
+<summary>What is stored in an episodic example for triage?</summary>
+<p>The email and its correct label (ignore, notify or respond).</p>
+</details>
+
+<details class="quiz">
+<summary>Why does a slightly different email still get the "ignore" decision?</summary>
+<p>The store searches by meaning (embeddings), so the closest stored example is retrieved even without an exact match.</p>
+</details>
+
+<details class="quiz">
+<summary>Why does another user still get "respond" for the same email?</summary>
+<p>Their namespace has no examples: memories are stored per user id.</p>
+</details>
+
+## Sources {.sources}
+
+- [Long-Term Agentic Memory with LangGraph](https://www.deeplearning.ai/courses/long-term-agentic-memory-with-langgraph), DeepLearning.AI × LangChain
+- [Lesson: Email Assistant with Semantic + Episodic Memory](https://learn.deeplearning.ai/courses/long-term-agentic-memory-with-langgraph/lesson/ucvjj/email-assistant-with-semantic-%2B-episodic-memory)

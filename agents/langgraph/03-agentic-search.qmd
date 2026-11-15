@@ -91,3 +91,9 @@ The same object can be handed to an agent as a tool: `Agent(model, [search], ...
 <summary>Why is a JSON response better for an agent than a list of links?</summary>
 <p>The agent can use the data directly. With links it would have to fetch, clean and extract each page first.</p>
 </details>
+
+## Sources {.sources}
+
+- [AI Agents in LangGraph](https://learn.deeplearning.ai/courses/ai-agents-in-langgraph/), DeepLearning.AI × LangChain
+- [Lesson: Agentic Search Tools](https://learn.deeplearning.ai/courses/ai-agents-in-langgraph/lesson/oj6p9/agentic-search-tools)
+- [Tavily documentation](https://docs.tavily.com)
