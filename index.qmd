@@ -4,12 +4,13 @@ toc: false
 listing:
   - id: latest-notes
     contents: "notes/langgraph/*.qmd"
-    type: table
+    type: grid
+    grid-columns: 3
     sort: "lesson desc"
-    fields: [title, subtitle]
+    max-items: 3
+    fields: [lesson, title, subtitle]
     field-display-names:
-      title: "Note"
-      subtitle: "In one line"
+      lesson: "Lesson"
 ---
 
 ::: {.home-hero}
@@ -20,3 +21,5 @@ A notebook kept while learning to build AI agents: one note per lesson, with the
 
 ::: {#latest-notes}
 :::
+
+[All notes →](notes/index.qmd)

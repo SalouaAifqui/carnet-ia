@@ -40,5 +40,5 @@ format:
     toc-title: "On this page"
     code-copy: true
     code-overflow: wrap
-    highlight-style: github
+    highlight-style: dracula
     lang: en

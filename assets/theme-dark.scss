@@ -1,12 +1,14 @@
 /*-- scss:defaults --*/
-$primary: #8aa4ff;
-$body-bg: #0e1220;
-$body-color: #e4e9f5;
-$navbar-bg: #151b2d;
-$navbar-fg: #e4e9f5;
-$link-color: $primary;
-$code-color: #9db8ff;
-$code-block-bg: #151b2d;
-
-/*-- scss:rules --*/
-.concept, details.quiz { border-color: rgba(138, 164, 255, .25); }
+$bg: #0e1220;
+$paper: #151b2d;
+$ink: #e4e9f5;
+$muted: #9aa5bf;
+$line: #27304a;
+$accent: #8aa4ff;
+$accent-soft: #1e2a52;
+$warn: #f5b25c;
+$warn-soft: #3a2a12;
+$ok: #5ad1a0;
+$ok-soft: #12352a;
+$block-bg: #0a0f1d;
+$code-fg: #dbe4ff;

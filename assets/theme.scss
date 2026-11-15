@@ -1,47 +1,162 @@
 /*-- scss:defaults --*/
 @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;600&display=swap');
 
-$primary: #2f54d6;
-$body-bg: #f7f9fc;
-$body-color: #1a2233;
-$font-family-sans-serif: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
-$font-family-monospace: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, monospace;
-$headings-font-family: "Space Grotesk", "Segoe UI", system-ui, sans-serif;
-$headings-font-weight: 700;
-$navbar-bg: #ffffff;
-$navbar-fg: #1a2233;
-$link-color: $primary;
-$code-color: #2f54d6;
+// Palette — revision notebook: cool paper, ink-blue accent, amber for warnings
+$bg: #f5f7fb !default;
+$paper: #ffffff !default;
+$ink: #1a2233 !default;
+$muted: #5b6579 !default;
+$line: #dde3ee !default;
+$accent: #2f54d6 !default;
+$accent-soft: #e6ecff !default;
+$warn: #b45309 !default;
+$warn-soft: #fff4e5 !default;
+$ok: #0f7a52 !default;
+$ok-soft: #e3f6ee !default;
+$block-bg: #0f1730 !default;
+$code-fg: #dbe4ff !default;
+
+$primary: $accent !default;
+$body-bg: $bg !default;
+$body-color: $ink !default;
+$link-color: $accent !default;
+$navbar-bg: $paper !default;
+$navbar-fg: $ink !default;
+$navbar-hl: $accent !default;
+$sidebar-bg: $bg !default;
+$footer-bg: $bg !default;
+$code-color: $accent !default;
+$code-bg: $accent-soft !default;
+$code-block-bg: $block-bg !default;
+$border-color: $line !default;
+$table-border-color: $line !default;
+
+$font-family-sans-serif: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif !default;
+$font-family-monospace: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, monospace !default;
+$headings-font-family: "Space Grotesk", "Segoe UI", system-ui, sans-serif !default;
+$headings-font-weight: 700 !default;
+$font-size-root: 16px !default;
+$line-height-base: 1.6 !default;
 
 /*-- scss:rules --*/
-h1, h2, h3 { text-wrap: balance; }
-.title { letter-spacing: -0.01em; }
+body { background: $bg; }
 
-.lesson-meta {
-  font-size: .8rem; font-weight: 600; letter-spacing: .1em; text-transform: uppercase;
-  color: $primary; margin-bottom: .25rem;
+h1, h2, h3, .title { text-wrap: balance; letter-spacing: -0.01em; }
+h2 { margin-top: 2.25rem; padding-bottom: 0; border-bottom: none; font-size: 1.6rem; }
+h3 { font-weight: 500; }
+
+/* top bar */
+.navbar { border-bottom: 1px solid $line; box-shadow: none; }
+.navbar-brand .navbar-title { font-family: $headings-font-family; font-weight: 700; letter-spacing: -0.01em; }
+
+/* the page itself is a sheet of paper */
+main.content {
+  background: $paper;
+  border: 1px solid $line;
+  border-radius: 14px;
+  padding: clamp(1.25rem, 4vw, 2.5rem) !important;
+  margin-top: 1.5rem;
+  margin-bottom: 2.5rem;
+  min-width: 0;
 }
-.tldr {
-  font-size: 1.15rem; line-height: 1.6; max-width: 65ch;
-  border-left: 3px solid $primary; padding-left: 1rem; margin: 1.5rem 0;
+#title-block-header { margin-bottom: 1rem; }
+#title-block-header .title { font-size: clamp(1.9rem, 4vw, 2.6rem); line-height: 1.1; }
+#title-block-header .subtitle { color: $muted; font-size: 1.1rem; font-weight: 400; margin-top: .5rem; }
+.quarto-categories .quarto-category {
+  border: none; background: $accent-soft; color: $accent; border-radius: 999px;
+  font-size: .72rem; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; padding: .3rem .6rem;
 }
+
+/* sidebar = lesson index */
+#quarto-sidebar { background: transparent; }
+.sidebar-navigation .sidebar-item-text { font-size: .92rem; }
+.sidebar-navigation .sidebar-link { border-radius: 8px; padding: .35rem .6rem; }
+.sidebar-navigation .sidebar-link:hover { background: $accent-soft; }
+.sidebar-navigation .sidebar-link.active { background: $accent-soft; color: $accent; font-weight: 600; }
+.sidebar-navigation .sidebar-section .sidebar-item-text { font-family: $headings-font-family; }
+
+/* lesson meta pills */
+.lesson-meta { display: flex; flex-wrap: wrap; gap: .5rem; margin: 0 0 .5rem; }
+.pill {
+  display: inline-block; font-size: .72rem; font-weight: 600; letter-spacing: .08em; text-transform: uppercase;
+  padding: .35rem .6rem; border-radius: 999px; background: $ok-soft; color: $ok;
+}
+.pill.muted { background: $accent-soft; color: $accent; }
+
+/* one-line summary */
+.tldr { font-size: 1.12rem; line-height: 1.65; max-width: 68ch; margin: 1rem 0 1.5rem; }
 
 /* concept cards */
 .concepts {
   display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: .75rem; margin: 1rem 0 1.5rem;
 }
 .concept {
-  border: 1px solid rgba(47, 84, 214, .18); border-radius: 10px; padding: .85rem 1rem; min-width: 0;
-  code { font-weight: 600; background: none; padding: 0; }
-  p { margin: .25rem 0 0; font-size: .92rem; opacity: .85; }
+  border: 1px solid $line; border-radius: 10px; padding: .9rem 1rem; min-width: 0; background: $paper;
+  > p:first-child code {
+    background: none; padding: 0; color: $accent; font-weight: 600; font-size: .9rem;
+  }
+  p { margin: 0; }
+  p + p { margin-top: .3rem; font-size: .92rem; color: $muted; }
+}
+
+/* code */
+div.sourceCode, pre.sourceCode {
+  background: $block-bg !important; border: none !important; border-radius: 10px;
+}
+pre.sourceCode, pre.sourceCode code { color: $code-fg; }
+div.sourceCode pre { padding: 1rem 1.1rem; }
+.code-copy-button { color: $code-fg !important; }
+p code:not(.sourceCode), li code:not(.sourceCode), td code:not(.sourceCode), summary code, details p code {
+  background: $accent-soft; color: $accent; padding: .08rem .35rem; border-radius: 4px; font-size: .86em;
+}
+
+/* tables */
+.table, table { font-size: .93rem; }
+table thead th {
+  font-size: .72rem; font-weight: 600; letter-spacing: .07em; text-transform: uppercase; color: $muted;
+  border-bottom: 1px solid $line !important;
+}
+table td { border-color: $line !important; vertical-align: top; }
+
+/* callouts: "Remember" in green, "Watch out" in amber */
+.callout {
+  border: none !important; border-radius: 10px !important; box-shadow: none !important; margin: 1.5rem 0;
+}
+.callout .callout-header { background: transparent !important; border: none !important; }
+.callout-tip { background: $ok-soft !important; }
+.callout-tip .callout-title-container, .callout-tip .callout-icon::before { color: $ok !important; }
+.callout-warning { background: $warn-soft !important; }
+.callout-warning .callout-title-container, .callout-warning .callout-icon::before { color: $warn !important; }
+.callout .callout-body-container { padding-bottom: .35rem; }
+
+/* mermaid diagrams */
+.cell-output-display, .quarto-figure { overflow-x: auto; }
+pre.mermaid, .mermaid-js { background: transparent; }
+div:has(> .mermaid-js), .quarto-diagram-container {
+  border: 1px dashed $line; border-radius: 10px; padding: .75rem;
 }
 
 /* quiz */
 details.quiz {
-  border: 1px solid rgba(47, 84, 214, .18); border-radius: 10px; padding: .6rem 1rem; margin: .5rem 0;
+  border: 1px solid $line; border-radius: 10px; padding: .65rem 1rem; margin: .5rem 0; background: $paper;
   summary { cursor: pointer; font-weight: 500; }
-  p { margin: .5rem 0 0; opacity: .85; }
+  summary:focus-visible { outline: 2px solid $accent; outline-offset: 4px; border-radius: 4px; }
+  p { margin: .6rem 0 0; color: $muted; }
 }
 
-.home-hero { padding: 1rem 0 .5rem; }
-.home-hero p { font-size: 1.15rem; max-width: 60ch; }
+/* listings as cards */
+.quarto-grid-item.card {
+  border: 1px solid $line; border-radius: 12px; background: $paper; box-shadow: none; transition: border-color .15s;
+}
+.quarto-grid-item.card:hover { border-color: $accent; }
+.quarto-grid-item .card-title { font-family: $headings-font-family; font-weight: 700; }
+.quarto-grid-item .card-subtitle { color: $muted; }
+.quarto-grid-item .listing-lesson {
+  font-size: .72rem; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: $accent;
+}
+
+/* home */
+.home-hero { padding: .25rem 0 1rem; }
+.home-hero p { font-size: 1.15rem; max-width: 60ch; color: $muted; margin: 0; }
+
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }

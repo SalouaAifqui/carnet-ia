@@ -1,0 +1,90 @@
+---
+title: "Agentic Search Tools"
+subtitle: "Why agents need search built for machines, not for people."
+lesson: 3
+date: 2026-11-15
+categories: [search, tools, Tavily]
+---
+
+::: {.lesson-meta}
+[Lesson 3]{.pill} [AI Agents in LangGraph]{.pill .muted}
+:::
+
+::: {.tldr}
+An LLM only knows what it saw during training. To answer questions about recent events, and to cite sources, it needs a search tool. Agents work best with search that returns **clean, structured data** rather than pages of links.
+:::
+
+## Why search?
+
+A model without search has two weaknesses:
+
+- **No fresh information**: it can't know last night's scores or today's weather.
+- **No sources**: it can't point to where an answer comes from, so hallucinations are harder to catch.
+
+## Regular search vs agentic search
+
+| | Regular search engine | Agentic search (e.g. Tavily) |
+|---|---|---|
+| Returns | Links and raw HTML | Structured JSON, already filtered |
+| Built for | A person reading a page | An agent processing data |
+| Extra work | Scrape, clean, extract | Little or none |
+
+## What happens inside a search tool
+
+::: {.concepts}
+::: {.concept}
+`1 · Decompose`
+
+Split a complex question into sub-questions.
+:::
+::: {.concept}
+`2 · Route`
+
+Send each sub-question to the best source. A weather question goes to a weather API.
+:::
+::: {.concept}
+`3 · Extract`
+
+Chunk the source and keep the most relevant pieces (vector search, top-K).
+:::
+::: {.concept}
+`4 · Score & filter`
+
+Rank the results and drop the weak ones before they reach the agent.
+:::
+:::
+
+## Using Tavily
+
+```python
+from langchain_tavily import TavilySearch   # reads TAVILY_API_KEY from the environment
+
+search = TavilySearch(max_results=4, include_answer=True)
+result = search.invoke({"query": "What is in Nvidia's new Blackwell GPU?"})
+
+result["answer"]                 # a short answer written by Tavily
+for r in result["results"]:      # the sources
+    print(r["title"], r["url"])
+```
+
+The same object can be handed to an agent as a tool: `Agent(model, [search], ...)`.
+
+::: {.callout-tip}
+## Remember
+- Search gives an agent **fresh facts** and **citable sources**.
+- People want readable answers. Agents want structured, minimal, relevant data.
+- Good search = decompose → route → extract → score.
+- Tavily needs its own API key (`TAVILY_API_KEY`).
+:::
+
+## Quiz
+
+<details class="quiz">
+<summary>What are the two main limits of an LLM without search?</summary>
+<p>It has no access to recent information, and it can't cite sources.</p>
+</details>
+
+<details class="quiz">
+<summary>Why is a JSON response better for an agent than a list of links?</summary>
+<p>The agent can use the data directly. With links it would have to fetch, clean and extract each page first.</p>
+</details>

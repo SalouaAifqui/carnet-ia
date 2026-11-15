@@ -1,0 +1,196 @@
+---
+title: "Build an Agent from Scratch"
+subtitle: "The ReAct loop in plain Python: think, act, observe, repeat."
+lesson: 1
+date: 2026-11-15
+categories: [agents, ReAct, Python]
+---
+
+::: {.lesson-meta}
+[Lesson 1]{.pill} [AI Agents in LangGraph]{.pill .muted}
+:::
+
+::: {.tldr}
+An agent is a **loop**. The LLM reasons and picks an action, your code runs that action, and the result goes back to the LLM. The loop repeats until the LLM gives a final answer. No framework needed.
+:::
+
+## The ReAct pattern
+
+ReAct means **Reasoning + Acting**. The model alternates between thinking about what to do and doing it.
+
+```{mermaid}
+flowchart LR
+  Q([Question]) --> T[Thought<br/>the LLM reasons]
+  T --> A[Action<br/>picks a tool]
+  A --> P[PAUSE]
+  P --> O[Observation<br/>your code runs the tool]
+  O --> T
+  T --> R([Answer])
+```
+
+## Who does what
+
+| The LLM | Your code (the "runtime") |
+|---|---|
+| Reasons about the question | Parses the model's reply (regex) |
+| Chooses which action to take | Checks the action exists, runs the tool |
+| Decides when it has the answer | Sends back the observation, keeps the history, limits the number of turns |
+
+## Key ideas
+
+::: {.concepts}
+::: {.concept}
+`messages`
+
+The agent's memory: system prompt, user turns and assistant replies, appended in order.
+:::
+::: {.concept}
+`system prompt`
+
+Describes the loop format, lists the available actions and shows one full example run.
+:::
+::: {.concept}
+`known_actions`
+
+A dictionary mapping action names to Python functions, so the runtime can find the right tool.
+:::
+::: {.concept}
+`max_turns`
+
+A safety limit so the loop can't run forever.
+:::
+:::
+
+## The agent
+
+```python
+from openai import OpenAI
+
+client = OpenAI()   # reads OPENAI_API_KEY from the environment
+
+class Agent:
+    def __init__(self, system=""):
+        self.messages = []
+        if system:
+            self.messages.append({"role": "system", "content": system})
+
+    def __call__(self, message):
+        self.messages.append({"role": "user", "content": message})
+        result = self.execute()
+        self.messages.append({"role": "assistant", "content": result})
+        return result
+
+    def execute(self):
+        completion = client.chat.completions.create(
+            model="gpt-5.4-mini",
+            messages=self.messages,
+        )
+        return completion.choices[0].message.content
+```
+
+## The prompt
+
+The system prompt teaches the model the format. The worked example at the end matters: it shows the exact shape the runtime expects.
+
+```text
+You run in a loop of Thought, Action, PAUSE, Observation.
+At the end of the loop you output an Answer.
+Use Thought to describe your thoughts about the question.
+Use Action to run one of the actions available to you, then return PAUSE.
+Observation will be the result of running those actions.
+
+Your available actions are:
+
+calculate:
+e.g. calculate: 4 * 7 / 3
+
+average_dog_weight:
+e.g. average_dog_weight: Collie
+
+Example session:
+
+Question: How much does a Bulldog weigh?
+Thought: I should look the dog's weight up using average_dog_weight
+Action: average_dog_weight: Bulldog
+PAUSE
+
+Observation: A Bulldog weighs 51 lbs
+
+Answer: A Bulldog weighs 51 lbs
+```
+
+## The tools
+
+```python
+def calculate(what):
+    return eval(what)          # fine for a demo, never on untrusted input
+
+def average_dog_weight(name):
+    weights = {"Scottish Terrier": 20, "Border Collie": 37, "Toy Poodle": 7}
+    return f"{name} average weight is {weights.get(name, 50)} lbs"
+
+known_actions = {
+    "calculate": calculate,
+    "average_dog_weight": average_dog_weight,
+}
+```
+
+## Automating the loop
+
+```python
+import re
+
+action_re = re.compile(r"^Action: (\w+): (.*)$")
+
+def query(question, max_turns=5):
+    bot = Agent(prompt)
+    next_prompt = question
+    for _ in range(max_turns):
+        result = bot(next_prompt)
+        print(result)
+        actions = [action_re.match(line) for line in result.split("\n") if action_re.match(line)]
+        if not actions:
+            return                      # no action: the model gave its answer
+        action, action_input = actions[0].groups()
+        if action not in known_actions:
+            raise Exception(f"Unknown action: {action}: {action_input}")
+        observation = known_actions[action](action_input)
+        print("Observation:", observation)
+        next_prompt = f"Observation: {observation}"
+
+query("I have 2 dogs, a border collie and a scottish terrier. What is their combined weight?")
+```
+
+The model looks up each breed, then calls `calculate: 37 + 20`, then answers **57 lbs**.
+
+::: {.callout-tip}
+## Remember
+- An agent = an LLM + a loop + tools. The LLM decides, the code executes.
+- The prompt defines a **contract** (Thought / Action / PAUSE / Observation / Answer) that the code relies on.
+- A one-shot example in the prompt is the easiest way to get a reliable output format.
+- Always cap the loop (`max_turns`) and validate the action name before running it.
+:::
+
+::: {.callout-warning}
+## Watch out
+- `eval()` runs any Python code. Use a safe parser for real calculations.
+- The agent keeps its whole history. Create a new `Agent` for an unrelated question.
+- Write regex patterns as raw strings (`r"..."`) so `\w` isn't read as an escape sequence.
+:::
+
+## Quiz
+
+<details class="quiz">
+<summary>Why does the prompt end with a full example session?</summary>
+<p>It shows the model the exact format to follow. Without it, the model might not write <code>Action: tool: input</code> in a way the regex can read.</p>
+</details>
+
+<details class="quiz">
+<summary>How does the loop know the agent is done?</summary>
+<p>The reply contains no <code>Action:</code> line, so the list of actions is empty and the function returns.</p>
+</details>
+
+<details class="quiz">
+<summary>In this design, who decides to call <code>calculate</code>: the LLM or the code?</summary>
+<p>The LLM decides. The code only reads that decision and runs the function.</p>
+</details>

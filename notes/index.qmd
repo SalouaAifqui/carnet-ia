@@ -1,22 +1,21 @@
 ---
 title: "Notes"
-subtitle: "Study notes, one per lesson."
+subtitle: "Study notes, one per lesson: key ideas, working code and a short quiz."
 toc: false
 listing:
   - id: langgraph
     contents: "langgraph/*.qmd"
-    type: table
+    type: grid
+    grid-columns: 2
     sort: "lesson"
     fields: [lesson, title, subtitle]
     field-display-names:
-      lesson: "#"
-      title: "Lesson"
-      subtitle: "In one line"
+      lesson: "Lesson"
 ---
 
 ## AI Agents in LangGraph
 
-Course by DeepLearning.AI and LangChain: [AI Agents in LangGraph](https://learn.deeplearning.ai/courses/ai-agents-in-langgraph/).
+A course by DeepLearning.AI and LangChain: [AI Agents in LangGraph](https://learn.deeplearning.ai/courses/ai-agents-in-langgraph/). From a hand-written ReAct loop to a multi-step essay-writing agent.
 
 ::: {#langgraph}
 :::

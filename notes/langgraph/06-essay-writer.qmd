@@ -7,7 +7,7 @@ categories: [LangGraph, agents, reflection]
 ---
 
 ::: {.lesson-meta}
-AI Agents in LangGraph · Lesson 6
+[Lesson 6]{.pill} [AI Agents in LangGraph]{.pill .muted}
 :::
 
 ::: {.tldr}
@@ -194,7 +194,7 @@ Streaming shows each node as it finishes, so you can watch the plan appear, then
 
 ## Human in the loop
 
-The lesson ends with a small GUI that pauses after each node. It reuses everything from the Human in the loop lesson, applied to this richer state:
+The lesson ends with a small GUI that pauses after each node. It reuses everything from [Human in the Loop](05-human-in-the-loop.qmd), applied to this richer state:
 
 - **edit the plan** before the essay is written (`update_state`);
 - **rewind** to an earlier checkpoint and take another branch (`get_state_history`);
