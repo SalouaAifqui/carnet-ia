@@ -20,13 +20,14 @@ from langchain.chat_models import init_chat_model
 from . import hitl
 from .config import MODEL, REVIEW_MODEL
 from .graph import CarnetAgent, Services, describe_plan, describe_run
-from .publish import make_publisher
+from .course import CourseAgent, describe_course_plan, describe_course_run, is_course_url
+from .publish import make_course_publisher, make_publisher
 from .web import fetch_source, make_tools, run_searches
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 
 
-def build_agent(dry_run: bool, issue: int | None, pause: bool = True):
+def make_services(dry_run: bool, issue: int | None, course: bool = False) -> Services:
     try:                                   # local runs: read keys from a .env file if present
         from dotenv import load_dotenv
         load_dotenv()
@@ -39,8 +40,15 @@ def build_agent(dry_run: bool, issue: int | None, pause: bool = True):
         fetch=fetch_source,
         search=run_searches,
         tools=make_tools(),
-        publish=None if dry_run else make_publisher(REPO_ROOT, issue),
+        publish=None if dry_run else (make_course_publisher if course else make_publisher)(REPO_ROOT, issue),
     )
+    return services
+
+
+def build_agent(dry_run: bool, issue: int | None, pause: bool = True, course: bool = False):
+    services = make_services(dry_run, issue, course)
+    if course:
+        return CourseAgent(services).build(pause_for_approval=pause)
     return CarnetAgent(services).build(pause_for_approval=pause)
 
 
@@ -83,6 +91,17 @@ def resume(graph, saved: dict, command: str, feedback: str, root: Path = REPO_RO
     return run(graph, None, config)
 
 
+def resume_course(graph, saved: dict, command: str, feedback: str) -> tuple[dict, bool]:
+    """Course mode. /approve: load the prepared pages and continue to write_pages.
+    /replan: read the course again with the instructions (the plan depends on every lesson)."""
+    config = new_thread()
+    feedback = "\n".join(part for part in [saved.get("human_feedback", ""), feedback] if part)
+    if command == "approve":
+        graph.update_state(config, saved | {"human_feedback": feedback}, as_node="human_approval")
+        return run(graph, None, config)
+    return run(graph, {"url": saved["url"], "human_feedback": feedback}, config)
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description="Turn a web page into a Carnet IA note.")
     parser.add_argument("urls", nargs="*", help="One or more source URLs about the same subject.")
@@ -94,8 +113,6 @@ def main() -> None:
     parser.add_argument("--yes", action="store_true", help="Skip the approval step (not recommended).")
     args = parser.parse_args()
 
-    graph = build_agent(args.dry_run, args.issue, pause=not args.yes)
-
     # ---- resume: a person answered on the issue
     if args.mode == "resume":
         command, feedback = hitl.parse_command(args.command or "")
@@ -105,7 +122,19 @@ def main() -> None:
         if command == "cancel":
             hitl.close_issue(args.issue, "Cancelled. Nothing was written.")
             return
-        state, paused = resume(graph, hitl.latest_saved_state(args.issue), command, feedback)
+        kind, saved = hitl.latest_saved_state(args.issue)
+        if kind == "course":
+            graph = build_agent(args.dry_run, args.issue, course=True)
+            state, paused = resume_course(graph, saved, command, feedback)
+            if paused:
+                hitl.post_comment(args.issue, hitl.course_plan_comment(state))
+            else:
+                print(describe_course_run(state))
+                hitl.post_comment(args.issue, f"✅ {len(state.get('written') or [])} page(s) written. "
+                                              f"Pull request: {state.get('pr_url') or '(dry run)'}")
+            return
+        graph = build_agent(args.dry_run, args.issue)
+        state, paused = resume(graph, saved, command, feedback)
         if paused:                                       # after /replan: a new plan to approve
             hitl.post_comment(args.issue, hitl.plan_comment(state))
         else:
@@ -120,6 +149,28 @@ def main() -> None:
     if not urls:
         parser.error("No URL given.")
 
+    # ---- course mode: one course page given → read every lesson, several pages
+    if len(urls) == 1 and is_course_url(urls[0]):
+        graph = build_agent(args.dry_run, args.issue, pause=not args.yes, course=True)
+        start = {"url": urls[0], "human_feedback": instructions}
+        state, paused = run(graph, start, new_thread())
+        if args.mode == "plan":
+            hitl.post_comment(args.issue, hitl.course_plan_comment(state))
+            print("Course plan posted on the issue. Waiting for /approve, /replan or /cancel.")
+            return
+        while paused:
+            print("\n" + describe_course_plan(state))
+            command, feedback = hitl.parse_command(input("\n/approve [instructions] · /replan <instructions> · /cancel\n> "))
+            if command == "cancel":
+                print("Cancelled. Nothing was written.")
+                return
+            if command is None:
+                continue
+            state, paused = resume_course(graph, dict(state), command, feedback)
+        print(describe_course_run(state))
+        return
+
+    graph = build_agent(args.dry_run, args.issue, pause=not args.yes)
     start = {"url": urls[0], "urls": urls}
     if instructions:
         start["human_feedback"] = instructions        # the issue's notes guide every step

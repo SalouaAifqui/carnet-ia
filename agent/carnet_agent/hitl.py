@@ -38,19 +38,55 @@ _PLAIN = ["url", "urls", "gaps", "human_feedback"]
 
 # --- Saving and restoring the state ------------------------------------------------
 
-def save_state(state: dict) -> str:
+def _dump(state: dict) -> dict:
     data = {k: state[k].model_dump() for k in _MODELS if state.get(k)}
     data |= {k: [x.model_dump() for x in state.get(k) or []] for k in _LISTS}
-    data |= {k: state[k] for k in _PLAIN if state.get(k)}
-    return base64.b64encode(zlib.compress(json.dumps(data).encode())).decode()
+    return data | {k: state[k] for k in _PLAIN if state.get(k)}
+
+
+def _load(data: dict) -> dict:
+    state = {k: model.model_validate(data[k]) for k, model in _MODELS.items() if k in data}
+    state |= {k: [model.model_validate(x) for x in data.get(k, [])] for k, model in _LISTS.items()}
+    return state | {k: data[k] for k in _PLAIN if k in data}
+
+
+def _pack(data: dict) -> str:
+    return base64.b64encode(zlib.compress(json.dumps(data).encode(), 9)).decode()
+
+
+def _unpack(blob: str) -> dict:
+    return json.loads(zlib.decompress(base64.b64decode(blob)))
+
+
+def save_state(state: dict) -> str:
+    return _pack(_dump(state))
 
 
 def load_state(blob: str) -> dict:
-    data = json.loads(zlib.decompress(base64.b64decode(blob)))
-    state = {k: model.model_validate(data[k]) for k, model in _MODELS.items() if k in data}
-    state |= {k: [model.model_validate(x) for x in data.get(k, [])] for k, model in _LISTS.items()}
-    state |= {k: data[k] for k in _PLAIN if k in data}
-    return state
+    return _load(_unpack(blob))
+
+
+# Course mode: the state is the list of prepared pages (each one a single-page state).
+COURSE_MARKER = "carnet-agent-course-state"
+
+
+def save_course_state(state: dict) -> str:
+    """Only what is needed to write the pages: the full transcripts are fetched again after the
+    pause, so the detailed notes are trimmed to keep the comment within GitHub's size limit."""
+    pages = []
+    for page in state.get("pages") or []:
+        data = _dump(page)
+        if "notes" in data:
+            data["notes"] = {k: data["notes"][k] for k in ("title", "content_type", "summary", "key_points")}
+        pages.append(data)
+    return _pack({"url": state["url"], "course_title": state.get("course_title", ""),
+                  "human_feedback": state.get("human_feedback", ""), "pages": pages})
+
+
+def load_course_state(blob: str) -> dict:
+    data = _unpack(blob)
+    return {"url": data["url"], "course_title": data["course_title"],
+            "human_feedback": data.get("human_feedback", ""), "pages": [_load(p) for p in data["pages"]]}
 
 
 def existing_body(root, route: Route) -> str:
@@ -73,6 +109,23 @@ def plan_comment(state: dict) -> str:
         "folder memory, and focus on the code`.\n"
         "- `/cancel`: stop here.\n"
         f"\n<!-- {MARKER}\n{save_state(state)}\n-->"
+    )
+
+
+def course_plan_comment(state: dict) -> str:
+    from .course import describe_course_plan
+    blob = save_course_state(state)
+    if len(blob) > 60_000:
+        raise RuntimeError("The course plan is too large to save in a GitHub comment. "
+                           "Split the course over several issues (one module per issue).")
+    return (
+        describe_course_plan(state)
+        + "\n\n---\n**Reply with one of:**\n"
+        "- `/approve`: write all these pages. Add instructions on the next lines if you want.\n"
+        "- `/replan` followed by instructions: read the course again and redo the plan, e.g. "
+        "`/replan make one page for LLM judges and one for code evaluators`.\n"
+        "- `/cancel`: stop here.\n"
+        f"\n<!-- {COURSE_MARKER}\n{blob}\n-->"
     )
 
 
@@ -130,12 +183,14 @@ def close_issue(issue: int, comment: str) -> None:
     _gh("issue", "close", str(issue), "--repo", _repo(), "--comment", comment)
 
 
-def latest_saved_state(issue: int) -> dict:
-    """Find the most recent plan comment on the issue and restore its state."""
+def latest_saved_state(issue: int) -> tuple[str, dict]:
+    """Find the most recent plan comment on the issue and restore its state.
+    Returns ("page", state) or ("course", state)."""
     comments = json.loads(_gh("api", f"repos/{_repo()}/issues/{issue}/comments", "--paginate"))
     for comment in reversed(comments):
         body = comment.get("body") or ""
-        if f"<!-- {MARKER}" in body:
-            blob = body.split(f"<!-- {MARKER}", 1)[1].split("-->", 1)[0].strip()
-            return load_state(blob)
+        for kind, marker, loader in [("course", COURSE_MARKER, load_course_state), ("page", MARKER, load_state)]:
+            if f"<!-- {marker}\n" in body:
+                blob = body.split(f"<!-- {marker}\n", 1)[1].split("-->", 1)[0].strip()
+                return kind, loader(blob)
     raise RuntimeError("No saved plan found on this issue. Re-add the 'source' label to start over.")

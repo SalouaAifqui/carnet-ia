@@ -46,7 +46,14 @@ def run_searches(queries: list[str]) -> list[dict]:
     search = TavilySearch(max_results=RESULTS_PER_QUERY)
     results = []
     for query in queries:
-        response = search.invoke({"query": query})
+        try:
+            response = search.invoke({"query": query})
+        except Exception as error:  # noqa: BLE001 - a failed search must not stop the run
+            print(f"Search failed for {query!r}: {error}")
+            continue
+        if not isinstance(response, dict):      # Tavily returns a message string on errors / no results
+            print(f"No results for {query!r}: {str(response)[:200]}")
+            continue
         for r in response.get("results", []):
             results.append({"query": query, "title": r.get("title", r["url"]),
                             "url": r["url"], "content": r.get("content", "")})

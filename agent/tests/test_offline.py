@@ -282,6 +282,70 @@ def test_parse_command():
     print("✓ commands parsed")
 
 
+def test_course_mode():
+    from carnet_agent.course import CourseAgent, is_course_url, list_lessons
+    from carnet_agent.run import resume_course
+    from carnet_agent.state import CoursePlan, LessonNotes, PlannedPage
+
+    course = "https://www.deeplearning.ai/courses/my-course"
+    assert is_course_url(course) and not is_course_url(course + "/lesson/abc/intro")
+    landing = ("# My Course\n\n[a](/courses/my-course/lesson/aaa/what-agents-do)"
+               "[b](/courses/my-course/lesson/bbb/using-an-llm-judge)"
+               "[c](/courses/my-course/lesson/ccc/lab-1%3A-build-evaluators)"
+               "[d](/courses/my-course/lesson/ddd/module-1-quiz)[a again](/courses/my-course/lesson/aaa/what-agents-do)")
+    lessons = list_lessons(landing, "my-course")
+    assert [l.title for l in lessons] == ["What agents do", "Using an llm judge"], "labs, quizzes, duplicates dropped"
+    from carnet_agent.course import clean_lesson_text
+    assert clean_lesson_text("[menu](/a)\n\nSign up for $30\n\nshort text") == "", "no transcript, no noise"
+
+    prose = "The instructor explains a SPECIFIC_DETAIL about judges and agents in a long sentence. " * 10
+    def fetch(url):
+        if url == course:
+            return landing
+        return "[menu](/x) [plans](/y)\n\nSign up $30\n\n" + prose + "\n\n[next](/z)"
+
+    root = make_site_copy()
+    note = LessonNotes(summary="s", key_points=["k"], details=["SPECIFIC_DETAIL"], examples=["an example"])
+    judge_page = Route(concept="LLM judges", reasoning="lesson 2", action="create", topic="evaluation", folder="llms",
+                       folder_title="Evaluating LLMs", target_path="", title="LLM judges", subtitle="Models grading models.")
+    agent_page = Route(concept="agents", reasoning="lesson 1", action="update", topic="agents", folder="foundations",
+                       folder_title="Foundations", target_path="agents/foundations/what-is-an-agent.qmd",
+                       title="What is an agent", subtitle="…")
+    planner = FakeModel(structured={
+        LessonNotes: [note.model_copy(), note.model_copy()],
+        CoursePlan: [CoursePlan(pages=[PlannedPage(route=judge_page, lessons=[2, 99]),
+                                       PlannedPage(route=agent_page, lessons=[1])])],
+        ResearchPlan: [ResearchPlan(gaps=[], queries=[]), ResearchPlan(gaps=[], queries=[])],
+        PageOutline: [OUTLINE, OUTLINE],
+    })
+    graph = CourseAgent(Services(root=root, model=planner, review_model=FakeModel(), fetch=fetch,
+                                 search=lambda q: [], today="2026-11-16")).build()
+    state, paused = run(graph, {"url": course}, new_thread())
+    assert paused and len(state["lessons"]) == 2 and len(state["pages"]) == 2
+    assert state["plan"].pages[0].lessons == [2], "unknown lesson numbers are dropped by code"
+    comment = hitl.course_plan_comment(state)
+    assert "2 page(s)" in comment and "LLM judges" in comment and "Lessons read:** 2" in comment
+
+    # A new process resumes from the comment, as on GitHub.
+    blob = comment.split(f"<!-- {hitl.COURSE_MARKER}\n", 1)[1].split("-->", 1)[0].strip()
+    saved = hitl.load_course_state(blob)
+    writer = FakeModel(replies=[AIMessage(content=LONG_BODY), AIMessage(content=LONG_BODY)])
+    reviewer = FakeModel(structured={Review: [Review(approved=True), Review(approved=True)]})
+    graph2 = CourseAgent(Services(root=root, model=writer, review_model=reviewer, fetch=fetch,
+                                  search=lambda q: [], today="2026-11-16")).build()
+    final, paused = resume_course(graph2, saved, "approve", "Keep the examples.")
+    assert not paused
+    assert final["written"] == ["evaluation/llms/llm-judges.qmd", "agents/foundations/what-is-an-agent.qmd"]
+    assert "SPECIFIC_DETAIL" in writer.prompts[0] and "Sign up" not in writer.prompts[0], \
+        "the writer gets the cleaned transcript of its lessons, fetched again after the pause"
+    assert "Keep the examples." in writer.prompts[0]
+    _, sources = split_sources(split_front_matter((root / "evaluation/llms/llm-judges.qmd").read_text())[1])
+    assert [u for _, u in sources] == [course, lessons[1].url], "course page + the lesson used are cited"
+    index = (root / "evaluation/index.qmd").read_text()
+    assert '## Evaluating LLMs {.group-title data-folder="llms"}' in index and "{#llms}" in index
+    print("✓ course mode: lessons read in parallel, regrouped into concept pages, approved, written")
+
+
 if __name__ == "__main__":
     test_parse_command()
     test_issue_with_several_sources()
@@ -290,3 +354,4 @@ if __name__ == "__main__":
     test_pause_then_approve_creates_page()
     test_replan_redoes_the_plan_with_instructions()
     test_update_existing_page()
+    test_course_mode()

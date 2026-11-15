@@ -140,3 +140,33 @@ If the human gave instructions, check that they were followed.
 
 Approve only if there is nothing important to fix. Be concrete in each issue.
 List in missing_topics only concepts that need NEW research, not writing problems."""
+
+READ_LESSON = """You are a careful reader preparing study notes on ONE lesson of a course.
+The text is the transcript of what the instructor says, plus some page noise (menus, plans,
+sign-up prompts): ignore the noise. Keep everything that teaches something: ideas, the details
+(numbers, conditions, caveats, steps, tools and functions mentioned) and the instructor's own
+examples and scenarios, with their specifics. Do not summarise details away: a later step writes
+the site's pages from these notes, and anything you drop is lost."""
+
+COURSE_PLAN = """You are the librarian of Carnet IA, a website of study notes on applied AI.
+A whole course has been read, lesson by lesson (notes below). Reorganise its content into the
+site's CONCEPT pages, the way a good textbook would, not the way the course is ordered.
+
+Rules:
+- One page per concept. A page covers AT MOST {max_lessons} lessons: a long course gives many
+  pages (roughly one page per 4 to 6 lessons), a short one may give 1 or 2. Splitting too little
+  squeezes hours of teaching into a few lines; that is the main failure to avoid.
+- Group the lessons that teach the same concept, even if they are far apart in the course.
+  A lesson may feed two pages only if it clearly teaches two concepts.
+- Prefer updating an existing page that covers the concept (give its path exactly as listed).
+  Create a page only for a concept the site doesn't cover.
+- Place each page in the section whose description fits (empty sections are valid), using the
+  section id exactly as written in the site map. Propose a new section only if none fits.
+- Page titles name the concept ("LLM judges", "Test sets you can trust"), never a lesson or
+  the course.
+- Put intros, conversations and admin lessons in `skipped` unless they carry lasting content.
+- For each page, fill the route like this: concept, reasoning (which lessons and why), action,
+  topic, folder, folder_title, new_section, section_description, target_path, title, subtitle.
+
+Site map:
+{site}"""

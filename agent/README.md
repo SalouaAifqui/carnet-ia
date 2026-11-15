@@ -47,6 +47,34 @@ Focus on when to use which checkpointer in production.
 
 (`hitl.py` → `parse_issue`, `graph.py` → `fetch`, `read`.)
 
+### Un cours entier : le mode cours
+
+Si l'URL de l'issue est **la page d'un cours DeepLearning.AI** (par exemple `https://www.deeplearning.ai/courses/evaluating-and-improving-agentic-applications`), l'agent passe en **mode cours** (`course.py`). Un cours de plusieurs heures ne peut pas tenir dans une page, et sa page de présentation ne contient pas le cours lui-même. Le mode cours fait donc ceci :
+
+```mermaid
+flowchart LR
+    C[page du cours] --> E["🔧 expand<br/>liste des leçons"]
+    E -- "Send ×N" --> R1["🧠 read_lesson 1"]
+    E -- "Send ×N" --> R2["🧠 read_lesson 2"]
+    E -- "Send ×N" --> RN["🧠 read_lesson N"]
+    R1 & R2 & RN --> P["🧠 plan_pages<br/>regrouper par notion"]
+    P --> PP["prepare_pages<br/>recherche + plan de chaque page"]
+    PP --> H{{"⏸ tu valides"}}
+    H --> W["write_pages<br/>rédiger + relire chaque page"]
+    W --> PR["🔧 une seule Pull Request"]
+```
+
+- **`expand`** (code) : lit la page du cours et liste ses leçons. Les labs (qui demandent une connexion), les quiz et le forum sont écartés.
+- **`read_lesson`** (map) : `Send` lance **une lecture par leçon, en parallèle**. Chaque leçon est lue **en entier** : le transcript est isolé du reste de la page par le code, puis le LLM en tire des notes détaillées. Une leçon sans transcript lisible est ignorée.
+- **`plan_pages`** (reduce) : le LLM voit les notes de **toutes** les leçons et les regroupe **par notion**, comme un manuel, pas dans l'ordre du cours. Chaque page couvre **8 leçons au maximum**. Si une page est trop grosse, le code demande un plan plus fin.
+- **`prepare_pages`** : pour chaque page, les étapes habituelles (vérification du rangement, recherche de compléments, plan de la page) sont **réutilisées** depuis l'agent normal.
+- **Ta validation** : le plan affiche chaque page, avec les leçons qui la nourrissent et ses grandes parties. `/approve`, `/replan …` ou `/cancel`, comme d'habitude.
+- **`write_pages`** : chaque page est rédigée et relue avec **les transcripts complets de ses leçons**, puis tout part dans **une seule Pull Request**.
+
+Ce que ça donne sur *Evaluating and Improving Agentic Applications* : **28 leçons lues** (environ 34 000 mots de transcripts), regroupées en **7 pages** (*Why evals matter*, *Requirements and test cases*, *Code evaluators and LLM judges*, *Evaluating actions, trajectories and outcomes*…).
+
+**Limite** : le code des labs n'est pas lisible depuis l'extérieur. Seul ce que dit le prof est utilisé. **Donne un cours par issue.**
+
 ---
 
 ## 2. Le graphe
@@ -294,6 +322,7 @@ agent/
 │   ├── prompts.py          ← une consigne système par rôle
 │   ├── graph.py            ← les nœuds, le graphe, la boucle de tools
 │   ├── hitl.py             ← pause, sauvegarde/reprise de l'état, commandes
+│   ├── course.py           ← mode cours : un cours entier → plusieurs pages (map-reduce)
 │   ├── site.py             ← opérations sur le site (code pur, sans LLM)
 │   ├── web.py              ← fetch / search (code) et tools (pour le LLM)
 │   ├── publish.py          ← branche, commit, Pull Request

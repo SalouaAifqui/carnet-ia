@@ -133,3 +133,52 @@ class AgentState(TypedDict, total=False):
     revision_number: int
     page_path: str                             # where the page was written
     pr_url: str                                # from `publish`
+
+
+# --- Course mode: a whole course → several concept pages ------------------------
+
+class Lesson(BaseModel):
+    """One lesson of a course, as found on the course page (filled by code)."""
+    index: int
+    url: str
+    title: str
+
+
+class LessonNotes(BaseModel):
+    """Detailed notes for ONE lesson (filled by the LLM, then index/url/title set by code)."""
+    index: int = 0
+    url: str = ""
+    title: str = ""
+    summary: str = Field(description="What this lesson teaches, in two or three sentences.")
+    key_points: list[str] = Field(description="The important ideas, one sentence each.")
+    details: list[str] = Field(default_factory=list, description=(
+        "Important specifics that must not be lost: numbers, thresholds, conditions, caveats, "
+        "steps of a procedure, names of tools and functions mentioned."))
+    examples: list[str] = Field(default_factory=list, description=(
+        "The concrete examples and scenarios the instructor uses, with their details."))
+    definitions: list[str] = Field(default_factory=list, description="'term: definition' for each new concept.")
+
+
+class PlannedPage(BaseModel):
+    """One page of the course plan: where it goes and which lessons feed it."""
+    route: Route
+    lessons: list[int] = Field(description="Numbers of the lessons whose content goes into this page.")
+
+
+class CoursePlan(BaseModel):
+    """Output of `plan_pages`: the course reorganised into the site's concept pages."""
+    pages: list[PlannedPage]
+    skipped: list[int] = Field(default_factory=list,
+                               description="Lessons with no lasting content (intros, admin), left out.")
+
+
+class CourseState(TypedDict, total=False):
+    url: str                                      # the course page
+    course_title: str
+    todo: list[Lesson]                            # lessons found on the course page
+    lessons: Annotated[list[LessonNotes], operator.add]   # filled in parallel, one per lesson
+    plan: CoursePlan
+    pages: list[dict]                             # one single-page state per planned page
+    human_feedback: str
+    written: list[str]                            # paths of the pages written
+    pr_url: str

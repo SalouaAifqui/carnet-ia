@@ -132,11 +132,18 @@ class CarnetAgent:
             SystemMessage(prompts.CATEGORIZE.format(site=describe_site(self.s.root))),
             HumanMessage(state["notes"].model_dump_json(indent=2) + feedback_block(state)),
         ])
-        # [code] Never trust the decision blindly.
-        # 1. An "update" must point to a page that exists.
+        return self.validate_route(route)
+
+    def validate_route(self, route: Route) -> dict:
+        """[code] Never trust a placement blindly. Returns {"route", "existing_body"}.
+        Also used by the course mode, once per planned page."""
+        # 1. An "update" must point to a page that exists; the page then decides topic and section.
         existing = {p.path: p for p in list_pages(self.s.root)}
         if route.action == "update" and route.target_path not in existing:
             route.action, route.target_path = "create", ""
+        if route.action == "update":
+            page = existing[route.target_path]
+            route.topic, route.folder = page.topic, page.folder
         # 2. The section must exist in that topic. If the model gave a title instead of the id,
         #    find it by title. Only if nothing matches is it really a new section.
         route.folder = slugify(route.folder)
@@ -148,13 +155,11 @@ class CarnetAgent:
         else:
             route.new_section = True
 
-        update = {"route": route, "existing_body": ""}
+        existing_body = ""
         if route.action == "update":
-            page = existing[route.target_path]
-            route.topic, route.folder = page.topic, page.folder
-            _, body = split_front_matter((self.s.root / page.path).read_text())
-            update["existing_body"] = split_sources(body)[0]
-        return update
+            _, body = split_front_matter((self.s.root / route.target_path).read_text())
+            existing_body = split_sources(body)[0]
+        return {"route": route, "existing_body": existing_body}
 
     # ---------------------------------------------------------------- 4. research
     def find_gaps(self, state: AgentState):

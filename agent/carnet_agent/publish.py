@@ -41,3 +41,23 @@ def make_publisher(root: Path, issue: int | None = None):
         return _run(root, "gh", "pr", "create", "--base", "main", "--head", branch,
                     "--title", f"{verb} note: {route.title}", "--body-file", "-", stdin=body)
     return publish
+
+
+def make_course_publisher(root: Path, issue: int | None = None):
+    """One pull request for all the pages written from a course."""
+    def publish(state) -> str:
+        from .course import describe_course_run
+        title = state.get("course_title") or "course"
+        stamp = dt.datetime.now().strftime("%Y%m%d-%H%M")
+        branch = f"agent/course-{slugify(title)[:40]}-{stamp}"
+        _run(root, "git", "checkout", "-b", branch)
+        _run(root, "git", "add", "-A")
+        _run(root, "git", "commit", "-m", f"Notes from the course: {title}\n\nProposed by the Carnet IA agent from {state['url']}")
+        _run(root, "git", "push", "-u", "origin", branch)
+        body = describe_course_run(state)
+        if issue:
+            body += f"\n\nCloses #{issue}"
+        body += "\n\n---\n🤖 Proposed by the Carnet IA agent (`agent/`). Merge to publish, or close to discard."
+        return _run(root, "gh", "pr", "create", "--base", "main", "--head", branch,
+                    "--title", f"Notes from the course: {title}", "--body-file", "-", stdin=body)
+    return publish
