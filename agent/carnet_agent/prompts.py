@@ -15,6 +15,8 @@ Decide where new content belongs.
 Topics:
 - llms: how LLMs work, foundation models, open-source models, model comparisons.
 - agents: building agents, agent frameworks (LangGraph…), tools, memory, multi-agent systems.
+- evaluation: assessing LLMs (folder `llms`) and AI agents (folder `agents`): benchmarks, test sets,
+  metrics, LLM-as-a-judge, trajectory and tool-use evaluation.
 - guardrails: safeguards for AI systems: validation, safety, what each guardrail protects against, implementation.
 - daily-use: practical tips for using AI apps day to day.
 

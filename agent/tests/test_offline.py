@@ -14,6 +14,7 @@ from langchain_core.messages import AIMessage
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from carnet_agent import hitl  # noqa: E402
+from carnet_agent.config import TOPICS  # noqa: E402
 from carnet_agent.graph import CarnetAgent, Services  # noqa: E402
 from carnet_agent.run import new_thread, resume, run  # noqa: E402
 from carnet_agent.site import split_front_matter, split_sources  # noqa: E402
@@ -65,7 +66,7 @@ class FakeTool:
 
 def make_site_copy() -> Path:
     tmp = Path(tempfile.mkdtemp())
-    for name in ["_quarto.yml", "index.qmd", "llms", "agents", "guardrails", "daily-use"]:
+    for name in ["_quarto.yml", "index.qmd", *TOPICS]:
         src = REPO / name
         (shutil.copytree if src.is_dir() else shutil.copy)(src, tmp / name)
     return tmp

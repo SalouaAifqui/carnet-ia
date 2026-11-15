@@ -7,7 +7,7 @@ project:
   - '!agent/'
 website:
   title: Carnet IA
-  description: Notes on how LLMs work, how to build agents, how to keep them safe, and how to use AI every day.
+  description: Notes on how LLMs work, how to build agents, how to evaluate them, how to keep them safe, and how to use AI every day.
   site-url: https://salouaaifqui.github.io/carnet-ia/
   repo-url: https://github.com/SalouaAifqui/carnet-ia
   favicon: assets/logo.svg
@@ -22,6 +22,8 @@ website:
       text: LLMs
     - href: agents/index.qmd
       text: Agents
+    - href: evaluation/index.qmd
+      text: Evaluation
     - href: guardrails/index.qmd
       text: Guardrails
     - href: daily-use/index.qmd
@@ -66,6 +68,11 @@ website:
     style: docked
     contents:
     - daily-use/index.qmd
+  - id: evaluation
+    title: Evaluation
+    style: docked
+    contents:
+    - evaluation/index.qmd
   page-footer:
     left: Carnet IA · notes written while learning
     right:

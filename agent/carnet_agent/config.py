@@ -23,6 +23,7 @@ MAX_SOURCE_CHARS = 60_000    # we cut very long pages so prompts stay affordable
 TOPICS = {
     "llms": ("LLMs", "t-llms"),
     "agents": ("Agents", "t-agents"),
+    "evaluation": ("Evaluation", "t-eval"),
     "guardrails": ("Guardrails", "t-guardrails"),
     "daily-use": ("Daily Use", "t-daily"),
 }

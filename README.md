@@ -6,6 +6,7 @@ A learning notebook on applied AI, published at https://salouaaifqui.github.io/c
 |---|---|
 | `llms/` | How LLMs work: foundation models, open-source models, comparisons |
 | `agents/` | Agent implementation and frameworks (e.g. `agents/langgraph/`) |
+| `evaluation/` | Assessing LLMs and AI agents |
 | `guardrails/` | Guardrails: what they protect against and how to implement them |
 | `daily-use/` | Practical tips for using AI apps every day |
 

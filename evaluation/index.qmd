@@ -1,0 +1,33 @@
+---
+title: "Evaluation"
+body-classes: "topic t-eval"
+toc: false
+---
+
+::: {.topic-hero}
+[Topic]{.topic-kicker}
+
+# Assess LLMs and AI agents {.topic-h1}
+
+How to measure whether a model or an agent is good enough: what to measure, how to build test sets, and how to compare versions with confidence.
+:::
+
+## LLMs {.group-title}
+
+::: {.group-meta}
+Evaluating models: benchmarks, test sets, metrics, LLM-as-a-judge, and comparing models for a given task.
+:::
+
+::: {.empty-state}
+Methods to evaluate the quality of a model's answers, from benchmarks to task-specific test sets. **First notes coming soon.**
+:::
+
+## Agents {.group-title}
+
+::: {.group-meta}
+Evaluating agents: final answers, the path they took, tool use, and behaviour over many runs.
+:::
+
+::: {.empty-state}
+Evaluating agents end to end and step by step: was the answer right, were the right tools called, in the right order. **First notes coming soon.**
+:::

@@ -9,6 +9,7 @@ listing:
     contents:
       - "agents/*/*.qmd"
       - "llms/*/*.qmd"
+      - "evaluation/*/*.qmd"
       - "guardrails/*/*.qmd"
       - "daily-use/*/*.qmd"
     type: grid
@@ -22,7 +23,7 @@ listing:
 <section class="hero">
   <p class="hero-eyebrow">A learning notebook on applied AI</p>
   <h1 class="hero-title">Understand the models.<br>Build with them. Use them well.</h1>
-  <p class="hero-lede">Notes, code and practical tips, written while learning: how LLMs work, how to build agents, how to keep them safe, and how to use AI every day.</p>
+  <p class="hero-lede">Notes, code and practical tips, written while learning: how LLMs work, how to build agents, how to evaluate them, how to keep them safe, and how to use AI every day.</p>
 </section>
 
 <section class="topics" aria-label="Topics">
@@ -42,6 +43,15 @@ listing:
     <span class="topic-name">Agents</span>
     <span class="topic-desc">From a simple tool loop to full systems with LangGraph: tools, memory, and keeping a human in control.</span>
     <span class="topic-tags"><span>LangGraph</span><span>Memory</span><span>Human in the loop</span></span>
+  </a>
+
+  <a class="topic-card t-eval" href="evaluation/index.html">
+    <span class="topic-icon" aria-hidden="true">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/><path d="m14.5 8 2 2 4-4"/></svg>
+    </span>
+    <span class="topic-name">Evaluation</span>
+    <span class="topic-desc">Assess LLMs and AI agents: what to measure, how to build test sets, and how to compare versions.</span>
+    <span class="topic-tags"><span>LLMs</span><span>Agents</span></span>
   </a>
 
   <a class="topic-card t-guardrails" href="guardrails/index.html">

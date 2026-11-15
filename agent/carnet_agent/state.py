@@ -11,7 +11,7 @@ from typing import Annotated, Literal, TypedDict
 
 from pydantic import BaseModel, Field
 
-Topic = Literal["llms", "agents", "guardrails", "daily-use"]
+Topic = Literal["llms", "agents", "evaluation", "guardrails", "daily-use"]
 
 
 # --- Filled by the LLM ---------------------------------------------------------

@@ -23,6 +23,8 @@ $t-agents: #2f54d6 !default;
 $t-agents-soft: #e6ecff !default;
 $t-guardrails: #0f7a52 !default;
 $t-guardrails-soft: #e3f6ee !default;
+$t-eval: #c2255c !default;
+$t-eval-soft: #fde8f0 !default;
 $t-daily: #d9480f !default;
 $t-daily-soft: #fff0e6 !default;
 
@@ -177,6 +179,7 @@ details.quiz {
 .t-agents { @include topic($t-agents, $t-agents-soft); }
 .t-guardrails { @include topic($t-guardrails, $t-guardrails-soft); }
 .t-daily { @include topic($t-daily, $t-daily-soft); }
+.t-eval { @include topic($t-eval, $t-eval-soft); }
 .pill[class*="t-"] { background: var(--t-soft); color: var(--t); }
 
 /* navbar logo */
@@ -201,7 +204,7 @@ body.home #title-block-header { display: none; }
 .hero-lede { font-size: clamp(1.05rem, 1.6vw, 1.25rem); color: $muted; max-width: 60ch; margin: 0; }
 
 .topics {
-  display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 1rem; margin: 1rem 0 3rem;
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin: 1rem 0 3rem;
 }
 .topic-card {
   position: relative; display: flex; flex-direction: column; gap: .6rem; min-width: 0;
@@ -241,6 +244,7 @@ body.t-llms { @include topic($t-llms, $t-llms-soft); }
 body.t-agents { @include topic($t-agents, $t-agents-soft); }
 body.t-guardrails { @include topic($t-guardrails, $t-guardrails-soft); }
 body.t-daily { @include topic($t-daily, $t-daily-soft); }
+body.t-eval { @include topic($t-eval, $t-eval-soft); }
 .topic-kicker {
   display: inline-block; font-size: .72rem; font-weight: 600; letter-spacing: .12em; text-transform: uppercase;
   padding: .3rem .65rem; border-radius: 999px; background: var(--t-soft); color: var(--t);
