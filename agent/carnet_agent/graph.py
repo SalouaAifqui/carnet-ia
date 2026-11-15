@@ -26,7 +26,7 @@ from langgraph.checkpoint.serde.jsonplus import JsonPlusSerializer
 from langgraph.graph import END, START, StateGraph
 
 from . import prompts
-from .config import MAX_QUERIES, MAX_REVISIONS, MAX_TOOL_CALLS, TOPICS
+from .config import MAX_QUERIES, MAX_REVISIONS, MAX_SOURCE_CHARS, MAX_TOOL_CALLS, TOPICS
 from .site import (check_page, describe_site, ensure_listed, is_self, join_front_matter, list_pages,
                    list_sections, related_pages,
                    merge_sources, render_sources, slugify, split_front_matter, split_sources,
@@ -97,18 +97,33 @@ class CarnetAgent:
 
     # ---------------------------------------------------------------- 1. fetch
     def fetch(self, state: AgentState):
-        """[code] Download the page and keep its readable text."""
-        return {"raw_text": self.s.fetch(state["url"]), "revision_number": 0}
+        """[code] Download every source and keep their readable text, one block per source."""
+        urls = state.get("urls") or [state["url"]]
+        budget = MAX_SOURCE_CHARS // len(urls)          # long pages are cut so the total stays affordable
+        blocks, failed = [], []
+        for i, url in enumerate(urls, 1):
+            try:
+                blocks.append(f"=== Source {i}: {url} ===\n{self.s.fetch(url)[:budget]}")
+            except Exception as error:  # noqa: BLE001 - one broken link must not stop the others
+                failed.append(f"{url} ({error})")
+        if not blocks:
+            raise RuntimeError("None of the sources could be read: " + "; ".join(failed))
+        if failed:
+            print("Could not read: " + "; ".join(failed))
+        return {"raw_text": "\n\n".join(blocks), "urls": urls, "url": urls[0], "revision_number": 0}
 
     # ---------------------------------------------------------------- 2. read
     def read(self, state: AgentState):
         """[LLM] Turn the raw page into structured notes."""
         notes = self.s.model.with_structured_output(SourceNotes).invoke([
             SystemMessage(prompts.READ),
-            HumanMessage(f"Source URL: {state['url']}\n\n{state['raw_text']}"),
+            HumanMessage(f"Sources: {', '.join(state['urls'])}\n\n{state['raw_text']}"),
         ])
-        primary = Source(title=notes.title, url=state["url"], role="primary")
-        return {"notes": notes, "sources": [primary]}
+        # [code] One "primary" source per URL given, with its title when the model found it.
+        titles = {t.url.rstrip("/"): t.title for t in notes.source_titles}
+        primary = [Source(title=titles.get(u.rstrip("/")) or (notes.title if len(state["urls"]) == 1 else u),
+                          url=u, role="primary") for u in state["urls"]]
+        return {"notes": notes, "sources": primary}
 
     # ---------------------------------------------------------------- 3. categorize
     def categorize(self, state: AgentState):
@@ -366,11 +381,12 @@ def describe_plan(state: AgentState) -> str:
         f"## 📝 Plan for: {route.title}",
         f"*{route.subtitle}*",
         "",
-        f"**Source:** {state['url']}",
+        f"**Source{'s' if len(state.get('urls') or [1]) > 1 else ''}:** " + " · ".join(state.get("urls") or [state["url"]]),
         f"**Decision:** {'update' if route.action == 'update' else 'create'} `{target}` "
         f"in **{TOPICS[route.topic][0]}** › {route.folder_title}",
         f"> {route.reasoning}",
         "",
+        *([f"📝 **Your notes:** {state['human_feedback']}", ""] if state.get("human_feedback") else []),
         *([f"⚠️ **New section proposed:** {route.folder_title} (`{route.topic}/{route.folder}`): "
            f"{route.section_description or 'no description'}. "
            "No existing section fits, according to the agent. If one does, answer `/replan` and name it.", ""]
@@ -398,7 +414,7 @@ def describe_run(state: AgentState) -> str:
     """A readable summary of what the agent did, used as the pull-request description."""
     route, review = state["route"], state.get("review")
     lines = [
-        f"**Source:** {state['url']}",
+        f"**Source{'s' if len(state.get('urls') or [1]) > 1 else ''}:** " + " · ".join(state.get("urls") or [state["url"]]),
         f"**Decision:** {route.action} `{state.get('page_path', route.target_path)}` "
         f"in **{TOPICS[route.topic][0]}** › {route.folder_title}",
         f"> {route.reasoning}",

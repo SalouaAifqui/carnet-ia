@@ -1,5 +1,5 @@
 name: New source
-description: Ask the agent to turn a web page into a note (it opens a pull request for review).
+description: Ask the agent to turn one or more web pages into a note (you approve its plan first).
 title: "Source: "
 labels: ["source"]
 body:
@@ -7,7 +7,7 @@ body:
     id: url
     attributes:
       label: URL
-      description: The page to learn from (article, lesson, documentation…).
+      description: The main page to learn from (article, lesson, documentation…).
       placeholder: https://
     validations:
       required: true
@@ -15,4 +15,11 @@ body:
     id: notes
     attributes:
       label: Notes (optional)
-      description: Anything the agent should know. It is not used yet; it's kept for future versions.
+      description: >-
+        Other pages on the same subject, one URL per line: the agent reads all of them together
+        and writes ONE note. Anything else you write here is an instruction for the agent
+        (for example "focus on the code" or "put it in Evaluation").
+      placeholder: |
+        https://another-page-on-the-same-subject
+        https://and-another-one
+        Focus on the practical examples.

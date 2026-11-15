@@ -16,9 +16,16 @@ Topic = Literal["llms", "agents", "evaluation", "guardrails"]
 
 # --- Filled by the LLM ---------------------------------------------------------
 
+class SourceTitle(BaseModel):
+    url: str = Field(description="The URL of one source, exactly as given.")
+    title: str = Field(description="The title of that page.")
+
+
 class SourceNotes(BaseModel):
-    """What the `read` node extracts from the source page."""
-    title: str = Field(description="Title of the source.")
+    """What the `read` node extracts from the source page(s)."""
+    title: str = Field(description="Title of the source (or of the common subject, if several sources).")
+    source_titles: list[SourceTitle] = Field(default_factory=list,
+                                             description="The title of each source page, one entry per URL.")
     content_type: Literal["course lesson", "article", "documentation", "tip", "video transcript", "other"]
     summary: str = Field(description="Two or three sentences: what the source teaches.")
     key_points: list[str] = Field(description="The important ideas, one sentence each.")
@@ -101,7 +108,8 @@ class Source(BaseModel):
 # --- The graph state ------------------------------------------------------------
 
 class AgentState(TypedDict, total=False):
-    url: str                                   # the source given by the user
+    url: str                                   # the first source (used in titles and messages)
+    urls: list[str]                            # all sources given by the user, read together
     raw_text: str                              # page text from `fetch`
     notes: SourceNotes                         # from `read`
     route: Route                               # from `categorize`

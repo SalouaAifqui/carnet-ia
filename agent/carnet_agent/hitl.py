@@ -19,6 +19,7 @@ from __future__ import annotations
 import base64
 import json
 import os
+import re
 import subprocess
 import zlib
 
@@ -32,7 +33,7 @@ COMMANDS = ("approve", "replan", "cancel")
 # What we save at the pause. The raw page text is not needed any more, so it is left out.
 _MODELS = {"notes": SourceNotes, "route": Route, "outline": PageOutline}
 _LISTS = {"findings": Finding, "sources": Source, "queries": Query}
-_PLAIN = ["url", "gaps", "human_feedback"]
+_PLAIN = ["url", "urls", "gaps", "human_feedback"]
 
 
 # --- Saving and restoring the state ------------------------------------------------
@@ -73,6 +74,25 @@ def plan_comment(state: dict) -> str:
         "- `/cancel`: stop here.\n"
         f"\n<!-- {MARKER}\n{save_state(state)}\n-->"
     )
+
+
+def parse_issue(text: str) -> tuple[list[str], str]:
+    """Read a 'New source' issue: every URL in it is a source, and the rest of the
+    Notes field is an instruction for the agent.
+
+    'Source: … ### URL https://a ### Notes (optional) https://b  focus on code'
+    -> (['https://a', 'https://b'], 'focus on code')
+    """
+    urls = []
+    for url in re.findall(r"https?://[^\s<>()\[\]]+", text):
+        url = url.rstrip(".,;:!?'\"")
+        if url not in urls:
+            urls.append(url)
+    notes = text.split("### Notes", 1)[1] if "### Notes" in text else ""
+    notes = re.sub(r"^\s*\(optional\)", "", notes)
+    notes = re.sub(r"https?://\S+", "", notes).replace("_No response_", "")
+    notes = "\n".join(line.strip(" -*") for line in notes.splitlines() if line.strip(" -*"))
+    return urls, notes.strip()
 
 
 def parse_command(text: str) -> tuple[str | None, str]:

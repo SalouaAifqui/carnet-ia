@@ -30,7 +30,8 @@ def make_publisher(root: Path, issue: int | None = None):
 
         _run(root, "git", "checkout", "-b", branch)
         _run(root, "git", "add", "-A")
-        _run(root, "git", "commit", "-m", f"{verb} note: {route.title}\n\nProposed by the Carnet IA agent from {state['url']}")
+        _run(root, "git", "commit", "-m", f"{verb} note: {route.title}\n\nProposed by the Carnet IA agent from:\n"
+             + "\n".join(state.get("urls") or [state["url"]]))
         _run(root, "git", "push", "-u", "origin", branch)
 
         body = describe_run(state)

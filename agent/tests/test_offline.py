@@ -19,7 +19,7 @@ from carnet_agent.graph import CarnetAgent, Services  # noqa: E402
 from carnet_agent.run import new_thread, resume, run  # noqa: E402
 from carnet_agent.site import split_front_matter, split_sources  # noqa: E402
 from carnet_agent.state import (Finding, Findings, OutlineSection, PageOutline, Query,  # noqa: E402
-                                ResearchPlan, Review, Route, Source, SourceNotes)
+                                ResearchPlan, Review, Route, Source, SourceNotes, SourceTitle)
 
 REPO = Path(__file__).resolve().parents[2]
 LONG_BODY = ("::: {.tldr}\nSummary.\n:::\n\n```{mermaid}\nflowchart LR\n  A --> B\n```\n\n"
@@ -237,6 +237,36 @@ def test_page_must_be_visual():
     print("✓ a flat page is sent back to the writer, a visual one passes")
 
 
+def test_issue_with_several_sources():
+    # The body GitHub writes for the "New source" form.
+    body = ("Source: memory\n### URL\n\nhttps://a.com/one\n\n### Notes (optional)\n\n"
+            "https://b.com/two\nhttps://c.com/three.\nFocus on the code.\n")
+    urls, notes = hitl.parse_issue(body)
+    assert urls == ["https://a.com/one", "https://b.com/two", "https://c.com/three"]
+    assert notes == "Focus on the code."
+    assert hitl.parse_issue("Source: x\n### URL\n\nhttps://a.com\n\n### Notes (optional)\n\n_No response_") \
+        == (["https://a.com"], "")
+
+    # fetch reads every source; a broken link doesn't stop the others.
+    root = make_site_copy()
+    def fetch(url):
+        if "broken" in url:
+            raise RuntimeError("404")
+        return f"text of {url}"
+    notes_model = FakeModel(structured={SourceNotes: [NOTES.model_copy(update={"source_titles": [
+        SourceTitle(url="https://a.com/one", title="Page one")]})]})
+    agent = CarnetAgent(Services(root=root, model=notes_model, review_model=FakeModel(), fetch=fetch,
+                                 search=lambda q: []))
+    state = {"urls": ["https://a.com/one", "https://broken.com", "https://b.com/two"]}
+    state |= agent.fetch(state)
+    assert "text of https://a.com/one" in state["raw_text"] and "text of https://b.com/two" in state["raw_text"]
+    sources = agent.read(state)["sources"]
+    assert [(s.title, s.url) for s in sources] == [("Page one", "https://a.com/one"),
+                                                   ("https://broken.com", "https://broken.com"),
+                                                   ("https://b.com/two", "https://b.com/two")]
+    print("✓ several URLs in one issue: all read together, notes become instructions")
+
+
 def test_parse_command():
     assert hitl.parse_command("/approve") == ("approve", "")
     assert hitl.parse_command("/replan put it in agents") == ("replan", "put it in agents")
@@ -247,6 +277,7 @@ def test_parse_command():
 
 if __name__ == "__main__":
     test_parse_command()
+    test_issue_with_several_sources()
     test_page_must_be_visual()
     test_routing_uses_existing_sections()
     test_pause_then_approve_creates_page()

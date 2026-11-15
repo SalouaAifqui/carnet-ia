@@ -32,6 +32,21 @@ sequenceDiagram
 1. **Le plan**, avant que quoi que ce soit soit écrit : où va la page, son titre, ses sections, les compléments trouvés et leurs sources.
 2. **La Pull Request**, avant la mise en ligne : le texte final, avec un résumé de ce que l'agent a fait.
 
+### Plusieurs sources pour une même fiche
+
+Dans le formulaire « New source », le champ **URL** reçoit la page principale. Le champ **Notes** peut contenir **d'autres URL sur le même sujet**, une par ligne, et des **consignes** :
+
+```
+https://docs.langchain.com/oss/python/langgraph/persistence
+Focus on when to use which checkpointer in production.
+```
+
+- **Toutes les URL** de l'issue sont lues ensemble par `fetch`, et `read` en tire **un seul jeu de notes** : il fusionne ce qu'elles ont en commun, garde ce que chacune apporte, et en cas de désaccord garde la version la plus récente ou la plus fiable. Chaque URL devient une source principale, citée en bas de la page.
+- **Le reste du texte** des notes devient une **consigne** pour toutes les étapes (rangement, recherche, plan, rédaction, relecture). Elle s'affiche dans le plan (📝) et s'ajoute aux consignes que tu donnes avec `/approve`.
+- **Si une URL ne répond pas**, l'agent continue avec les autres.
+
+(`hitl.py` → `parse_issue`, `graph.py` → `fetch`, `read`.)
+
 ---
 
 ## 2. Le graphe

@@ -7,7 +7,12 @@ reader, librarian (categorize), researcher, editor (select), writer, reviewer.
 READ = """You are a careful reader preparing study notes.
 Extract what the source teaches: its main ideas, the new terms with their definitions,
 and any code it shows (verbatim). Ignore navigation menus, ads, sign-up prompts and
-anything that is not the actual content."""
+anything that is not the actual content.
+
+There may be SEVERAL sources about the same subject. Read them together and produce ONE set
+of notes that combines them: merge what they say in common, keep what each adds, and when
+they disagree, keep the most recent or most authoritative version. Give the title of each
+source page in source_titles."""
 
 CATEGORIZE = """You are the librarian of Carnet IA, a website of study notes on applied AI.
 Decide where new content belongs. The site map below lists every topic and every section,

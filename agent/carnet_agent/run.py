@@ -68,13 +68,16 @@ def finish(state: dict) -> None:
 def resume(graph, saved: dict, command: str, feedback: str, root: Path = REPO_ROOT) -> tuple[dict, bool]:
     """Load a saved plan into a fresh thread and continue, like update_state + stream(None)."""
     config = new_thread()
+    # The issue's notes and the instructions given with the command both apply.
+    feedback = "\n".join(part for part in [saved.get("human_feedback", ""), feedback] if part)
     if command == "approve":
         values = saved | {"human_feedback": feedback, "revision_number": 0,
                           "existing_body": hitl.existing_body(root, saved["route"])}
         graph.update_state(config, values, as_node="human_approval")   # next node: write
     else:  # replan: keep the source, redo categorize → research → outline with the instructions
         primary = [s for s in saved.get("sources", []) if s.role == "primary"]
-        values = {"url": saved["url"], "notes": saved["notes"], "sources": primary,
+        values = {"url": saved["url"], "urls": saved.get("urls") or [saved["url"]],
+                  "notes": saved["notes"], "sources": primary,
                   "human_feedback": feedback, "revision_number": 0}
         graph.update_state(config, values, as_node="read")             # next node: categorize
     return run(graph, None, config)
@@ -82,7 +85,7 @@ def resume(graph, saved: dict, command: str, feedback: str, root: Path = REPO_RO
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="Turn a web page into a Carnet IA note.")
-    parser.add_argument("url", nargs="?", help="The source URL.")
+    parser.add_argument("urls", nargs="*", help="One or more source URLs about the same subject.")
     parser.add_argument("--from-text", help="Text containing the URL (e.g. a GitHub issue).")
     parser.add_argument("--mode", choices=["local", "plan", "resume"], default="local")
     parser.add_argument("--issue", type=int, help="GitHub issue number (plan / resume modes).")
@@ -111,14 +114,16 @@ def main() -> None:
         return
 
     # ---- plan / local: start from a URL
-    url = args.url
-    if not url and args.from_text:
-        found = re.search(r"https?://\S+", args.from_text)
-        url = found.group(0).rstrip(").,>]") if found else None
-    if not url:
+    urls, instructions = list(args.urls), ""
+    if not urls and args.from_text:
+        urls, instructions = hitl.parse_issue(args.from_text)
+    if not urls:
         parser.error("No URL given.")
 
-    state, paused = run(graph, {"url": url}, new_thread())
+    start = {"url": urls[0], "urls": urls}
+    if instructions:
+        start["human_feedback"] = instructions        # the issue's notes guide every step
+    state, paused = run(graph, start, new_thread())
 
     if args.mode == "plan":                              # GitHub: post the plan and stop
         hitl.post_comment(args.issue, hitl.plan_comment(state))
