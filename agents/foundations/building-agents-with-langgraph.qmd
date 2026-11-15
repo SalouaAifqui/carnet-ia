@@ -99,6 +99,7 @@ Each level keeps everything from the previous one and adds **one idea**. Start a
 ### [Level 1]{.level-tag} The tool loop
 
 **Idea:** one model in a loop with tools, the [ReAct loop](what-is-an-agent.qmd) as a graph.
+
 **Use it when:** the task is one question that may need a few lookups.
 
 ```{mermaid}
@@ -164,6 +165,7 @@ bot = create_agent("openai:gpt-5.4-mini", tools=[TavilySearch(max_results=4)],
 ### [Level 2]{.level-tag} The router
 
 **Idea:** classify first, then send the input down the right path. A cheap, structured decision before any expensive work.
+
 **Use it when:** inputs are of different kinds and need different handling, or many need no action at all.
 
 ```{mermaid}
@@ -227,6 +229,7 @@ A sales spam is classified *ignore* and stops there. A colleague's question is c
 ### [Level 3]{.level-tag} Plan, act, reflect
 
 **Idea:** split a big task into **specialised steps** sharing a rich state, and let the agent **critique and improve its own work** in a loop with a stopping rule.
+
 **Use it when:** the output must be good, not just correct: a report, an essay, code.
 
 ```{mermaid}
@@ -302,6 +305,7 @@ With `max_revisions = 2`, the agent writes a draft, critiques it, researches wha
 ### [Level 4]{.level-tag} Memory and a human in the loop
 
 **Idea:** the agent **remembers** across conversations, and **pauses** for a person before sensitive steps.
+
 **Use it when:** the agent works for someone over time, or its actions have consequences.
 
 Two independent additions to any graph from the previous levels:

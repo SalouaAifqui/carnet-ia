@@ -83,6 +83,6 @@ format:
     toc: true
     toc-title: On this page
     code-copy: true
-    code-overflow: wrap
+    code-overflow: scroll
     highlight-style: dracula
     lang: en
