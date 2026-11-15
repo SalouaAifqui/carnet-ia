@@ -1,7 +1,16 @@
 ---
-title: "Evaluation"
-body-classes: "topic t-eval"
+title: Evaluation
+body-classes: topic t-eval
 toc: false
+listing:
+- id: agent-evaluation
+  contents: agent-evaluation/*.qmd
+  type: grid
+  grid-columns: 2
+  sort: date desc
+  fields:
+  - title
+  - subtitle
 ---
 
 ::: {.topic-hero}
@@ -30,4 +39,9 @@ Evaluating agents: final answers, the path they took, tool use, and behaviour ov
 
 ::: {.empty-state}
 Evaluating agents end to end and step by step: was the answer right, were the right tools called, in the right order. **First notes coming soon.**
+:::
+
+## Agent Evaluation {.group-title}
+
+::: {#agent-evaluation}
 :::

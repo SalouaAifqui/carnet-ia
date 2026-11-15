@@ -1,0 +1,195 @@
+---
+title: Evaluating AI Agents
+subtitle: How to assess, debug, and improve agents with traces, component tests, trajectory metrics, and structured experiments.
+date: '2026-11-15'
+categories:
+- Evaluation
+- Agent Evaluation
+---
+
+::: {.lesson-meta}
+[Evaluation]{.pill .t-eval} [Agent Evaluation]{.pill .muted}
+:::
+
+::: {.tldr}
+AI agents need evaluation methods that go beyond traditional software testing. Their behavior is more open-ended, so you need observability: collect and visualize traces of each step, inspect the agent’s components, and judge both the final answer and the path taken to get there. The workflow on this page is: evaluate parts of the agent, evaluate full trajectories, then run structured experiments to improve and monitor the system.
+:::
+
+```{mermaid}
+flowchart TD
+    U[User request] --> A[Agent run]
+    A --> T[Trace collection]
+    T --> I[Inspect steps]
+    I --> C[Component tests<br/>router, skills, memory]
+    I --> J[Trajectory evaluation]
+    C --> E[Choose evaluator<br/>code, LLM-as-a-judge, human]
+    J --> E
+    E --> X[Structured experiment]
+    X --> M[Production monitoring]
+    M --> T
+```
+
+## Key ideas
+
+::: {.concepts}
+::: {.concept}
+`Observability`
+
+Observability means collecting and visualizing traces so you can see what the agent did. It helps you debug the path, not only the final answer.
+:::
+
+::: {.concept}
+`Component evaluation`
+
+Break the agent into parts such as routers, skills, and memory. Test each part on its own to find where the failure starts.
+:::
+
+::: {.concept}
+`Evaluator`
+
+An evaluator is the method you use to judge behavior. Use code for exact rules, an LLM for semantic judgments, and humans when the task needs expert review.
+:::
+
+::: {.concept}
+`Trajectory`
+
+A trajectory is the full sequence of steps from the user request to the final result. It lets you measure both success and efficiency.
+:::
+:::
+
+## Why agent evaluation is different
+
+Traditional software testing checks whether a program gives the expected result for a given input. AI agents are different. The same input can lead to different valid paths.
+
+That means output-only checks are not enough. You also need to ask:
+
+- Did the agent use the right tool?
+- Did it route the request well?
+- Did it follow a useful path?
+- Did it waste steps or loop?
+
+So the evaluation method must match the kind of judgment you need. A rule that can be checked exactly should use a code-based evaluator. A semantic judgment should use an LLM or a human.
+
+## Break the agent into evaluable parts
+
+AI agents are often built from parts such as:
+
+| Component | What it does | What to test |
+|---|---|---|
+| Router | Chooses the next path or tool | Did it choose the right route? |
+| Skill | Performs a task or action | Did it do the task well? |
+| Memory | Stores useful context | Did it keep and retrieve the right information? |
+
+Testing these parts separately makes debugging faster. If the final answer is wrong, you do not need to guess. You can check which component made the wrong decision.
+
+**Example:** if a router sends a search request to the wrong tool, a router test can catch that without waiting for the full agent to fail.
+
+## Use traces for observability
+
+A trace is a record of the steps taken by an agent during execution. Traces make the agent observable. That means you can inspect what happened step by step.
+
+Traces help you see:
+
+- tool use,
+- routing choices,
+- repeated loops,
+- missing information,
+- unnecessary steps.
+
+This is the basis for debugging agent behavior. Instead of only reading the final response, you inspect the path that produced it.
+
+**Example:** capture the agent’s inputs, tool calls, and outputs at each step, then review the sequence to find where the run went off track.
+
+## Choose the right evaluator
+
+Different kinds of judgment need different evaluators.
+
+| Evaluator | Best for | Why it fits |
+|---|---|---|
+| Code-based evaluator | Exact rules | It is precise and repeatable. |
+| LLM-as-a-judge | Meaning, quality, relevance | It can handle open-ended judgments. |
+| Human annotations | Ambiguous or expert tasks | People can review edge cases and nuance. |
+
+A code-based evaluator uses explicit program logic or rules to score behavior. It is best when the criterion is clear, such as whether a field exists or a format is valid.
+
+LLM-as-a-judge means using an LLM to evaluate another model’s output or decisions. It is useful when the task needs semantic judgment, like whether an answer is relevant or helpful.
+
+Human annotations are evaluations made by people. Use them when the task is ambiguous, high-stakes, or needs expert review.
+
+**Example:** if you want to check whether an answer mentions the correct policy detail, an LLM-based judgment may work better than a strict string match.
+
+## Test router and skill decisions with examples from traces
+
+Traces can become test cases. That is useful because they show real agent behavior, not just invented examples.
+
+For router tests, check whether the agent chose the right branch, tool, or route.
+
+For skill tests, check whether the selected action was performed well.
+
+This separates “did the agent choose the right thing?” from “did the agent do it well?” That distinction is important when you debug agents.
+
+**Example:** a trace shows that the agent called a calculator when it should have searched a document. That trace can become a router test case.
+
+## Evaluate full trajectories
+
+A trajectory is the full sequence of steps from the user request to the final result. Trajectory evaluation checks the whole run, not just the last answer.
+
+This matters because an agent can be correct but inefficient. It may reach the right result after too many steps, unnecessary tool calls, or a long detour.
+
+Trajectory metrics help measure that efficiency. One example is convergence score, which measures whether an agent can respond to a query in an efficient number of steps.
+
+Use trajectory metrics when you want to compare the overall behavior of two agent versions.
+
+**Example:** two agents both answer correctly, but one reaches the answer in fewer steps. The one with the better trajectory score is usually the better design.
+
+## Run structured experiments to improve the agent
+
+Structured experiments help you improve prompts, models, or agent logic. The key idea is to change one variable at a time and measure the effect.
+
+A simple workflow is:
+
+1. Choose one metric.
+2. Change one thing, such as the prompt or model.
+3. Run the same test set.
+4. Compare the results.
+
+This is how you turn evaluation into improvement. Component tests tell you where the problem is. Trajectory metrics tell you how the whole agent behaves. Structured experiments tell you which change helped.
+
+**Example:** compare two prompt versions on the same trace-derived test cases, then measure whether one improves router accuracy or trajectory efficiency.
+
+## Use the same methods in production monitoring
+
+The same traces and evaluators used during development can also be used after deployment. That lets you monitor the agent over time.
+
+Production monitoring helps you detect:
+
+- drift,
+- regressions,
+- performance drops,
+- new failure patterns.
+
+This makes evaluation a continuous loop. You do not test once and stop. You keep collecting traces, scoring behavior, and improving the system as conditions change.
+
+::: {.callout-tip}
+## Remember
+
+- AI agents need more than traditional software tests because their behavior is open-ended.
+- Collect traces so you can inspect the agent step by step.
+- Break the agent into parts like routers, skills, and memory for targeted testing.
+- Use the right evaluator for the job: code, LLM-as-a-judge, or human review.
+- Test both correctness and efficiency.
+- Reuse the same evaluation methods in production monitoring.
+:::
+
+::: {.callout-warning}
+## Watch out
+
+- Do not judge an agent only by its final answer.
+- Do not use one evaluator for every task. Different judgments need different methods.
+- Do not mix component bugs with trajectory issues. Separate them when you can.
+- Do not treat evaluation as a one-time step. Agents change, and their behavior can drift over time.
+:::
+
+## Sources {.sources}
+
+- [Evaluating AI Agents](https://www.deeplearning.ai/courses/evaluating-ai-agents)
