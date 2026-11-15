@@ -84,7 +84,7 @@ Check that:
 {style}
 </style_guide>
 
-The front matter (between --- lines), the topic pills (::: {.lesson-meta}) and the Sources
+The front matter (between --- lines), the topic pills (::: {{.lesson-meta}}) and the Sources
 section are added automatically by code: do not flag them.
 
 If the human gave instructions, check that they were followed.
