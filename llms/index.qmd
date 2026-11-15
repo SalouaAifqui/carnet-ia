@@ -3,8 +3,8 @@ title: LLMs
 body-classes: topic t-llms
 toc: false
 listing:
-- id: foundations
-  contents: foundations/*.qmd
+- id: how-llms-work
+  contents: how-llms-work/*.qmd
   type: grid
   grid-columns: 2
   sort: date desc
@@ -21,19 +21,31 @@ listing:
 How large language models work under the hood, how the main models compare, and how to choose between them.
 :::
 
-## Foundation models {.group-title}
+## How LLMs work {.group-title data-folder="how-llms-work"}
 
-::: {.empty-state}
-The large proprietary models (GPT, Claude, Gemini…): how they are trained, what they're good at, and comparative dashboards. **First notes coming soon.**
+::: {.group-meta}
+What happens inside a model: tokens, embeddings, the transformer architecture, attention, training and inference.
 :::
 
-## Open-source models {.group-title}
-
-::: {.empty-state}
-Open-weight models you can run or fine-tune yourself (Llama, Mistral, Qwen…), and how they stack up. **First notes coming soon.**
+::: {#how-llms-work}
 :::
 
-## Foundations {.group-title}
+## Foundation models {.group-title data-folder="foundation-models"}
 
-::: {#foundations}
+::: {.group-meta}
+The large proprietary models (GPT, Claude, Gemini…): what each family is good at, how they compare, comparative dashboards.
+:::
+
+::: {.empty-state}
+Comparisons and profiles of the main proprietary models. **First notes coming soon.**
+:::
+
+## Open-source models {.group-title data-folder="open-source-models"}
+
+::: {.group-meta}
+Open-weight models you can run or fine-tune yourself (Llama, Mistral, Qwen…): what they offer and how they stack up.
+:::
+
+::: {.empty-state}
+Open-weight models and how to use them. **First notes coming soon.**
 :::

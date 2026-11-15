@@ -86,7 +86,7 @@ def services(root, model, review_model, tool=None, today="2026-11-15"):
 
 NOTES = SourceNotes(title="Input validation for LLM apps", content_type="article",
                     summary="How to validate inputs.", key_points=["Validate inputs"])
-ROUTE = Route(reasoning="New guardrail subject.", action="create", topic="guardrails",
+ROUTE = Route(concept="input validation", reasoning="New guardrail subject.", action="create", topic="guardrails",
               folder="Input Validation", folder_title="Input validation", target_path="",
               title="Validating LLM inputs", subtitle="Check what goes into the model.")
 PLAN = ResearchPlan(gaps=["What is prompt injection?"],
@@ -175,7 +175,7 @@ def test_update_existing_page():
     _, old_sources = split_sources(old_body)
     notes = SourceNotes(title="LangGraph docs: Graph API", content_type="documentation",
                         summary="Nodes and edges.", key_points=["Nodes", "Edges"])
-    route = Route(reasoning="Same concept.", action="update", topic="agents", folder="foundations",
+    route = Route(concept="graph API", reasoning="Same concept.", action="update", topic="agents", folder="foundations",
                   folder_title="Foundations", target_path=target,
                   title="Building agents with LangGraph", subtitle="...")
     model = FakeModel(
@@ -199,6 +199,30 @@ def test_update_existing_page():
     print("✓ update: dates, sources, pills kept")
 
 
+def route_only(route):
+    """Run only the categorize node with a given LLM decision; return the validated route."""
+    root = make_site_copy()
+    agent = CarnetAgent(services(root, FakeModel(structured={Route: [route]}), FakeModel()))
+    return agent.categorize({"notes": NOTES})["route"], root
+
+
+def test_routing_uses_existing_sections():
+    base = dict(concept="x", reasoning="x", action="create", target_path="", title="T", subtitle="S")
+    # An EMPTY section is a valid target, chosen by id.
+    route, _ = route_only(Route(topic="evaluation", folder="llms", folder_title="LLMs", **base))
+    assert (route.folder, route.new_section) == ("llms", False)
+    # The model gives the section TITLE instead of its id: code maps it to the id.
+    route, _ = route_only(Route(topic="llms", folder="Foundation models", folder_title="Foundation models", **base))
+    assert (route.folder, route.folder_title, route.new_section) == ("foundation-models", "Foundation models", False)
+    # A section that doesn't exist is flagged as new, even if the model didn't say so…
+    route, _ = route_only(Route(topic="evaluation", folder="agent-evaluation", folder_title="Agent Evaluation", **base))
+    assert route.new_section is True
+    # …and the plan shown to the human says it loudly.
+    plan = hitl.plan_comment({"url": "u", "route": route, "outline": OUTLINE, "sources": []})
+    assert "New section proposed" in plan
+    print("✓ routing: empty sections usable, titles mapped to ids, new sections flagged")
+
+
 def test_parse_command():
     assert hitl.parse_command("/approve") == ("approve", "")
     assert hitl.parse_command("/replan put it in agents") == ("replan", "put it in agents")
@@ -209,6 +233,7 @@ def test_parse_command():
 
 if __name__ == "__main__":
     test_parse_command()
+    test_routing_uses_existing_sections()
     test_pause_then_approve_creates_page()
     test_replan_redoes_the_plan_with_instructions()
     test_update_existing_page()

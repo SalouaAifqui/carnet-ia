@@ -4,11 +4,13 @@ subtitle: From tokenization and embeddings to self-attention, transformer blocks
 date: '2026-11-15'
 categories:
 - LLMs
-- Foundations
+- How LLMs work
+aliases:
+- /llms/foundations/how-transformer-llms-work.html
 ---
 
 ::: {.lesson-meta}
-[LLMs]{.pill .t-llms} [Foundations]{.pill .muted}
+[LLMs]{.pill .t-llms} [How LLMs work]{.pill .muted}
 :::
 
 ::: {.tldr}

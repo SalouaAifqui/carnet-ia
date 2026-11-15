@@ -62,23 +62,69 @@ def list_pages(root: Path) -> list[PageInfo]:
     return pages
 
 
-def list_folders(root: Path) -> dict[str, list[str]]:
-    return {t: sorted(p.name for p in (root / t).iterdir() if p.is_dir()) for t in TOPICS}
+# --- The site map: topics → sections → pages --------------------------------------
+#
+# Sections are declared on each topic page (topic/index.qmd) as headings like
+#     ## Foundation models {.group-title data-folder="foundation-models"}
+# followed by a `::: {.group-meta}` description. Empty sections exist too: that is
+# why we read the topic pages instead of looking at folders on disk.
+
+SECTION_RE = re.compile(r'^## (.+?) \{([^}]*\.group-title[^}]*)\}\s*$', re.M)
+
+
+@dataclass
+class Section:
+    topic: str
+    folder: str
+    title: str
+    description: str
+
+
+def list_sections(root: Path) -> list[Section]:
+    sections = []
+    for topic in TOPICS:
+        index = root / topic / "index.qmd"
+        _, body = split_front_matter(index.read_text()) if index.exists() else ({}, "")
+        found = list(SECTION_RE.finditer(body))
+        for i, match in enumerate(found):
+            attrs = match.group(2)
+            folder = re.search(r'data-folder="([^"]+)"', attrs)
+            chunk = body[match.end(): found[i + 1].start() if i + 1 < len(found) else len(body)]
+            meta = re.search(r"::: \{\.(?:group-meta|empty-state)\}\n(.*?)\n:::", chunk, re.S)
+            description = re.sub(r"\*\*|\[|\]\([^)]*\)", "", meta.group(1)).strip() if meta else ""
+            sections.append(Section(topic, folder.group(1) if folder else slugify(match.group(1)),
+                                    match.group(1).strip(), description))
+        # A folder with pages but no declared section still counts.
+        declared = {s.folder for s in sections if s.topic == topic}
+        if (root / topic).exists():
+            for d in sorted(p for p in (root / topic).iterdir() if p.is_dir() and p.name not in declared):
+                sections.append(Section(topic, d.name, d.name.replace("-", " ").capitalize(), ""))
+    return sections
+
+
+def topic_description(root: Path, topic: str) -> str:
+    index = root / topic / "index.qmd"
+    if not index.exists():
+        return ""
+    hero = re.search(r"::: \{\.topic-hero\}.*?\{\.topic-h1\}\n\n(.*?)\n:::", index.read_text(), re.S)
+    return hero.group(1).strip() if hero else ""
 
 
 def describe_site(root: Path) -> str:
-    """A compact text version of the site, given to the `categorize` LLM."""
-    lines = []
-    folders = list_folders(root)
+    """The site map given to the `categorize` LLM: every topic, every section
+    (including empty ones) with what it is for, and the pages it already has."""
     pages = list_pages(root)
+    sections = list_sections(root)
+    lines = []
     for topic, (label, _) in TOPICS.items():
-        lines.append(f"# Topic `{topic}` ({label})")
-        if not folders[topic]:
-            lines.append("  (no folders yet)")
-        for folder in folders[topic]:
-            lines.append(f"  ## Folder `{folder}`")
-            for p in (p for p in pages if p.topic == topic and p.folder == folder):
-                lines.append(f"    - {p.path} | {p.title}: {p.subtitle}")
+        lines.append(f"# Topic `{topic}` ({label}): {topic_description(root, topic)}")
+        topic_sections = [s for s in sections if s.topic == topic]
+        if not topic_sections:
+            lines.append("  (no sections yet)")
+        for sec in topic_sections:
+            lines.append(f"  ## Section `{sec.folder}` ({sec.title}): {sec.description or 'no description'}")
+            in_section = [p for p in pages if p.topic == topic and p.folder == sec.folder]
+            lines += [f"    - page {p.path} | {p.title}: {p.subtitle}" for p in in_section] or ["    (empty)"]
     return "\n".join(lines)
 
 
@@ -145,13 +191,13 @@ def check_page(text: str, findings: list[Finding]) -> list[str]:
 
 # --- Registering a new folder in the site's menus --------------------------------
 
-def ensure_listed(root: Path, topic: str, folder: str, folder_title: str) -> None:
+def ensure_listed(root: Path, topic: str, folder: str, folder_title: str, description: str = "") -> None:
     """Make sure topic/<folder> appears on the topic page and in the sidebar."""
-    _add_listing_to_topic_page(root / topic / "index.qmd", folder, folder_title)
+    _add_listing_to_topic_page(root / topic / "index.qmd", folder, folder_title, description)
     _add_folder_to_sidebar(root / "_quarto.yml", topic, folder, folder_title)
 
 
-def _add_listing_to_topic_page(index_file: Path, folder: str, folder_title: str) -> None:
+def _add_listing_to_topic_page(index_file: Path, folder: str, folder_title: str, description: str = "") -> None:
     fm, body = split_front_matter(index_file.read_text())
     listings = fm.get("listing") or []
     if isinstance(listings, dict):
@@ -164,9 +210,11 @@ def _add_listing_to_topic_page(index_file: Path, folder: str, folder_title: str)
 
     placeholder = f"::: {{#{folder}}}\n:::"
     # 1. A section with this name already exists (e.g. "Foundation models"): replace its empty state.
-    sections = list(re.finditer(r"^## (.+?) \{\.group-title\}\s*$", body, re.M))
+    sections = list(SECTION_RE.finditer(body))
     for i, section in enumerate(sections):
-        if slugify(section.group(1)) in (folder, slugify(folder_title)):
+        declared = re.search(r'data-folder="([^"]+)"', section.group(2))
+        if (declared and declared.group(1) == folder) or \
+                (not declared and slugify(section.group(1)) in (folder, slugify(folder_title))):
             end = sections[i + 1].start() if i + 1 < len(sections) else len(body)
             chunk = body[section.end():end]
             new_chunk = re.sub(r"::: \{\.empty-state\}.*?\n:::", placeholder, chunk, count=1, flags=re.S)
@@ -178,7 +226,9 @@ def _add_listing_to_topic_page(index_file: Path, folder: str, folder_title: str)
         # 2. Otherwise drop a lone "coming soon" box (topics with no sections yet) and add a section.
         if not sections:
             body = re.sub(r"::: \{\.empty-state\}.*?\n:::\n?", "", body, flags=re.S)
-        body = body.rstrip() + f"\n\n## {folder_title} {{.group-title}}\n\n{placeholder}\n"
+        meta = f"::: {{.group-meta}}\n{description}\n:::\n\n" if description else ""
+        body = body.rstrip() + (f'\n\n## {folder_title} {{.group-title data-folder="{folder}"}}\n\n'
+                                f"{meta}{placeholder}\n")
     index_file.write_text(join_front_matter(fm, body))
 
 

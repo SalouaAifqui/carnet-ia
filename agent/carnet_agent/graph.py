@@ -28,6 +28,7 @@ from langgraph.graph import END, START, StateGraph
 from . import prompts
 from .config import MAX_QUERIES, MAX_REVISIONS, MAX_TOOL_CALLS, TOPICS
 from .site import (check_page, describe_site, ensure_listed, is_self, join_front_matter, list_pages,
+                   list_sections,
                    merge_sources, render_sources, slugify, split_front_matter, split_sources,
                    topic_pills)
 from .state import (AgentState, Findings, PageOutline, ResearchPlan, Review, Route, Source,
@@ -116,11 +117,21 @@ class CarnetAgent:
             SystemMessage(prompts.CATEGORIZE.format(site=describe_site(self.s.root))),
             HumanMessage(state["notes"].model_dump_json(indent=2) + feedback_block(state)),
         ])
-        # Never trust a path blindly: an "update" must point to a page that exists.
+        # [code] Never trust the decision blindly.
+        # 1. An "update" must point to a page that exists.
         existing = {p.path: p for p in list_pages(self.s.root)}
         if route.action == "update" and route.target_path not in existing:
             route.action, route.target_path = "create", ""
+        # 2. The section must exist in that topic. If the model gave a title instead of the id,
+        #    find it by title. Only if nothing matches is it really a new section.
         route.folder = slugify(route.folder)
+        sections = [s for s in list_sections(self.s.root) if s.topic == route.topic]
+        match = next((s for s in sections if s.folder == route.folder), None) or \
+            next((s for s in sections if slugify(s.title) in (route.folder, slugify(route.folder_title))), None)
+        if match:
+            route.folder, route.folder_title, route.new_section = match.folder, match.title, False
+        else:
+            route.new_section = True
 
         update = {"route": route, "existing_body": ""}
         if route.action == "update":
@@ -283,7 +294,7 @@ class CarnetAgent:
         path.write_text(page)
         route = state["route"]
         if route.action == "create":
-            ensure_listed(self.s.root, route.topic, route.folder, route.folder_title)
+            ensure_listed(self.s.root, route.topic, route.folder, route.folder_title, route.section_description)
         return {"page_path": str(path.relative_to(self.s.root))}
 
     def publish(self, state: AgentState):
@@ -356,6 +367,10 @@ def describe_plan(state: AgentState) -> str:
         f"in **{TOPICS[route.topic][0]}** › {route.folder_title}",
         f"> {route.reasoning}",
         "",
+        *([f"⚠️ **New section proposed:** {route.folder_title} (`{route.topic}/{route.folder}`): "
+           f"{route.section_description or 'no description'}. "
+           "No existing section fits, according to the agent. If one does, answer `/replan` and name it.", ""]
+          if route.new_section else []),
         "### Outline",
     ]
     for section in outline.sections:

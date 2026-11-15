@@ -28,12 +28,17 @@ class SourceNotes(BaseModel):
 
 class Route(BaseModel):
     """Decision of the `categorize` node: where does this content belong?"""
-    reasoning: str = Field(description="Why this placement, in one or two sentences.")
+    concept: str = Field(description="The main concept the content teaches, in a few words "
+                                     "(not the title of the source).")
+    reasoning: str = Field(description="Why this topic, section and page, in one or two sentences.")
     action: Literal["update", "create"] = Field(
-        description="'update' if an existing page covers the same subject, otherwise 'create'.")
+        description="'update' if an existing page covers the same concept, otherwise 'create'.")
     topic: Topic
-    folder: str = Field(description="Sub-folder inside the topic, e.g. 'langgraph'. Reuse an existing one when it fits.")
-    folder_title: str = Field(description="Human title of the folder, e.g. 'AI Agents in LangGraph'.")
+    folder: str = Field(description="The section id, EXACTLY as listed in the site map (e.g. 'memory', "
+                                    "'foundation-models'). Only if no section fits: a new id.")
+    folder_title: str = Field(description="The section title as listed (or the title of the new section).")
+    new_section: bool = Field(default=False, description="True only if no existing section fits.")
+    section_description: str = Field(default="", description="Only for a new section: what it will contain.")
     target_path: str = Field(description="For 'update': the path of the page to update, exactly as listed. "
                                          "For 'create': leave empty.")
     title: str = Field(description="Title of the page (new title for 'create', current title for 'update').")

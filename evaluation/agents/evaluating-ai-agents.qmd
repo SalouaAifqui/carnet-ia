@@ -4,11 +4,13 @@ subtitle: How to assess, debug, and improve agents with traces, component tests,
 date: '2026-11-15'
 categories:
 - Evaluation
-- Agent Evaluation
+- Agents
+aliases:
+- /evaluation/agent-evaluation/evaluating-ai-agents.html
 ---
 
 ::: {.lesson-meta}
-[Evaluation]{.pill .t-eval} [Agent Evaluation]{.pill .muted}
+[Evaluation]{.pill .t-eval} [Agents]{.pill .muted}
 :::
 
 ::: {.tldr}

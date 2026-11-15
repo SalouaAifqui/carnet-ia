@@ -74,7 +74,7 @@ Le graphe est construit dans `carnet_agent/graph.py`, méthode `CarnetAgent.buil
 |---|---|---|---|
 | `fetch` | 🔧 code | Récupère le texte de la page avec Tavily Extract (téléchargement simple en secours). Chaque site est différent : on ne lit pas le HTML nous-mêmes. | `graph.py` → `fetch`, `web.py` → `fetch_source` |
 | `read` | 🧠 LLM | Transforme la page en `SourceNotes` : titre, résumé, idées clés, définitions, code. | `graph.py` → `read` |
-| `categorize` | 🔧 → 🧠 → 🔧 | **Code** : décrit le site (thèmes, dossiers, pages). **LLM** : remplit un `Route` (update/create, thème, dossier, titre). **Code** : vérifie que la page à mettre à jour existe vraiment, sinon passe en « create ». | `graph.py` → `categorize`, `site.py` → `describe_site` |
+| `categorize` | 🔧 → 🧠 → 🔧 | **Code** : construit la carte du site (thèmes → sections, même vides → pages). **LLM** : remplit un `Route` en suivant une procédure (notion → thème → section → page). **Code** : vérifie que la page et la section existent, et signale toute nouvelle section. Voir « Le routage » plus bas. | `graph.py` → `categorize`, `site.py` → `describe_site`, `list_sections` |
 | `find_gaps` | 🧠 LLM | Liste ce qu'un apprenant ne comprendrait pas, et propose 3 recherches maximum (`ResearchPlan`). | `graph.py` → `find_gaps` |
 | `search` | 🔧 code | Lance les recherches Tavily et classe en premier les sites de confiance (docs officielles, papiers…). | `web.py` → `run_searches` |
 | `select` | 🧠 → 🔧 | **LLM** : garde les informations utiles, chacune avec son URL (`Findings`). **Code** : supprime toute information dont l'URL n'était pas dans les résultats, ce qui empêche les sources inventées. | `graph.py` → `select` |
@@ -101,6 +101,38 @@ le LLM répond → s'il demande un tool : on l'exécute, on renvoie le résultat
 ```
 
 Elle s'arrête après 4 appels maximum (`MAX_TOOL_CALLS`).
+
+### Le routage : comment l'agent choisit où ranger une page
+
+C'est l'étape la plus importante pour la cohérence du site. Elle repose sur trois éléments.
+
+**1. Une carte du site explicite.** Chaque page thème (`llms/index.qmd`, `agents/index.qmd`…) déclare ses sections avec un identifiant et une description :
+
+```markdown
+## Foundation models {.group-title data-folder="foundation-models"}
+
+::: {.group-meta}
+The large proprietary models (GPT, Claude, Gemini…): what each family is good at, how they compare.
+:::
+```
+
+`site.py` → `list_sections` lit ces déclarations. Le routeur voit donc **toutes** les sections, **y compris les vides**, avec ce qu'elles doivent contenir, et les pages qu'elles ont déjà. **Pour ajouter ou modifier une section, il suffit de modifier la page thème : l'agent la verra à la prochaine exécution.**
+
+**2. Une procédure en étapes, avec des exemples** (`prompts.py` → `CATEGORIZE`) :
+
+```
+1. Notion      : que m'apprend ce contenu ? (pas le titre de la source)
+2. Thème       : comment marchent les modèles → llms, construire des agents → agents,
+                 mesurer la qualité → evaluation, garde-fous → guardrails
+3. Section     : celle dont la description correspond (une section vide est un bon choix)
+4. Page        : une page couvre déjà la notion ? → la compléter (update), sinon créer
+5. Nouvelle section : seulement si aucune ne convient (rare, à confirmer par un humain)
+```
+
+**3. Une vérification par le code**, après la décision du LLM :
+- une mise à jour doit viser une page qui existe ;
+- la section doit exister dans ce thème. Si le LLM a donné le **titre** au lieu de l'identifiant, le code retrouve l'identifiant ;
+- sinon, c'est une **nouvelle section**, et le plan l'affiche avec un ⚠️ pour que tu la valides ou la corriges avec `/replan`.
 
 ---
 

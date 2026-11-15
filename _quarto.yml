@@ -54,8 +54,8 @@ website:
     style: docked
     contents:
     - llms/index.qmd
-    - section: Foundations
-      contents: llms/foundations/*.qmd
+    - section: How LLMs work
+      contents: llms/how-llms-work/*.qmd
   - id: guardrails
     title: Guardrails
     style: docked
@@ -66,8 +66,8 @@ website:
     style: docked
     contents:
     - evaluation/index.qmd
-    - section: Agent Evaluation
-      contents: evaluation/agent-evaluation/*.qmd
+    - section: Agents
+      contents: evaluation/agents/*.qmd
   page-footer:
     left: Carnet IA · notes written while learning
     right:

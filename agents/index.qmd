@@ -31,7 +31,7 @@ listing:
 How to build agents around LLMs: what an agent is, how to build one with LangGraph from the simplest loop to a full system, how it remembers, and how to keep control of it.
 :::
 
-## Foundations {.group-title}
+## Foundations {.group-title data-folder="foundations"}
 
 ::: {.group-meta}
 What an agent is, the LangGraph building blocks, and agent designs from level 1 to level 5.
@@ -40,7 +40,7 @@ What an agent is, the LangGraph building blocks, and agent designs from level 1 
 ::: {#foundations}
 :::
 
-## Memory {.group-title}
+## Memory {.group-title data-folder="memory"}
 
 ::: {.group-meta}
 Short-term memory with checkpointers, long-term memory with the store: facts, examples and instructions.
@@ -49,7 +49,7 @@ Short-term memory with checkpointers, long-term memory with the store: facts, ex
 ::: {#memory}
 :::
 
-## Control {.group-title}
+## Control {.group-title data-folder="control"}
 
 ::: {.group-meta}
 Streaming, human in the loop and time travel.
