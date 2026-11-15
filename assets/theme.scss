@@ -263,3 +263,11 @@ body.topic .quarto-grid-item.card:hover { border-color: var(--t); }
   border: none; background: $accent-soft; color: $accent; border-radius: 999px;
   font-size: .68rem; font-weight: 600; letter-spacing: .05em; text-transform: uppercase; padding: .2rem .5rem;
 }
+
+/* card text sizes */
+.quarto-grid-item .card-subtitle, .quarto-grid-item .listing-subtitle {
+  font-size: .95rem !important; line-height: 1.5; color: $muted; margin-top: .3rem;
+}
+.quarto-grid-item .card-title, .quarto-grid-item .listing-title { font-size: 1.05rem; }
+.quarto-grid-item .listing-categories { margin-top: .75rem; }
+.topic-hero p { line-height: 1.6 !important; }
