@@ -42,7 +42,21 @@ topics below. Write at most {max_queries} web search queries to fill them."""
 SELECT = """You are an editor. Below are web search results gathered to complete a study page.
 Keep ONLY information that is important for understanding the subject, accurate, and not
 already in the notes. Rewrite each kept fact in your own words, and attach the exact URL and
-title of the result it comes from. Discard everything else. It is fine to keep nothing."""
+title of the result it comes from. Discard everything else. It is fine to keep nothing.
+
+Source quality matters: prefer official documentation, the authors' own sites, papers and
+well-known references. Do not keep facts from forum threads, Q&A pages or SEO tutorials
+when the same fact is available from a better source in the results; if it is only available
+from a weak source, drop it."""
+
+OUTLINE = """You are planning a page for Carnet IA, a website of study notes on applied AI.
+Before anything is written, a human will approve this plan, so make it concrete:
+the sections in order, what each will say, and the code examples that will be shown.
+Follow the page structure of the style guide.
+
+<style_guide>
+{style}
+</style_guide>"""
 
 WRITE = """You are the writer of Carnet IA, a website of study notes on applied AI.
 Write the page following the style guide exactly.
@@ -58,7 +72,9 @@ When you are done, answer with the full page body in markdown and nothing else."
 REVIEW = """You are a demanding reviewer. Check the page below before it is published.
 
 Check that:
-1. It is faithful to the source notes and adds no invented facts.
+1. It is faithful to the source notes. Facts may also come from the research findings
+   listed below (they are sourced on purpose), and short general explanations that help a
+   learner are welcome. Flag only specific claims that come from neither and could be wrong.
 2. Every added fact from the research findings is consistent with the source.
 3. The code uses current APIs (you may call web_search / fetch_url to verify).
 4. It follows the style guide.
@@ -67,6 +83,11 @@ Check that:
 <style_guide>
 {style}
 </style_guide>
+
+The front matter (between --- lines), the topic pills (::: {.lesson-meta}) and the Sources
+section are added automatically by code: do not flag them.
+
+If the human gave instructions, check that they were followed.
 
 Approve only if there is nothing important to fix. Be concrete in each issue.
 List in missing_topics only concepts that need NEW research, not writing problems."""

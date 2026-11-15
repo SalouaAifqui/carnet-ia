@@ -1,9 +1,11 @@
 """The Carnet IA agent: a LangGraph graph that turns a URL into a page proposal.
 
-    fetch → read → categorize → find_gaps ─┬→ search → select → write → review ─┬→ finalize → publish
-                                           └──────────(no gaps)───────↑          │
-                                                                      ├── write ◄┤ (text issues)
-                                                research_critique → search ◄─────┘ (missing topics)
+    fetch → read → categorize → find_gaps ─┬→ search → select ─→ outline → ⏸ human_approval → write → review ─┬→ finalize → publish
+                                           └───────(no gaps)───────↑                            ▲           │
+                                                                                                ├─ write ◄──┤ (text issues)
+                                                         research_critique → search → select ───┘ ◄─────────┘ (missing topics)
+
+⏸ = the graph pauses (interrupt) so a human approves the outline before anything is written.
 
 Legend used in the comments below:
     [code] plain Python: always runs, no decision
@@ -19,6 +21,8 @@ from pathlib import Path
 from typing import Callable
 
 from langchain_core.messages import HumanMessage, SystemMessage, ToolMessage
+from langgraph.checkpoint.memory import MemorySaver
+from langgraph.checkpoint.serde.jsonplus import JsonPlusSerializer
 from langgraph.graph import END, START, StateGraph
 
 from . import prompts
@@ -26,7 +30,8 @@ from .config import MAX_QUERIES, MAX_REVISIONS, MAX_TOOL_CALLS, TOPICS
 from .site import (check_page, describe_site, ensure_listed, join_front_matter, list_pages,
                    merge_sources, render_sources, slugify, split_front_matter, split_sources,
                    topic_pills)
-from .state import AgentState, Findings, ResearchPlan, Review, Route, Source, SourceNotes
+from .state import (AgentState, Findings, PageOutline, ResearchPlan, Review, Route, Source,
+                    SourceNotes)
 
 
 @dataclass
@@ -52,6 +57,13 @@ def text_of(message) -> str:
     if isinstance(content, str):
         return content
     return "".join(block.get("text", "") for block in content if isinstance(block, dict))
+
+
+def feedback_block(state: AgentState) -> str:
+    """The human's instructions, if any, formatted for a prompt."""
+    if not state.get("human_feedback"):
+        return ""
+    return f"\n\nInstructions from the human (they take priority):\n{state['human_feedback']}"
 
 
 def run_with_tools(model, tools, messages, max_calls=MAX_TOOL_CALLS):
@@ -102,7 +114,7 @@ class CarnetAgent:
         """[code] describe the site, [LLM] decide update/create, [code] validate the decision."""
         route = self.s.model.with_structured_output(Route).invoke([
             SystemMessage(prompts.CATEGORIZE.format(site=describe_site(self.s.root))),
-            HumanMessage(state["notes"].model_dump_json(indent=2)),
+            HumanMessage(state["notes"].model_dump_json(indent=2) + feedback_block(state)),
         ])
         # Never trust a path blindly: an "update" must point to a page that exists.
         existing = {p.path: p for p in list_pages(self.s.root)}
@@ -127,7 +139,7 @@ class CarnetAgent:
                         f"do not search for it again:\n{state['existing_body'][:6000]}\n")
         plan = self.s.model.with_structured_output(ResearchPlan).invoke([
             SystemMessage(prompts.FIND_GAPS.format(existing=existing, max_queries=MAX_QUERIES)),
-            HumanMessage(state["notes"].model_dump_json(indent=2)),
+            HumanMessage(state["notes"].model_dump_json(indent=2) + feedback_block(state)),
         ])
         return {"gaps": plan.gaps, "queries": plan.queries[:MAX_QUERIES]}
 
@@ -159,7 +171,30 @@ class CarnetAgent:
         sources = [Source(title=f.source_title, url=f.source_url, role="complementary") for f in findings]
         return {"findings": findings, "sources": sources}
 
-    # ---------------------------------------------------------------- 5. write
+    # ---------------------------------------------------------------- 5. plan + human approval
+    def outline(self, state: AgentState):
+        """[LLM] Plan the page: sections and code examples. This is what the human approves."""
+        route = state["route"]
+        parts = [f"Page: {route.action} '{route.title}' ({route.subtitle})",
+                 f"Source notes:\n{state['notes'].model_dump_json(indent=2)}"]
+        if state.get("findings"):
+            parts.append("Research findings:\n" + "\n".join(f"- {f.fact}" for f in state["findings"]))
+        if state.get("existing_body"):
+            parts.append(f"Current page (to be extended):\n{state['existing_body'][:6000]}")
+        plan = self.s.model.with_structured_output(PageOutline).invoke([
+            SystemMessage(prompts.OUTLINE.format(style=self.style)),
+            HumanMessage("\n\n".join(parts) + feedback_block(state)),
+        ])
+        return {"outline": plan}
+
+    def human_approval(self, state: AgentState):
+        """[code] Does nothing by itself. The graph is compiled with
+        interrupt_before=["human_approval"], so it stops HERE and waits for a person.
+        When the person approves, their instructions are written into the state
+        (update_state) and the run resumes."""
+        return {}
+
+    # ---------------------------------------------------------------- 6. write
     def write(self, state: AgentState):
         """[LLM] + [tool] Write (or rewrite) the page body."""
         route = state["route"]
@@ -167,6 +202,8 @@ class CarnetAgent:
             f"Action: {route.action} the page '{route.title}' ({route.subtitle}).",
             f"Source notes:\n{state['notes'].model_dump_json(indent=2)}",
         ]
+        if state.get("outline"):
+            parts.append("Approved outline (follow it):\n" + state["outline"].model_dump_json(indent=2))
         if state.get("findings"):
             parts.append("Complementary findings to integrate where they help understanding:\n" +
                          "\n".join(f"- {f.fact} (from {f.source_url})" for f in state["findings"]))
@@ -180,11 +217,11 @@ class CarnetAgent:
 
         reply, _ = run_with_tools(self.s.model, self.s.tools, [
             SystemMessage(prompts.WRITE.format(style=self.style)),
-            HumanMessage("\n\n".join(parts)),
+            HumanMessage("\n\n".join(parts) + feedback_block(state)),
         ])
         return {"draft": clean_draft(text_of(reply)), "revision_number": state["revision_number"] + 1}
 
-    # ---------------------------------------------------------------- 6. review
+    # ---------------------------------------------------------------- 7. review
     def review(self, state: AgentState):
         """[code] mechanical checks, then [LLM] + [tool] critical review."""
         _, page = self.assemble(state)
@@ -193,7 +230,11 @@ class CarnetAgent:
         messages = [
             SystemMessage(prompts.REVIEW.format(style=self.style)),
             HumanMessage(f"Source notes:\n{state['notes'].model_dump_json(indent=2)}\n\n"
-                         f"Page to review:\n<page>\n{page}\n</page>"),
+                         "Research findings (sourced, allowed on the page):\n"
+                         + ("\n".join(f"- {f.fact} ({f.source_url})" for f in state.get("findings") or [])
+                            or "(none)")
+                         + feedback_block(state)
+                         + f"\n\nPage to review:\n<page>\n{page}\n</page>"),
         ]
         _, messages = run_with_tools(self.s.review_model, self.s.tools, messages)
         verdict = self.s.review_model.with_structured_output(Review).invoke(
@@ -209,7 +250,7 @@ class CarnetAgent:
             return "research_critique"
         return "write"
 
-    # ---------------------------------------------------------------- 7. finalize + publish
+    # ---------------------------------------------------------------- 8. finalize + publish
     def assemble(self, state: AgentState) -> tuple[Path, str]:
         """[code] Build the final file: front matter + pills + body + Sources."""
         route = state["route"]
@@ -252,21 +293,26 @@ class CarnetAgent:
         return {"pr_url": self.s.publish(state)}
 
     # ---------------------------------------------------------------- the graph
-    def build(self):
+    def build(self, pause_for_approval: bool = True):
+        """pause_for_approval=True: stop before `human_approval` (needs a checkpointer)."""
         g = StateGraph(AgentState)
-        for name in ["fetch", "read", "categorize", "find_gaps", "search", "select", "write",
-                     "review", "research_critique", "finalize", "publish"]:
+        for name in ["fetch", "read", "categorize", "find_gaps", "search", "select", "outline",
+                     "human_approval", "write", "review", "research_critique", "finalize", "publish"]:
             g.add_node(name, getattr(self, name))
 
         g.add_edge(START, "fetch")
         g.add_edge("fetch", "read")
         g.add_edge("read", "categorize")
         g.add_edge("categorize", "find_gaps")
-        # No gaps found → skip the search and write directly.
-        g.add_conditional_edges("find_gaps", lambda s: "search" if s.get("queries") else "write",
-                                {"search": "search", "write": "write"})
+        # No gaps found → skip the search and go straight to the outline.
+        g.add_conditional_edges("find_gaps", lambda s: "search" if s.get("queries") else "outline",
+                                {"search": "search", "outline": "outline"})
         g.add_edge("search", "select")
-        g.add_edge("select", "write")
+        # First research round → plan the page. Research asked by the reviewer → back to writing.
+        g.add_conditional_edges("select", lambda s: "write" if s.get("review") else "outline",
+                                {"write": "write", "outline": "outline"})
+        g.add_edge("outline", "human_approval")
+        g.add_edge("human_approval", "write")
         g.add_edge("write", "review")
         g.add_conditional_edges("review", self.should_continue,
                                 {"finalize": "finalize", "write": "write",
@@ -274,6 +320,13 @@ class CarnetAgent:
         g.add_edge("research_critique", "search")
         g.add_edge("finalize", "publish")
         g.add_edge("publish", END)
+        if pause_for_approval:
+            # The checkpointer stores our Pydantic objects: we list them so they can be loaded back.
+            our_types = [("carnet_agent.state", name) for name in
+                         ["SourceNotes", "Route", "Query", "Finding", "Source", "PageOutline",
+                          "OutlineSection", "Review"]]
+            memory = MemorySaver(serde=JsonPlusSerializer(allowed_msgpack_modules=our_types))
+            return g.compile(checkpointer=memory, interrupt_before=["human_approval"])
         return g.compile()
 
 
@@ -287,6 +340,34 @@ def clean_draft(text: str) -> str:
     if text.lstrip().startswith("::: {.lesson-meta}"):
         text = text.split(":::", 2)[2].lstrip()
     return text.strip()
+
+
+def describe_plan(state: AgentState) -> str:
+    """The plan shown to the human at the pause: where the page goes and what it will say."""
+    route, outline = state["route"], state["outline"]
+    target = route.target_path if route.action == "update" else \
+        f"{route.topic}/{route.folder}/{slugify(route.title)}.qmd"
+    lines = [
+        f"## 📝 Plan for: {route.title}",
+        f"*{route.subtitle}*",
+        "",
+        f"**Source:** {state['url']}",
+        f"**Decision:** {'update' if route.action == 'update' else 'create'} `{target}` "
+        f"in **{TOPICS[route.topic][0]}** › {route.folder_title}",
+        f"> {route.reasoning}",
+        "",
+        "### Outline",
+    ]
+    for section in outline.sections:
+        lines.append(f"- **{section.heading}**")
+        lines += [f"  - {p}" for p in section.points]
+    if outline.code_examples:
+        lines += ["", "### Code examples", *[f"- {c}" for c in outline.code_examples]]
+    lines += ["", "### Added from research"]
+    lines += [f"- {f.fact} — [{f.source_title}]({f.source_url})" for f in state.get("findings") or []] \
+        or ["- (nothing added)"]
+    lines += ["", "### Sources", *[f"- [{s.title}]({s.url})" for s in state.get("sources") or []]]
+    return "\n".join(lines)
 
 
 def describe_run(state: AgentState) -> str:

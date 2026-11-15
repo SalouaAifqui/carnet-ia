@@ -63,6 +63,18 @@ class Findings(BaseModel):
     findings: list[Finding]
 
 
+class OutlineSection(BaseModel):
+    heading: str = Field(description="Section heading as it will appear on the page.")
+    points: list[str] = Field(description="What this section will say, one short bullet per idea.")
+
+
+class PageOutline(BaseModel):
+    """Output of the `outline` node: the plan shown to the human before anything is written."""
+    sections: list[OutlineSection]
+    code_examples: list[str] = Field(default_factory=list,
+                                     description="The code examples the page will show, one line each.")
+
+
 class Review(BaseModel):
     """Output of the `review` node."""
     approved: bool = Field(description="True only if the page is accurate, complete and follows the style guide.")
@@ -91,6 +103,8 @@ class AgentState(TypedDict, total=False):
     # These two grow over the whole run: each research round ADDS to them.
     findings: Annotated[list[Finding], operator.add]
     sources: Annotated[list[Source], operator.add]
+    outline: PageOutline                       # from `outline`: what the page will contain
+    human_feedback: str                        # instructions given when approving or re-planning
     draft: str                                 # page body written by `write`
     review: Review                             # from `review`
     check_errors: list[str]                    # from the code checks in `review`

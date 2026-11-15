@@ -32,5 +32,5 @@ PREFERRED_DOMAINS = [
     "docs.langchain.com", "langchain-ai.github.io", "python.langchain.com",
     "platform.openai.com", "openai.com", "docs.anthropic.com", "anthropic.com",
     "ai.google.dev", "huggingface.co", "arxiv.org", "deeplearning.ai",
-    "docs.tavily.com", "github.com",
+    "docs.tavily.com", "github.com", "docs.python.org", "pydantic.dev",
 ]

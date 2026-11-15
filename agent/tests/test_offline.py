@@ -1,7 +1,7 @@
 """Offline tests: the whole graph runs with fake models and a fake web.
 
-No API key, no cost. Run from the agent/ folder:
-    python -m pytest tests -q        or        python tests/test_offline.py
+No API key, no cost. From the agent/ folder:
+    python tests/test_offline.py
 """
 import shutil
 import sys
@@ -13,27 +13,34 @@ from langchain_core.messages import AIMessage
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
+from carnet_agent import hitl  # noqa: E402
 from carnet_agent.graph import CarnetAgent, Services  # noqa: E402
+from carnet_agent.run import new_thread, resume, run  # noqa: E402
 from carnet_agent.site import split_front_matter, split_sources  # noqa: E402
-from carnet_agent.state import (Finding, Findings, Query, ResearchPlan, Review, Route,  # noqa: E402
-                                SourceNotes)
+from carnet_agent.state import (Finding, Findings, OutlineSection, PageOutline, Query,  # noqa: E402
+                                ResearchPlan, Review, Route, Source, SourceNotes)
 
 REPO = Path(__file__).resolve().parents[2]
 LONG_BODY = "::: {.tldr}\nSummary.\n:::\n\n## Key ideas\n\n" + "Words to make the page long enough. " * 30
+OUTLINE = PageOutline(sections=[OutlineSection(heading="Key ideas", points=["What a guardrail is"])],
+                      code_examples=["A minimal input check"])
 
 
 class FakeModel:
-    """Answers from scripted queues: one queue per structured-output schema, one for plain replies."""
+    """Answers from scripted queues: one queue per structured-output schema, one for plain replies.
+    It also records every prompt it receives, so tests can check what the LLM was told."""
 
     def __init__(self, structured=None, replies=None):
         self.structured = {k: list(v) for k, v in (structured or {}).items()}
         self.replies = list(replies or [])
+        self.prompts = []
 
     def with_structured_output(self, schema):
         model = self
 
         class _Runner:
             def invoke(self, messages):
+                model.prompts.append(messages[-1].content)
                 return model.structured[schema].pop(0)
         return _Runner()
 
@@ -41,7 +48,19 @@ class FakeModel:
         return self
 
     def invoke(self, messages):
+        self.prompts.append(messages[-1].content)
         return self.replies.pop(0) if self.replies else AIMessage(content="Looks fine.")
+
+
+class FakeTool:
+    name = "web_search"
+
+    def __init__(self):
+        self.calls = []
+
+    def invoke(self, args):
+        self.calls.append(args)
+        return "result"
 
 
 def make_site_copy() -> Path:
@@ -52,69 +71,95 @@ def make_site_copy() -> Path:
     return tmp
 
 
-def test_create_page_in_empty_topic():
-    root = make_site_copy()
-    notes = SourceNotes(title="Input validation for LLM apps", content_type="article",
-                        summary="How to validate inputs.", key_points=["Validate inputs"])
-    route = Route(reasoning="New guardrail subject.", action="create", topic="guardrails",
-                  folder="Input Validation", folder_title="Input validation", target_path="",
-                  title="Validating LLM inputs", subtitle="Check what goes into the model.")
-    plan = ResearchPlan(gaps=["What is prompt injection?"],
-                        queries=[Query(query="prompt injection definition", why="term not explained")])
-    good = Finding(fact="Prompt injection hides instructions in user input.", why="definition",
-                   source_url="https://docs.example.com/injection", source_title="Injection docs")
-    invented = Finding(fact="Made up.", why="-", source_url="https://not-in-results.com", source_title="?")
-    model = FakeModel(
-        structured={SourceNotes: [notes], Route: [route], ResearchPlan: [plan],
-                    Findings: [Findings(findings=[good, invented])]},
-        replies=[
-            # 1st draft: the writer first calls a tool, then answers (with things code must strip)
-            AIMessage(content="", tool_calls=[{"name": "web_search", "args": {"query": "x"}, "id": "t1"}]),
-            AIMessage(content="---\ntitle: x\n---\n" + LONG_BODY + "\n## Sources\n- [x](https://x.com)"),
-            AIMessage(content=LONG_BODY + "\n\nNow with the fix."),   # 2nd draft
-        ],
-    )
-    review_model = FakeModel(structured={Review: [
-        Review(approved=False, issues=["Explain prompt injection."]),
-        Review(approved=True),
-    ]})
-    tool_calls = []
-
-    class FakeTool:
-        name = "web_search"
-
-        def invoke(self, args):
-            tool_calls.append(args)
-            return "result"
-
-    services = Services(
+def services(root, model, review_model, tool=None, today="2026-11-15"):
+    return Services(
         root=root, model=model, review_model=review_model,
         fetch=lambda url: "page text",
         search=lambda qs: [{"query": qs[0], "title": "Injection docs",
                             "url": "https://docs.example.com/injection", "content": "..."}],
-        tools=[FakeTool()], today="2026-11-15",
+        tools=[tool] if tool else [], today=today,
     )
-    final = CarnetAgent(services).build().invoke({"url": "https://source.example.com/article"})
 
+
+NOTES = SourceNotes(title="Input validation for LLM apps", content_type="article",
+                    summary="How to validate inputs.", key_points=["Validate inputs"])
+ROUTE = Route(reasoning="New guardrail subject.", action="create", topic="guardrails",
+              folder="Input Validation", folder_title="Input validation", target_path="",
+              title="Validating LLM inputs", subtitle="Check what goes into the model.")
+PLAN = ResearchPlan(gaps=["What is prompt injection?"],
+                    queries=[Query(query="prompt injection definition", why="term not explained")])
+GOOD = Finding(fact="Prompt injection hides instructions in user input.", why="definition",
+               source_url="https://docs.example.com/injection", source_title="Injection docs")
+INVENTED = Finding(fact="Made up.", why="-", source_url="https://not-in-results.com", source_title="?")
+
+
+def test_pause_then_approve_creates_page():
+    root = make_site_copy()
+
+    # ---- Run 1: until the pause (like the GitHub "plan" step)
+    planner = FakeModel(structured={SourceNotes: [NOTES], Route: [ROUTE], ResearchPlan: [PLAN],
+                                    Findings: [Findings(findings=[GOOD, INVENTED])], PageOutline: [OUTLINE]})
+    graph = CarnetAgent(services(root, planner, FakeModel())).build()
+    state, paused = run(graph, {"url": "https://source.example.com/article"}, new_thread())
+    assert paused, "the graph must stop before writing"
+    assert not (root / "guardrails/input-validation").exists(), "nothing is written before approval"
+    comment = hitl.plan_comment(state)
+    assert "Validating LLM inputs" in comment and "What a guardrail is" in comment
+    assert "not-in-results.com" not in comment, "invented source dropped by code"
+
+    # ---- The state travels through the comment, then a NEW process resumes
+    blob = comment.split(f"<!-- {hitl.MARKER}", 1)[1].split("-->", 1)[0].strip()
+    saved = hitl.load_state(blob)
+    assert saved["route"].title == ROUTE.title and saved["outline"] == OUTLINE
+
+    tool = FakeTool()
+    writer = FakeModel(replies=[
+        AIMessage(content="", tool_calls=[{"name": "web_search", "args": {"query": "x"}, "id": "t1"}]),
+        AIMessage(content="---\ntitle: x\n---\n" + LONG_BODY + "\n## Sources\n- [x](https://x.com)"),
+        AIMessage(content=LONG_BODY + "\n\nNow with the fix."),
+    ])
+    reviewer = FakeModel(structured={Review: [Review(approved=False, issues=["Explain prompt injection."]),
+                                              Review(approved=True)]})
+    graph2 = CarnetAgent(services(root, writer, reviewer, tool)).build()
+    command, feedback = hitl.parse_command("/approve\nKeep it short.")
+    final, paused = resume(graph2, saved, command, feedback, root=root)
+
+    assert not paused
+    assert "Keep it short." in writer.prompts[0], "the human's instructions reach the writer"
+    assert "Approved outline" in writer.prompts[0], "the approved outline reaches the writer"
     page = (root / final["page_path"]).read_text()
     front_matter, body = split_front_matter(page)
     _, sources = split_sources(body)
-    urls = [u for _, u in sources]
-
     assert final["page_path"] == "guardrails/input-validation/validating-llm-inputs.qmd"
-    assert final["revision_number"] == 2                       # rewritten once after review
-    assert tool_calls == [{"query": "x"}]                      # the LLM's tool call was executed
-    assert front_matter["title"] == "Validating LLM inputs" and front_matter["date"] == "2026-11-15"
-    assert urls == ["https://source.example.com/article", "https://docs.example.com/injection"]
-    assert "not-in-results.com" not in page                    # invented source dropped by code
-    assert "https://x.com" not in page                         # writer's own Sources replaced
-    assert "[Guardrails]{.pill .t-guardrails}" in page
+    assert final["revision_number"] == 2
+    assert tool.calls == [{"query": "x"}]
+    assert front_matter["title"] == "Validating LLM inputs"
+    assert [u for _, u in sources] == ["https://source.example.com/article", "https://docs.example.com/injection"]
+    assert "https://x.com" not in page and "[Guardrails]{.pill .t-guardrails}" in page
     index = (root / "guardrails/index.qmd").read_text()
     assert "{#input-validation}" in index and "empty-state" not in index
     sidebar = yaml.safe_load((root / "_quarto.yml").read_text())["website"]["sidebar"]
     guard = next(s for s in sidebar if s["id"] == "guardrails")
     assert {"section": "Input validation", "contents": "guardrails/input-validation/*.qmd"} in guard["contents"]
-    print("✓ create: page, sources, menus OK")
+    print("✓ pause → plan comment → /approve in a new process → page, sources, menus")
+
+
+def test_replan_redoes_the_plan_with_instructions():
+    root = make_site_copy()
+    saved = {"url": "https://source.example.com/article", "notes": NOTES, "route": ROUTE,
+             "sources": [Source(title="Input validation", url="https://source.example.com/article",
+                                role="primary")],
+             "findings": [GOOD], "outline": OUTLINE}
+    new_route = ROUTE.model_copy(update={"topic": "agents", "folder": "safety", "folder_title": "Safety"})
+    model = FakeModel(structured={Route: [new_route], ResearchPlan: [ResearchPlan(gaps=[], queries=[])],
+                                  PageOutline: [OUTLINE]})
+    graph = CarnetAgent(services(root, model, FakeModel())).build()
+    state, paused = resume(graph, saved, "replan", "Put it in agents.", root=root)
+    assert paused, "after /replan the agent stops again with a new plan"
+    assert state["route"].topic == "agents"
+    assert "Put it in agents." in model.prompts[0], "instructions reach categorize"
+    assert state.get("findings") == [], "old research is not carried over"
+    print("✓ /replan → categorize again with the instructions → new plan, paused again")
 
 
 def test_update_existing_page():
@@ -128,25 +173,36 @@ def test_update_existing_page():
                   folder_title="AI Agents in LangGraph", target_path=target,
                   title="LangGraph Components", subtitle="...")
     model = FakeModel(
-        structured={SourceNotes: [notes], Route: [route], ResearchPlan: [ResearchPlan(gaps=[], queries=[])]},
+        structured={SourceNotes: [notes], Route: [route], ResearchPlan: [ResearchPlan(gaps=[], queries=[])],
+                    PageOutline: [OUTLINE]},
         replies=[AIMessage(content=LONG_BODY)],
     )
-    services = Services(root=root, model=model, review_model=FakeModel(structured={Review: [Review(approved=True)]}),
-                        fetch=lambda url: "text", search=lambda qs: [], today="2026-11-16")
-    final = CarnetAgent(services).build().invoke({"url": "https://docs.example.com/graph-api"})
+    reviewer = FakeModel(structured={Review: [Review(approved=True)]})
+    graph = CarnetAgent(services(root, model, reviewer, today="2026-11-16")).build(pause_for_approval=False)
+    final = graph.invoke({"url": "https://docs.example.com/graph-api"})
 
     front_matter, body = split_front_matter((root / target).read_text())
     _, sources = split_sources(body)
     assert final["page_path"] == target
-    assert front_matter["date"] == old_front_matter["date"]          # creation date kept
-    assert front_matter["date-modified"] == "2026-11-16"             # modification date added
+    assert front_matter["date"] == old_front_matter["date"]
+    assert front_matter["date-modified"] == "2026-11-16"
     assert front_matter.get("aliases") == old_front_matter.get("aliases")
-    assert sources[:len(old_sources)] == old_sources                 # old sources kept, in order
-    assert sources[-1][1] == "https://docs.example.com/graph-api"    # new source added
-    assert body.lstrip().startswith("::: {.lesson-meta}")            # pills kept
-    print("✓ update: dates, sources, pills OK")
+    assert sources[:len(old_sources)] == old_sources
+    assert sources[-1][1] == "https://docs.example.com/graph-api"
+    assert body.lstrip().startswith("::: {.lesson-meta}")
+    print("✓ update: dates, sources, pills kept")
+
+
+def test_parse_command():
+    assert hitl.parse_command("/approve") == ("approve", "")
+    assert hitl.parse_command("/replan put it in agents") == ("replan", "put it in agents")
+    assert hitl.parse_command("/approve\nshorter\nmore code") == ("approve", "shorter\nmore code")
+    assert hitl.parse_command("thanks!") == (None, "")
+    print("✓ commands parsed")
 
 
 if __name__ == "__main__":
-    test_create_page_in_empty_topic()
+    test_parse_command()
+    test_pause_then_approve_creates_page()
+    test_replan_redoes_the_plan_with_instructions()
     test_update_existing_page()
