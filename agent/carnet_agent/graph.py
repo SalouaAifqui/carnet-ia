@@ -20,7 +20,9 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Callable
 
+from langchain_core.exceptions import OutputParserException
 from langchain_core.messages import HumanMessage, SystemMessage, ToolMessage
+from pydantic import ValidationError
 from langgraph.checkpoint.memory import MemorySaver
 from langgraph.checkpoint.serde.jsonplus import JsonPlusSerializer
 from langgraph.graph import END, START, StateGraph
@@ -50,6 +52,11 @@ class Services:
     tools: list = field(default_factory=list)    # tools the LLM may call in write / review
     publish: Callable[[AgentState], str] | None = None
     today: str = field(default_factory=lambda: dt.date.today().isoformat())
+    models: dict = field(default_factory=dict)  # role -> model; missing roles use `model` / `review_model`
+
+    def m(self, role: str):
+        """The model for a role: read, plan, research, write or review."""
+        return self.models.get(role) or (self.review_model if role == "review" else self.model)
 
 
 def text_of(message) -> str:
@@ -58,6 +65,20 @@ def text_of(message) -> str:
     if isinstance(content, str):
         return content
     return "".join(block.get("text", "") for block in content if isinstance(block, dict))
+
+
+def ask(model, schema, messages, retries: int = 2):
+    """[LLM] A structured answer, retried when it comes back incomplete or malformed.
+    Cheaper models sometimes skip required fields; telling them what was wrong usually fixes it."""
+    for attempt in range(retries + 1):
+        try:
+            return model.with_structured_output(schema).invoke(messages)
+        except (ValidationError, OutputParserException, ValueError) as error:
+            if attempt == retries:
+                raise
+            messages = messages + [HumanMessage(
+                f"Your previous answer could not be used ({str(error)[:300]}). Answer again and fill every "
+                f"required field of {schema.__name__}.")]
 
 
 def feedback_block(state: AgentState) -> str:
@@ -115,7 +136,7 @@ class CarnetAgent:
     # ---------------------------------------------------------------- 2. read
     def read(self, state: AgentState):
         """[LLM] Turn the raw page into structured notes."""
-        notes = self.s.model.with_structured_output(SourceNotes).invoke([
+        notes = ask(self.s.m("read"), SourceNotes, [
             SystemMessage(prompts.READ),
             HumanMessage(f"Sources: {', '.join(state['urls'])}\n\n{state['raw_text']}"),
         ])
@@ -128,7 +149,7 @@ class CarnetAgent:
     # ---------------------------------------------------------------- 3. categorize
     def categorize(self, state: AgentState):
         """[code] describe the site, [LLM] decide update/create, [code] validate the decision."""
-        route = self.s.model.with_structured_output(Route).invoke([
+        route = ask(self.s.m("plan"), Route, [
             SystemMessage(prompts.CATEGORIZE.format(site=describe_site(self.s.root))),
             HumanMessage(state["notes"].model_dump_json(indent=2) + feedback_block(state)),
         ])
@@ -168,7 +189,7 @@ class CarnetAgent:
         if state.get("existing_body"):
             existing = ("\nThe page being updated already explains the following; "
                         f"do not search for it again:\n{state['existing_body'][:6000]}\n")
-        plan = self.s.model.with_structured_output(ResearchPlan).invoke([
+        plan = ask(self.s.m("research"), ResearchPlan, [
             SystemMessage(prompts.FIND_GAPS.format(existing=existing, max_queries=MAX_QUERIES)),
             HumanMessage(state["notes"].model_dump_json(indent=2) + feedback_block(state)),
         ])
@@ -176,7 +197,7 @@ class CarnetAgent:
 
     def research_critique(self, state: AgentState):
         """[LLM] The reviewer found missing topics: plan targeted searches."""
-        plan = self.s.model.with_structured_output(ResearchPlan).invoke([
+        plan = ask(self.s.m("research"), ResearchPlan, [
             SystemMessage(prompts.RESEARCH_CRITIQUE.format(max_queries=MAX_QUERIES)),
             HumanMessage("\n".join(state["review"].missing_topics)),
         ])
@@ -193,7 +214,7 @@ class CarnetAgent:
             return {"findings": []}
         listing = "\n\n".join(f"[{i}] {r['title']}\nURL: {r['url']}\n{r['content'][:1500]}"
                               for i, r in enumerate(results, 1))
-        picked = self.s.model.with_structured_output(Findings).invoke([
+        picked = ask(self.s.m("research"), Findings, [
             SystemMessage(prompts.SELECT),
             HumanMessage(f"Notes:\n{state['notes'].model_dump_json()}\n\nSearch results:\n{listing}"),
         ])
@@ -212,7 +233,7 @@ class CarnetAgent:
             parts.append("Research findings:\n" + "\n".join(f"- {f.fact}" for f in state["findings"]))
         if state.get("existing_body"):
             parts.append(f"Current page (to be extended):\n{state['existing_body'][:6000]}")
-        plan = self.s.model.with_structured_output(PageOutline).invoke([
+        plan = ask(self.s.m("plan"), PageOutline, [
             SystemMessage(prompts.OUTLINE.format(style=self.style)),
             HumanMessage("\n\n".join(parts) + feedback_block(state)),
         ])
@@ -259,7 +280,7 @@ class CarnetAgent:
             parts.append(f"Your previous draft:\n<draft>\n{state['draft']}\n</draft>\n"
                          "Fix these problems:\n" + "\n".join(f"- {i}" for i in feedback))
 
-        reply, _ = run_with_tools(self.s.model, self.s.tools, [
+        reply, _ = run_with_tools(self.s.m("write"), self.s.tools, [
             SystemMessage(prompts.WRITE.format(style=self.style)),
             HumanMessage("\n\n".join(parts) + feedback_block(state)),
         ])
@@ -282,8 +303,8 @@ class CarnetAgent:
                          + feedback_block(state)
                          + f"\n\nPage to review:\n<page>\n{page}\n</page>"),
         ]
-        _, messages = run_with_tools(self.s.review_model, self.s.tools, messages)
-        verdict = self.s.review_model.with_structured_output(Review).invoke(
+        _, messages = run_with_tools(self.s.m("review"), self.s.tools, messages)
+        verdict = ask(self.s.m("review"), Review, 
             messages + [HumanMessage("Give your verdict now.")])
         return {"review": verdict, "check_errors": errors}
 

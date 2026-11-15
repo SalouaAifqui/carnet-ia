@@ -9,7 +9,7 @@ import tempfile
 from pathlib import Path
 
 import yaml
-from langchain_core.messages import AIMessage
+from langchain_core.messages import AIMessage, HumanMessage
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
@@ -274,6 +274,31 @@ def test_issue_with_several_sources():
     print("✓ several URLs in one issue: all read together, notes become instructions")
 
 
+def test_incomplete_structured_answer_is_retried():
+    from carnet_agent.graph import ask
+    from pydantic import ValidationError
+
+    class Flaky:
+        def __init__(self):
+            self.calls = []
+
+        def with_structured_output(self, schema):
+            outer = self
+
+            class _R:
+                def invoke(self, messages):
+                    outer.calls.append(messages[-1].content)
+                    if len(outer.calls) == 1:
+                        schema.model_validate({})          # raises: required fields missing
+                    return schema(gaps=[], queries=[])
+            return _R()
+
+    flaky = Flaky()
+    assert ask(flaky, ResearchPlan, [HumanMessage("plan")]) == ResearchPlan(gaps=[], queries=[])
+    assert len(flaky.calls) == 2 and "fill every required field" in flaky.calls[1]
+    print("✓ an incomplete structured answer is retried with the error explained")
+
+
 def test_parse_command():
     assert hitl.parse_command("/approve") == ("approve", "")
     assert hitl.parse_command("/replan put it in agents") == ("replan", "put it in agents")
@@ -348,6 +373,7 @@ def test_course_mode():
 
 if __name__ == "__main__":
     test_parse_command()
+    test_incomplete_structured_answer_is_retried()
     test_issue_with_several_sources()
     test_page_must_be_visual()
     test_routing_uses_existing_sections()

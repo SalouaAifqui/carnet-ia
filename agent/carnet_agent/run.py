@@ -18,13 +18,21 @@ from pathlib import Path
 from langchain.chat_models import init_chat_model
 
 from . import hitl
-from .config import MODEL, REVIEW_MODEL
+from .config import MODELS
 from .graph import CarnetAgent, Services, describe_plan, describe_run
 from .course import CourseAgent, describe_course_plan, describe_course_run, is_course_url
 from .publish import make_course_publisher, make_publisher
 from .web import fetch_source, make_tools, run_searches
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
+
+
+def make_model(name: str):
+    """'provider:model'. DeepSeek models run with thinking disabled: our tasks don't need it,
+    it costs extra tokens, and it refuses the forced structured outputs the agent relies on."""
+    if name.startswith("deepseek:"):
+        return init_chat_model(name, extra_body={"thinking": {"type": "disabled"}})
+    return init_chat_model(name)
 
 
 def make_services(dry_run: bool, issue: int | None, course: bool = False) -> Services:
@@ -35,8 +43,8 @@ def make_services(dry_run: bool, issue: int | None, course: bool = False) -> Ser
         pass
     services = Services(
         root=REPO_ROOT,
-        model=init_chat_model(MODEL),
-        review_model=init_chat_model(REVIEW_MODEL),
+        model=None, review_model=None,
+        models={role: make_model(name) for role, name in MODELS.items()},
         fetch=fetch_source,
         search=run_searches,
         tools=make_tools(),

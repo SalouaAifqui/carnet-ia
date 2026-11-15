@@ -28,7 +28,7 @@ from langgraph.types import Send
 
 from . import prompts
 from .config import TOPICS
-from .graph import CarnetAgent, Services, feedback_block
+from .graph import CarnetAgent, Services, ask, feedback_block
 from .site import describe_site, slugify
 from .state import CoursePlan, CourseState, Lesson, LessonNotes, Source, SourceNotes
 
@@ -129,7 +129,7 @@ class CourseAgent:
         if not text:
             print(f"No transcript found for lesson {lesson.index}: {lesson.title}")
             return {"lessons": []}
-        notes = self.s.model.with_structured_output(LessonNotes).invoke([
+        notes = ask(self.s.m("read"), LessonNotes, [
             SystemMessage(prompts.READ_LESSON),
             HumanMessage(f"Lesson {lesson.index}: {lesson.title}\n\n{text}"),
         ])
@@ -147,11 +147,11 @@ class CourseAgent:
                                                      max_lessons=MAX_LESSONS_PER_PAGE)),
             HumanMessage(f"Course: {state['course_title']}\n\n{listing}" + feedback_block(state)),
         ]
-        plan = self.s.model.with_structured_output(CoursePlan).invoke(messages)
+        plan = ask(self.s.m("plan"), CoursePlan, messages)
         # [code] Pages that swallow too many lessons squeeze the content: ask once for a finer plan.
         too_big = [p.route.title for p in plan.pages if len(p.lessons) > MAX_LESSONS_PER_PAGE]
         if too_big:
-            plan = self.s.model.with_structured_output(CoursePlan).invoke(messages + [HumanMessage(
+            plan = ask(self.s.m("plan"), CoursePlan, messages + [HumanMessage(
                 f"These pages cover more than {MAX_LESSONS_PER_PAGE} lessons: {', '.join(too_big)}. "
                 "Split them into more focused concept pages and give the whole plan again.")])
         known = {l.index for l in lessons} - set(plan.skipped)        # skipped lessons feed no page

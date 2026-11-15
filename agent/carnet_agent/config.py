@@ -5,11 +5,17 @@ Models can be overridden with environment variables without touching the code.
 """
 import os
 
-# --- Models -----------------------------------------------------------------
-# One model does the everyday work (reading, routing, writing).
-# The reviewer can be a stronger model: it is the last check before a human.
-MODEL = os.getenv("CARNET_MODEL", "openai:gpt-5.4-mini")
-REVIEW_MODEL = os.getenv("CARNET_REVIEW_MODEL", "openai:gpt-5.4-mini")
+# --- Models: one per role -----------------------------------------------------
+# Each role can use a different model; change them with environment variables, no code change.
+# DeepSeek models are 3 to 5 times cheaper than gpt-5.4-mini; the writer stays on OpenAI until
+# a comparison shows DeepSeek writes as well.
+MODELS = {
+    "read": os.getenv("CARNET_MODEL_READ", "deepseek:deepseek-flash"),          # read sources and lessons
+    "plan": os.getenv("CARNET_MODEL_PLAN", "deepseek:deepseek-flash"),          # librarian: where things go, outlines
+    "research": os.getenv("CARNET_MODEL_RESEARCH", "deepseek:deepseek-flash"),  # find gaps, pick findings
+    "write": os.getenv("CARNET_MODEL_WRITE", "openai:gpt-5.4-mini"),            # write the pages
+    "review": os.getenv("CARNET_MODEL_REVIEW", "openai:gpt-5.4-mini"),          # check details against the source
+}
 
 # --- Limits -----------------------------------------------------------------
 MAX_REVISIONS = 2            # write → review loops before we stop and open the PR anyway
