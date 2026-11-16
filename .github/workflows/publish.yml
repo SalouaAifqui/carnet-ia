@@ -1,14 +1,17 @@
 name: Publish site
 
+# Builds the site from main, plus a preview of every open pull request proposed by the agent
+# (branches agent/…), published under /preview/pr-<number>/ so pages can be read before merging.
 on:
   push:
     branches: [main]
-  workflow_dispatch:
+  workflow_dispatch:          # the agent triggers it after opening a pull request
 
 permissions:
   contents: read
   pages: write
   id-token: write
+  pull-requests: read
 
 concurrency:
   group: pages
@@ -19,9 +22,27 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - uses: quarto-dev/quarto-actions/setup@v2
+
       - name: Render site
         uses: quarto-dev/quarto-actions/render@v2
+
+      - name: Render previews of open agent pull requests
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh pr list --state open --json number,headRefName \
+            --jq '.[] | select(.headRefName | startswith("agent/")) | "\(.number) \(.headRefName)"' |
+          while read -r number branch; do
+            echo "Preview of PR #$number ($branch)"
+            git worktree add "/tmp/pr-$number" "origin/$branch"
+            (cd "/tmp/pr-$number" && quarto render) || { echo "Preview of #$number failed"; continue; }
+            mkdir -p "_site/preview"
+            cp -r "/tmp/pr-$number/_site" "_site/preview/pr-$number"
+          done
+
       - uses: actions/upload-pages-artifact@v3
         with:
           path: _site

@@ -13,6 +13,7 @@ permissions:
   contents: write
   pull-requests: write
   issues: write
+  actions: write        # to start the site build that publishes the preview
 
 concurrency:
   group: carnet-agent-${{ github.event.issue.number }}

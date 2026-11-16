@@ -4,15 +4,12 @@ Two different things live here, and the difference matters:
 
 * `fetch_source` and `run_searches` are plain functions. The GRAPH calls them,
   always, at a fixed step (`fetch` and `search` nodes).
-* `make_tools()` returns LangChain TOOLS. The graph hands them to an LLM, and the
-  LLM decides whether to call them (inside the `write` and `review` nodes).
 """
 from __future__ import annotations
 
 import re
 
 import httpx
-from langchain_core.tools import tool
 from langchain_tavily import TavilyExtract, TavilySearch
 
 from .config import MAX_SOURCE_CHARS, PREFERRED_DOMAINS, RESULTS_PER_QUERY
@@ -62,19 +59,3 @@ def run_searches(queries: list[str]) -> list[dict]:
     return results
 
 
-# --- Tools the LLM may decide to call -------------------------------------------
-
-def make_tools():
-    @tool
-    def web_search(query: str) -> str:
-        """Search the web. Use it to check that a function or API still exists,
-        or to verify a fact you are not sure about. Returns titles, URLs and snippets."""
-        results = run_searches([query])
-        return "\n\n".join(f"{r['title']}\n{r['url']}\n{r['content'][:600]}" for r in results)
-
-    @tool
-    def fetch_url(url: str) -> str:
-        """Read the content of a web page, e.g. a documentation page found with web_search."""
-        return fetch_source(url)[:8000]
-
-    return [web_search, fetch_url]

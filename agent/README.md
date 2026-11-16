@@ -1,12 +1,12 @@
 # L'agent du Carnet IA : comment il est construit
 
-Cet agent transforme une page web (article, leçon, documentation…) en une **proposition de fiche** pour le site Carnet IA. Il lit la source, décide où la ranger, complète avec des recherches, **te montre son plan**, rédige, se relit, puis ouvre une **Pull Request**. Rien n'est publié sans ta validation.
+Cet agent transforme une ou plusieurs pages web (article, leçon, documentation, ou un cours entier) en **fiches** pour le site Carnet IA. Il est découpé en **rôles**, chacun avec une seule mission et une consigne courte, et **deux validations humaines** encadrent tout : le plan avant d'écrire, l'aperçu avant de publier.
 
-Ce document explique **exactement** comment il est construit. Chaque concept renvoie au fichier et à la fonction où il est codé, et à la leçon du cours où tu l'as appris.
+Ce document explique exactement comment il est construit. Chaque élément renvoie au fichier où il est codé.
 
 ---
 
-## 1. Le parcours d'une URL, du début à la fin
+## 1. Le parcours d'une source
 
 ```mermaid
 sequenceDiagram
@@ -16,140 +16,139 @@ sequenceDiagram
     participant PR as Pull Request
     participant Site
 
-    Toi->>Issue: Ouvre une issue "New source" avec une URL
-    Issue->>A: Déclenche le workflow (étiquette "source")
-    A->>A: fetch → read → categorize → find_gaps → search → select → outline
-    A->>Issue: Publie le PLAN et s'arrête ⏸
-    Toi->>Issue: /approve (ou /replan …, /cancel)
-    Issue->>A: Déclenche la reprise
-    A->>A: write → review (→ write…) → finalize
-    A->>PR: Ouvre une Pull Request
-    Toi->>PR: Relis et clique "Merge"
-    PR->>Site: Le site se reconstruit et publie la fiche
+    Toi->>Issue: "New source" : une URL (+ d'autres URL et des consignes dans Notes)
+    Issue->>A: déclenche l'agent
+    A->>A: lecture, découpage, bibliothécaire, recherche web
+    A->>Issue: publie le PLAN + les faits web proposés ⏸
+    Toi->>Issue: /approve (F1 F3 | all) ou /replan … ou /cancel
+    Issue->>A: reprise
+    A->>A: rédaction des parties, vérification des détails, synthèse, assemblage
+    A->>PR: ouvre une Pull Request
+    A->>Site: construit l'APERÇU de la page
+    Toi->>Site: lis l'aperçu
+    Toi->>PR: Merge ⇒ la page est publiée
 ```
 
-**Deux validations humaines** :
-1. **Le plan**, avant que quoi que ce soit soit écrit : où va la page, son titre, ses sections, les compléments trouvés et leurs sources.
-2. **La Pull Request**, avant la mise en ligne : le texte final, avec un résumé de ce que l'agent a fait.
+---
 
-### Plusieurs sources pour une même fiche
-
-Dans le formulaire « New source », le champ **URL** reçoit la page principale. Le champ **Notes** peut contenir **d'autres URL sur le même sujet**, une par ligne, et des **consignes** :
-
-```
-https://docs.langchain.com/oss/python/langgraph/persistence
-Focus on when to use which checkpointer in production.
-```
-
-- **Toutes les URL** de l'issue sont lues ensemble par `fetch`, et `read` en tire **un seul jeu de notes** : il fusionne ce qu'elles ont en commun, garde ce que chacune apporte, et en cas de désaccord garde la version la plus récente ou la plus fiable. Chaque URL devient une source principale, citée en bas de la page.
-- **Le reste du texte** des notes devient une **consigne** pour toutes les étapes (rangement, recherche, plan, rédaction, relecture). Elle s'affiche dans le plan (📝) et s'ajoute aux consignes que tu donnes avec `/approve`.
-- **Si une URL ne répond pas**, l'agent continue avec les autres.
-
-(`hitl.py` → `parse_issue`, `graph.py` → `fetch`, `read`.)
-
-### Un cours entier : le mode cours
-
-Si l'URL de l'issue est **la page d'un cours DeepLearning.AI** (par exemple `https://www.deeplearning.ai/courses/evaluating-and-improving-agentic-applications`), l'agent passe en **mode cours** (`course.py`). Un cours de plusieurs heures ne peut pas tenir dans une page, et sa page de présentation ne contient pas le cours lui-même. Le mode cours fait donc ceci :
+## 2. Les rôles
 
 ```mermaid
 flowchart LR
-    C[page du cours] --> E["🔧 expand<br/>liste des leçons"]
-    E -- "Send ×N" --> R1["🧠 read_lesson 1"]
-    E -- "Send ×N" --> R2["🧠 read_lesson 2"]
-    E -- "Send ×N" --> RN["🧠 read_lesson N"]
-    R1 & R2 & RN --> P["🧠 plan_pages<br/>regrouper par notion"]
-    P --> PP["prepare_pages<br/>recherche + plan de chaque page"]
-    PP --> H{{"⏸ tu valides"}}
-    H --> W["write_pages<br/>rédiger + relire chaque page"]
+    F["🔧 fetch<br/>lire + découper"] --> L["🧠 1. bibliothécaire<br/>où ranger, quelles parties"]
+    L --> R["🧠 6. recherche web<br/>faits PROPOSÉS"]
+    R --> H{{"⏸ tu valides<br/>plan + faits"}}
+    H --> W["🧠 2. rédacteurs<br/>une partie chacun,<br/>en parallèle"]
+    W --> C["🧠 3. vérificateur<br/>détails oubliés ?"]
+    C --> E["🧠 4. éditeur<br/>résumé, notions, Remember"]
+    E --> M["🔧 assemblage<br/>insère dans la page"]
+    M --> P["🔧 5. Pull Request<br/>+ aperçu web"]
+```
+
+| # | Rôle | Type | Ce qu'il reçoit | Ce qu'il produit | Modèle par défaut | Où |
+|---|---|---|---|---|---|---|
+| — | **fetch** | 🔧 code | les URL | le texte des sources, **découpé en morceaux numérotés** [C1], [C2]… (environ 300 mots chacun) | — | `article.py` → `fetch`, `chunks.py` |
+| 1 | **Bibliothécaire** | 🧠 | les morceaux + la carte du site (sections, pages et leurs parties) | un `ArticlePlan` : où ranger (créer / compléter, thème, section) et **les parties à écrire** (4 max), chacune avec **ses numéros de morceaux**, son exemple, son visuel. Il n'écrit aucun contenu. | gpt-5.4-mini | `article.py` → `librarian` |
+| — | vérification du plan | 🔧 code | le plan | rangement vérifié, numéros de morceaux valides, « compléter » seulement des parties qui existent, **chaque morceau utilisé** par une partie, 4 parties max | — | `core.py` → `validate_route`, `article.py` → `check_sections` |
+| 6 | **Recherche web** | 🧠 + 🔧 | le plan (pas la source) | des **faits proposés**, numérotés F1, F2…, chacun avec sa source. Le code retire les URL inventées et le site lui-même. **Rien n'est ajouté sans ton accord.** | gpt-5.4-nano | `article.py` → `research` |
+| ⏸ | **Ta validation** | toi | le plan affiché sur l'issue | `/approve`, `/approve F1 F3`, `/approve all`, `/replan …`, `/cancel` | — | `hitl.py` |
+| 2 | **Rédacteur** (un par partie) | 🧠 | **seulement les morceaux de sa partie**, le plan de la page, les faits approuvés, le guide de style, et la partie existante s'il la complète | le texte de **sa** partie | gpt-5.4-mini | `article.py` → `write_part` |
+| 3 | **Vérificateur** | 🧠 | la partie écrite + **ses** morceaux | la liste des détails importants oubliés. S'il y en a, le rédacteur les **ajoute** en une seule passe ciblée (pas de réécriture complète). | gpt-5.4-nano | `article.py` → `write_part` |
+| 4 | **Éditeur** | 🧠 | les titres et débuts des parties (pas leur texte complet) | le résumé, les notions clés, le « Remember » | gpt-5.4-mini | `article.py` → `edit` |
+| — | **Assemblage** | 🔧 code | la page existante + les nouvelles parties | la page finale : les parties **insérées à leur place**, les autres **gardées à l'identique**, les sources fusionnées | — | `article.py` → `assemble` |
+| 5 | **Publication** | 🔧 code | la page | une branche, une Pull Request, et l'**aperçu** de la page sur le site | — | `publish.py` |
+
+Les rédacteurs des différentes parties travaillent **en parallèle** (un fil d'exécution par partie), d'où une page écrite en quelques dizaines de secondes.
+
+**La règle partout** : *si l'étape doit toujours avoir lieu → code ; si elle demande de comprendre ou de juger → LLM.*
+
+---
+
+## 3. Pourquoi ce découpage coûte peu et garde les détails
+
+| Avant | Maintenant |
+|---|---|
+| Le rédacteur recevait **toute** la source pour écrire **toute** la page | Chaque rédacteur ne reçoit **que ses morceaux** |
+| Le relecteur relisait toute la page contre toute la source, puis **3 brouillons complets** | Le vérificateur compare **une partie avec ses morceaux** ; les oublis sont **ajoutés**, pas réécrits |
+| Un LLM fusionnait l'ancienne page avec la nouvelle | **Le code** insère les parties ; l'éditeur ne voit que les débuts des parties |
+| La recherche web s'ajoutait toujours | Elle est **proposée**, et ajoutée seulement si tu l'approuves |
+| Un seul modèle partout | **nano** pour les tâches simples, **mini** là où la qualité compte |
+
+Résultat mesuré sur la même source (le guide LLM-as-a-judge de Hugging Face) :
+
+| | Ancienne version | Nouvelle version |
+|---|---|---|
+| Coût | 0,141 $ | **0,034 $** |
+| Durée | 94 s | **37 s** |
+| Longueur | 1 770 mots | 1 786 mots |
+| Détails de la source | présents | présents |
+
+**Garde-fous** : le coût de chaque exécution est compté (`run.py` → `Budget`) et affiché dans le plan et la Pull Request. Au-delà de **0,50 $** par article ou **3 $** par cours (`CARNET_MAX_COST`, `CARNET_MAX_COST_COURSE`), l'agent s'arrête et te le signale sur l'issue.
+
+---
+
+## 4. Ta validation (human in the loop)
+
+### Le plan
+
+Le commentaire affiché sur l'issue contient :
+- la **décision** : créer ou compléter, quel fichier, quel thème, quelle section (⚠️ si une nouvelle section est proposée) ;
+- les **parties**, avec ce qu'elles couvrent, leur exemple 💡, leur visuel 🎨, et si elles **complètent** une partie existante ou s'ajoutent ;
+- les **faits web proposés**, F1, F2…, avec leurs sources ;
+- le coût de la planification.
+
+### Tes réponses
+
+| Réponse | Effet |
+|---|---|
+| `/approve` | écrit la page, **sans** les faits web |
+| `/approve F1 F3` | écrit, avec les faits F1 et F3 |
+| `/approve all` | écrit, avec tous les faits proposés |
+| `/approve` puis des consignes sur les lignes suivantes | écrit en suivant aussi les consignes |
+| `/replan` + consignes | refait le plan, par exemple `/replan put it in agents, memory` |
+| `/cancel` | arrête, rien n'est écrit |
+
+Seul le propriétaire du dépôt peut piloter l'agent.
+
+### Comment la pause marche techniquement
+
+Le plan et la rédaction ont lieu dans **deux exécutions GitHub Actions séparées**.
+1. **Pause** : le graphe est compilé avec `interrupt_before=["human_approval"]` et un checkpointer.
+2. **Sauvegarde** : le plan, les faits proposés et une **empreinte de chaque morceau** sont compressés et cachés dans le commentaire. **Le texte des sources n'est pas sauvegardé**, il est relu à la reprise. Les morceaux sont retrouvés grâce à leurs empreintes, même si la page a un peu changé entre-temps (`chunks.py` → `remap`).
+3. **Reprise** : `update_state(config, état, as_node="human_approval")`, puis `stream(None, config)`, comme dans la leçon *Human in the Loop* (`run.py` → `resume`).
+
+### L'aperçu avant publication
+
+Après avoir ouvert la Pull Request, l'agent relance la construction du site. Le workflow `publish.yml` construit le site normal **et** chaque Pull Request ouverte par l'agent, sous `…/carnet-ia/preview/pr-<numéro>/`. L'agent commente la Pull Request avec le lien direct vers la page. Tu la lis telle qu'elle sera publiée, puis tu fusionnes ou tu fermes.
+
+---
+
+## 5. Plusieurs sources, un cours entier
+
+**Plusieurs URL dans une issue** (champ URL + autres URL dans Notes) : elles sont lues ensemble et découpées en morceaux. Un morceau ne mélange jamais deux sources. Le reste du texte des Notes devient une consigne pour toutes les étapes.
+
+**Un cours DeepLearning.AI** (une seule URL, la page du cours) passe en **mode cours** (`course.py`) :
+
+```mermaid
+flowchart LR
+    C[page du cours] --> E["🔧 liste des leçons"]
+    E -- "Send ×N" --> RL["🧠 lire chaque leçon<br/>(nano, en parallèle)"]
+    RL --> PP["🧠 regrouper par notion<br/>(8 leçons max par page)"]
+    PP --> LB["🧠 bibliothécaire<br/>pour chaque page"]
+    LB --> H{{"⏸ un seul plan<br/>pour tout le cours"}}
+    H --> W["rédaction + vérification<br/>+ synthèse de chaque page"]
     W --> PR["🔧 une seule Pull Request"]
 ```
 
-- **`expand`** (code) : lit la page du cours et liste ses leçons. Les labs (qui demandent une connexion), les quiz et le forum sont écartés.
-- **`read_lesson`** (map) : `Send` lance **une lecture par leçon, en parallèle**. Chaque leçon est lue **en entier** : le transcript est isolé du reste de la page par le code, puis le LLM en tire des notes détaillées. Une leçon sans transcript lisible est ignorée.
-- **`plan_pages`** (reduce) : le LLM voit les notes de **toutes** les leçons et les regroupe **par notion**, comme un manuel, pas dans l'ordre du cours. Chaque page couvre **8 leçons au maximum**. Si une page est trop grosse, le code demande un plan plus fin.
-- **`prepare_pages`** : pour chaque page, les étapes habituelles (vérification du rangement, recherche de compléments, plan de la page) sont **réutilisées** depuis l'agent normal.
-- **Ta validation** : le plan affiche chaque page, avec les leçons qui la nourrissent et ses grandes parties. `/approve`, `/replan …` ou `/cancel`, comme d'habitude.
-- **`write_pages`** : chaque page est rédigée et relue avec **les transcripts complets de ses leçons**, puis tout part dans **une seule Pull Request**.
-
-Ce que ça donne sur *Evaluating and Improving Agentic Applications* : **28 leçons lues** (environ 34 000 mots de transcripts), regroupées en **7 pages** (*Why evals matter*, *Requirements and test cases*, *Code evaluators and LLM judges*, *Evaluating actions, trajectories and outcomes*…).
-
-**Limite** : le code des labs n'est pas lisible depuis l'extérieur. Seul ce que dit le prof est utilisé. **Donne un cours par issue.**
+- Les **transcripts** sont isolés du reste de la page par le code. Les labs (accès connecté), les quiz et les leçons sans transcript lisible sont écartés.
+- Les faits web proposés sont numérotés par page : `P2.F1` est le fait 1 de la page 2.
+- **Limite** : le code des labs n'est pas lisible depuis l'extérieur. **Donne un cours par issue.**
 
 ---
 
-## 2. Le graphe
+## 6. La carte du site et le rangement
 
-```mermaid
-flowchart TD
-    START([START]) --> fetch["🔧 fetch<br/>télécharge la page"]
-    fetch --> read["🧠 read<br/>notes structurées"]
-    read --> categorize["🔧🧠🔧 categorize<br/>update ou create ? où ?"]
-    categorize --> find_gaps["🧠 find_gaps<br/>que manque-t-il pour comprendre ?"]
-    find_gaps -- "des recherches à faire" --> search["🔧 search<br/>lance les recherches"]
-    find_gaps -- "rien à chercher" --> outline
-    search --> select["🧠🔧 select<br/>garde l'utile + son URL"]
-    select -- "1re recherche" --> outline["🧠 outline<br/>le plan de la page"]
-    select -- "recherche demandée<br/>par le relecteur" --> write
-    outline --> human{{"⏸ human_approval<br/>TU valides le plan"}}
-    human --> write["🧠🛠️ write<br/>rédige la page"]
-    write --> review["🔧🧠🛠️ review<br/>vérifie et critique"]
-    review -- "approuvé<br/>(ou 3 brouillons)" --> finalize["🔧 finalize<br/>front matter, sources, menus"]
-    review -- "problèmes de texte" --> write
-    review -- "sujets manquants" --> rc["🧠 research_critique"]
-    rc --> search
-    finalize --> publish["🔧 publish<br/>Pull Request"]
-    publish --> END([END])
-```
-
-Légende : 🔧 code Python · 🧠 appel LLM · 🛠️ tools que le LLM peut décider d'appeler · ⏸ pause humaine.
-
-Le graphe est construit dans `carnet_agent/graph.py`, méthode `CarnetAgent.build()`.
-
----
-
-## 3. Code, LLM ou tool : la règle
-
-> **Si l'étape doit toujours avoir lieu → code.**
-> **Si elle demande de comprendre ou de juger → appel LLM.**
-> **Si c'est au LLM de décider s'il en a besoin → tool.**
-
-| Nœud | Type | Ce qu'il fait | Où |
-|---|---|---|---|
-| `fetch` | 🔧 code | Récupère le texte de la page avec Tavily Extract (téléchargement simple en secours). Chaque site est différent : on ne lit pas le HTML nous-mêmes. | `graph.py` → `fetch`, `web.py` → `fetch_source` |
-| `read` | 🧠 LLM | Transforme la ou les pages en `SourceNotes` : titre, résumé, idées clés, **détails à ne pas perdre** (chiffres, conditions, mises en garde, paramètres, étapes), **exemples de la source**, définitions, code. | `graph.py` → `read` |
-| `categorize` | 🔧 → 🧠 → 🔧 | **Code** : construit la carte du site (thèmes → sections, même vides → pages). **LLM** : remplit un `Route` en suivant une procédure (notion → thème → section → page). **Code** : vérifie que la page et la section existent, et signale toute nouvelle section. Voir « Le routage » plus bas. | `graph.py` → `categorize`, `site.py` → `describe_site`, `list_sections` |
-| `find_gaps` | 🧠 LLM | Liste ce qu'un apprenant ne comprendrait pas, et propose 3 recherches maximum (`ResearchPlan`), dont une pour trouver **un exemple réel** si la source en manque. | `graph.py` → `find_gaps` |
-| `search` | 🔧 code | Lance les recherches Tavily et classe en premier les sites de confiance (docs officielles, papiers…). | `web.py` → `run_searches` |
-| `select` | 🧠 → 🔧 | **LLM** : garde les informations utiles, chacune avec son URL (`Findings`). **Code** : supprime toute information dont l'URL n'était pas dans les résultats, ce qui empêche les sources inventées. | `graph.py` → `select` |
-| `outline` | 🧠 LLM | Écrit le plan de la page (`PageOutline`) : pour chaque section, ses points, **son exemple concret** (et d'où il vient) et **son visuel**. C'est ce que tu valides. | `graph.py` → `outline` |
-| `human_approval` | ⏸ | Ne fait rien : le graphe **s'arrête avant ce nœud** et attend ta réponse. | `graph.py` → `human_approval` |
-| `write` | 🧠 + 🛠️ | Rédige la page. Reçoit **le plan approuvé (la structure)** et **le texte complet des sources (les détails)**, plus les notes de lecture, les compléments de recherche, tes consignes et des extraits des pages voisines. Consigne : le plan n'est pas une limite de contenu, il faut garder chiffres, conditions, mises en garde et exemples. Un exemple concret par section, au moins 3 types de visuels. Peut appeler `web_search` / `fetch_url`. | `graph.py` → `write`, `source_text`, `run_with_tools` |
-| `review` | 🔧 → 🧠 + 🛠️ | **Code** : vérifications mécaniques (titre, sources, blocs bien fermés, longueur, au moins 3 types de visuels, au moins un exemple). **LLM** : relecture critique **en comparant avec le texte complet des sources** (fidélité, détails importants oubliés, API à jour, page concrète et visuelle), peut vérifier sur le web, rend un `Review`. | `graph.py` → `review`, `site.py` → `check_page` |
-| `should_continue` | 🔧 code | Après la relecture : publier, réécrire, ou chercher plus. | `graph.py` → `should_continue` |
-| `research_critique` | 🧠 LLM | Transforme les « sujets manquants » du relecteur en recherches. | `graph.py` → `research_critique` |
-| `finalize` | 🔧 code | Assemble le fichier final : front matter, pastilles, texte, **section Sources**. Ajoute le dossier au menu si c'est un nouveau. | `graph.py` → `assemble`, `finalize`, `site.py` → `ensure_listed` |
-| `publish` | 🔧 code | Crée une branche, un commit, une Pull Request. **Jamais un LLM** : on ne laisse pas un modèle décider d'écrire dans le dépôt. | `publish.py` |
-
-### Les tools, en détail
-
-Deux tools seulement, définis dans `web.py` → `make_tools()` :
-
-- `web_search(query)` : une recherche web.
-- `fetch_url(url)` : lire une page trouvée.
-
-Ils ne sont donnés **qu'à** `write` et `review`. La boucle qui les exécute, `run_with_tools` dans `graph.py`, est la même que `take_action` dans le cours LangGraph :
-
-```
-le LLM répond → s'il demande un tool : on l'exécute, on renvoie le résultat → il répond à nouveau …
-```
-
-Elle s'arrête après 4 appels maximum (`MAX_TOOL_CALLS`).
-
-### Le routage : comment l'agent choisit où ranger une page
-
-C'est l'étape la plus importante pour la cohérence du site. Elle repose sur trois éléments.
-
-**1. Une carte du site explicite.** Chaque page thème (`llms/index.qmd`, `agents/index.qmd`…) déclare ses sections avec un identifiant et une description :
+Chaque page thème déclare ses sections, avec un identifiant et une description :
 
 ```markdown
 ## Foundation models {.group-title data-folder="foundation-models"}
@@ -159,214 +158,90 @@ The large proprietary models (GPT, Claude, Gemini…): what each family is good 
 :::
 ```
 
-`site.py` → `list_sections` lit ces déclarations. Le routeur voit donc **toutes** les sections, **y compris les vides**, avec ce qu'elles doivent contenir, et les pages qu'elles ont déjà. **Pour ajouter ou modifier une section, il suffit de modifier la page thème : l'agent la verra à la prochaine exécution.**
+`site.py` → `describe_site` donne au bibliothécaire **toutes** les sections, vides comprises, leurs pages, **et les grandes parties de chaque page**. C'est ce qui lui permet de proposer de **compléter** une partie existante plutôt que de dupliquer.
 
-**2. Une procédure en étapes, avec des exemples** (`prompts.py` → `CATEGORIZE`) :
-
-```
-1. Notion      : que m'apprend ce contenu ? (pas le titre de la source)
-2. Thème       : comment marchent les modèles → llms, construire des agents → agents,
-                 mesurer la qualité → evaluation, garde-fous → guardrails
-3. Section     : celle dont la description correspond (une section vide est un bon choix)
-4. Page        : une page couvre déjà la notion ? → la compléter (update), sinon créer
-5. Nouvelle section : seulement si aucune ne convient (rare, à confirmer par un humain)
-```
-
-**3. Une vérification par le code**, après la décision du LLM :
-- une mise à jour doit viser une page qui existe ;
-- la section doit exister dans ce thème. Si le LLM a donné le **titre** au lieu de l'identifiant, le code retrouve l'identifiant ;
-- sinon, c'est une **nouvelle section**, et le plan l'affiche avec un ⚠️ pour que tu la valides ou la corriges avec `/replan`.
-
----
-
-## 4. L'état du graphe
-
-Tout ce que l'agent sait circule dans un seul dictionnaire, `AgentState` (`state.py`) :
-
-| Champ | Rempli par | Contenu |
-|---|---|---|
-| `url` | toi | La source |
-| `raw_text` | `fetch` | Le texte complet des sources. Donné au rédacteur et au relecteur. Après une pause sur GitHub, il est retéléchargé, car il n'est pas sauvegardé dans le commentaire. |
-| `notes` | `read` | `SourceNotes` |
-| `route` | `categorize` | `Route` : la décision de rangement |
-| `existing_body` | `categorize` | Le texte actuel de la page, si c'est une mise à jour |
-| `gaps`, `queries` | `find_gaps` | Les manques et les recherches prévues |
-| `search_results` | `search` | Les résultats bruts |
-| `findings` ➕ | `select` | Les informations retenues, chacune avec son URL |
-| `sources` ➕ | `read`, `select` | **Toutes** les sources : la source principale et les sources complémentaires |
-| `outline` | `outline` | Le plan approuvé |
-| `human_feedback` | toi | Tes consignes données avec `/approve` ou `/replan` |
-| `draft` | `write` | Le texte de la page |
-| `review`, `check_errors` | `review` | Le verdict du relecteur et les erreurs mécaniques |
-| `revision_number` | `write` | Le nombre de brouillons écrits |
-| `page_path`, `pr_url` | `finalize`, `publish` | Le résultat |
-
-➕ = champ annoté avec `operator.add` : chaque recherche **ajoute** ses résultats au lieu de remplacer les précédents. C'est le même mécanisme que `messages` dans le cours. Les autres champs sont simplement **remplacés** à chaque mise à jour, ce qu'on veut pour `draft` ou `review`.
-
-### Les sorties structurées
-
-Le LLM ne répond jamais en texte libre quand on a besoin de **données**. Il remplit un modèle Pydantic grâce à `with_structured_output` :
-
-`SourceNotes` · `Route` · `ResearchPlan` · `Findings` · `PageOutline` · `Review`
-
-Tous sont dans `state.py`, avec une description de chaque champ. Ces descriptions font partie de la consigne donnée au modèle.
-
----
-
-## 5. La validation humaine (human in the loop)
-
-### En pratique
-
-Après la recherche, l'agent publie un commentaire sur l'issue :
-
-```
-📝 Plan for: How to implement LLM guardrails
-Decision: create guardrails/implementation/how-to-implement-llm-guardrails.qmd
-Outline: …   Added from research: …   Sources: …
-```
-
-Tu réponds sur l'issue :
-
-| Réponse | Effet |
-|---|---|
-| `/approve` | L'agent rédige la page comme prévu. |
-| `/approve` puis des consignes sur les lignes suivantes | Il rédige en suivant aussi tes consignes. Exemple : *keep it short, add a comparison table*. |
-| `/replan` + consignes | Il refait le rangement, la recherche et le plan avec tes consignes, puis te remontre un plan. Exemple : `/replan put it in agents, folder memory`. |
-| `/cancel` | Il s'arrête et ferme l'issue. Rien n'est écrit. |
-
-Seul **le propriétaire du dépôt** peut donner ces commandes : le workflow vérifie que `author_association == 'OWNER'`.
-
-### Comment la pause fonctionne techniquement
-
-C'est exactement la leçon *Human in the Loop*, avec une difficulté en plus : le plan et la reprise ont lieu dans **deux exécutions GitHub Actions séparées**, peut-être à plusieurs heures d'écart. La mémoire de la première exécution a disparu quand la seconde démarre.
-
-1. **La pause** : le graphe est compilé avec `interrupt_before=["human_approval"]` et un checkpointer (`MemorySaver`). Il s'arrête juste avant ce nœud (`graph.py` → `build`).
-2. **La sauvegarde** : l'état est compressé et caché dans le commentaire du plan, entre `<!-- carnet-agent-state … -->`. Il est invisible à l'affichage, mais présent dans le texte (`hitl.py` → `save_state`, `plan_comment`).
-3. **La reprise** : la nouvelle exécution relit le dernier commentaire de plan (`hitl.py` → `latest_saved_state`), crée un graphe neuf et recharge l'état avec **`update_state(config, valeurs, as_node=…)`**, puis continue avec **`stream(None, config)`** (`run.py` → `resume`).
-
-`as_node` décide **où** le graphe reprend :
-
-| Commande | `as_node=` | Le graphe croit que ce nœud vient de finir, donc il continue avec… |
-|---|---|---|
-| `/approve` | `"human_approval"` | `write` |
-| `/replan` | `"read"` | `categorize` → … → `outline` → nouvelle pause |
-
----
-
-## 6. La boucle de relecture
-
-C'est la boucle *generate → reflect* de l'**Essay Writer** :
-
-```
-write → review ─┬─ approuvé et aucune erreur mécanique ─────────→ finalize
-                ├─ problèmes de texte ──────────────────────────→ write (avec la liste des problèmes)
-                └─ sujets manquants → research_critique → search → select → write
-```
-
-Elle s'arrête au plus tard après 3 brouillons (`MAX_REVISIONS = 2` réécritures, dans `config.py`). Si la page n'est pas approuvée à ce moment-là, la Pull Request est quand même ouverte, avec les points restants listés pour que tu les vérifies.
+**Pour ajouter ou décrire une section, modifie simplement la page thème** : l'agent en tient compte à la prochaine exécution. Une section vide porte la classe `.planned` (affichée « Coming soon »), retirée automatiquement quand elle reçoit sa première page.
 
 ---
 
 ## 7. Les sources : garanties par le code
 
-Le LLM **n'écrit jamais** la section Sources lui-même :
-
-1. Chaque information de recherche garde son URL (`Finding.source_url`).
-2. `select` supprime toute URL qui n'était pas dans les vrais résultats de recherche.
-3. `write` rédige le texte **sans** section Sources. Si le modèle en écrit une quand même, `clean_draft` l'enlève.
-4. `finalize` génère la section à partir de `state["sources"]`. Pour une mise à jour, il **fusionne** avec les sources déjà présentes, sans doublons (`site.py` → `merge_sources`).
-5. `review` vérifie par le code que chaque URL utilisée apparaît dans la section (`site.py` → `check_page`).
+- Chaque URL donnée devient une source principale.
+- Les faits web ne sont utilisés **que s'ils sont approuvés**, et leur URL est alors ajoutée aux sources.
+- Le code retire toute URL inventée (absente des résultats de recherche) et toute URL du site lui-même.
+- La section Sources est générée par le code, jamais par un LLM. Lors d'une mise à jour, elle est **fusionnée** avec les sources existantes, sans doublons.
 
 ---
 
-## 8. La mémoire de l'agent
+## 8. Les choix de modèles
 
-Ce sont les trois types de mémoire du cours *Long-Term Agentic Memory* :
+Un modèle par rôle, modifiable par variable d'environnement, sans toucher au code (`config.py`) :
 
-| Type | Ici | Où |
+| Variable | Rôle | Par défaut |
 |---|---|---|
-| **Procédurale** (les instructions) | `STYLE.md` : les règles d'écriture, relues à chaque exécution par `outline`, `write` et `review`. **Modifie ce fichier pour changer la façon d'écrire de l'agent, sans toucher au code.** | `agent/STYLE.md` |
-| **Sémantique** (les faits) | L'index des pages du site, reconstruit à chaque exécution depuis les fichiers. C'est ce qui permet de décider « compléter » ou « créer ». | `site.py` → `list_pages`, `describe_site` |
-| **Épisodique** (les exemples) | Pas encore. Idée : garder tes `/replan` et tes corrections de Pull Request comme exemples pour `categorize`. | |
+| `CARNET_MODEL_READ` | lire les leçons d'un cours | `openai:gpt-5.4-nano` |
+| `CARNET_MODEL_PLAN` | bibliothécaire, plan de cours | `openai:gpt-5.4-mini` |
+| `CARNET_MODEL_WRITE` | rédiger les parties | `openai:gpt-5.4-mini` |
+| `CARNET_MODEL_CHECK` | vérifier les détails | `openai:gpt-5.4-nano` |
+| `CARNET_MODEL_EDIT` | résumé, notions, Remember | `openai:gpt-5.4-mini` |
+| `CARNET_MODEL_RESEARCH` | proposer des faits web | `openai:gpt-5.4-nano` |
+
+DeepSeek fonctionne aussi (`deepseek:deepseek-flash`), avec la réflexion désactivée par le code. Avec l'ancienne architecture, il n'était pas moins cher, car il consommait plus de tokens. `CARNET_RESEARCH=0` désactive complètement la recherche web.
 
 ---
 
-## 9. GitHub : workflows, secrets, sécurité
+## 9. Ce que tu reconnaîtras des cours
 
-| Fichier | Rôle |
+| Concept | Où dans l'agent |
 |---|---|
-| `.github/ISSUE_TEMPLATE/new-source.yml` | Le formulaire « New source ». Il ajoute l'étiquette `source`. |
-| `.github/workflows/agent.yml` | Job `plan` (étiquette `source` ajoutée) et job `resume` (commentaire `/…` du propriétaire). |
-| `.github/workflows/publish.yml` | Reconstruit et publie le site à chaque merge sur `main`. |
-
-**Secrets nécessaires** (Settings → Secrets and variables → Actions) : `OPENAI_API_KEY` et `TAVILY_API_KEY`. Ils sont chiffrés par GitHub et n'apparaissent jamais dans le code ni dans les logs.
-
-**Garde-fous** :
-- L'agent n'écrit jamais sur `main` : il passe toujours par une branche et une Pull Request.
-- Seul le propriétaire du dépôt peut piloter l'agent par commentaire.
-- Le texte des issues est passé par variables d'environnement, jamais injecté directement dans une commande shell.
-- Les chemins proposés par le LLM sont vérifiés par le code avant d'être utilisés.
+| `StateGraph`, nœuds, arêtes | `article.py` → `build`, `course.py` → `build` |
+| Sorties structurées pour décider | `ArticlePlan`, `MissingDetails`, `Synthesis`, `CoursePlan` |
+| Recherche agentique (Tavily) | `web.py` |
+| Checkpointer, `interrupt_before`, `update_state`, `as_node` | `article.py` → `build`, `run.py` → `resume` |
+| Map-reduce avec `Send` | `course.py` → `dispatch`, `read_lesson`, `plan_pages` |
+| Routeur (niveau 2) | le bibliothécaire |
+| Écrire puis vérifier (niveau 3) | rédacteur + vérificateur |
+| Mémoire procédurale | `STYLE.md`, lu par chaque rédacteur |
+| Mémoire sémantique | la carte du site (`describe_site`) |
+| Évaluer un agent | les tests hors ligne, le comparatif de coût, les vérifications du code (`check_page`) |
 
 ---
 
-## 10. Carte des fichiers
+## 10. Les fichiers
 
 ```
 agent/
-├── README.md               ← ce document
-├── STYLE.md                ← guide de style (mémoire procédurale)
-├── requirements.txt        ← dépendances Python
+├── README.md            ← ce document
+├── STYLE.md             ← guide de style, lu par chaque rédacteur (mémoire procédurale)
+├── requirements.txt
 ├── carnet_agent/
-│   ├── config.py           ← modèles, limites, thèmes du site
-│   ├── state.py            ← AgentState + sorties structurées (Pydantic)
-│   ├── prompts.py          ← une consigne système par rôle
-│   ├── graph.py            ← les nœuds, le graphe, la boucle de tools
-│   ├── hitl.py             ← pause, sauvegarde/reprise de l'état, commandes
-│   ├── course.py           ← mode cours : un cours entier → plusieurs pages (map-reduce)
-│   ├── site.py             ← opérations sur le site (code pur, sans LLM)
-│   ├── web.py              ← fetch / search (code) et tools (pour le LLM)
-│   ├── publish.py          ← branche, commit, Pull Request
-│   └── run.py              ← point d'entrée (local ou GitHub)
+│   ├── config.py        ← modèles par rôle, prix, plafond de coût, thèmes
+│   ├── state.py         ← les sorties structurées (ArticlePlan, SectionPlan, Proposal, Synthesis…)
+│   ├── prompts.py       ← une consigne courte par rôle
+│   ├── article.py       ← l'agent : bibliothécaire → recherche → ⏸ → rédaction/vérification → éditeur → assemblage
+│   ├── course.py        ← le mode cours (map-reduce sur les leçons)
+│   ├── chunks.py        ← découpage en morceaux numérotés, empreintes
+│   ├── core.py          ← services, réponses structurées réessayées, vérification du rangement
+│   ├── site.py          ← opérations sur le site (code pur) : carte, parties, sources, menus, vérifications
+│   ├── hitl.py          ← pause, sauvegarde/reprise, commandes /approve /replan /cancel
+│   ├── web.py           ← lecture des pages et recherche Tavily
+│   ├── publish.py       ← Pull Request + aperçu
+│   └── run.py           ← point d'entrée, compteur de coût, plafond
 └── tests/
-    └── test_offline.py     ← le graphe complet avec de faux modèles, gratuit
+    └── test_offline.py  ← tout l'agent avec de faux modèles : gratuit, sans clé
 ```
 
-**Ordre de lecture conseillé** : `state.py` → `graph.py` (commence par `build()`, puis chaque nœud) → `hitl.py` → `run.py`. Les autres fichiers sont des outils dont tu peux lire seulement les noms de fonctions.
+**Ordre de lecture conseillé** : `state.py` (les sorties structurées) → `article.py` (de haut en bas : chaque méthode est un rôle) → `run.py` (la pause et la reprise).
 
 ---
 
-## 11. Ce que tu reconnaîtras des cours
-
-| Concept | Leçon | Dans l'agent |
-|---|---|---|
-| Boucle ReAct, tools | Build an Agent from Scratch / LangGraph Components | `run_with_tools` |
-| `StateGraph`, nœuds, arêtes, arêtes conditionnelles | LangGraph Components | `build()` |
-| Reducer `operator.add` | LangGraph Components | `findings`, `sources` |
-| Recherche agentique (Tavily) | Agentic Search Tools | `web.py` |
-| Checkpointer, threads | Persistence and Streaming | `MemorySaver`, `new_thread()` |
-| Streaming des étapes | Persistence and Streaming | `run()` avec `stream_mode="updates"` |
-| `interrupt_before`, `update_state`, `as_node`, `stream(None)` | Human in the Loop | `build()`, `resume()` |
-| Plan → recherche → écriture → critique → révision | Essay Writer | `find_gaps` … `should_continue` |
-| Sortie structurée pour router | Baseline Email Assistant | `Route` dans `categorize` |
-| Mémoire procédurale et sémantique | Long-Term Agentic Memory | `STYLE.md`, `describe_site` |
-
----
-
-## 12. Lancer l'agent sur ton ordinateur (facultatif)
+## 11. Lancer l'agent sur ton ordinateur (facultatif)
 
 ```bash
 cd agent
 pip install -r requirements.txt
-python tests/test_offline.py                                   # gratuit, sans clé
-python -m carnet_agent.run https://example.com/article --dry-run
+python tests/test_offline.py                                        # gratuit, sans clé
+python -m carnet_agent.run https://example.com/article --dry-run     # le plan s'affiche, tu réponds au clavier
 ```
 
-En local, le plan s'affiche dans le terminal et tu réponds `/approve`, `/replan …` ou `/cancel` au clavier. `--dry-run` écrit la page dans ton dossier sans ouvrir de Pull Request. Il faut `OPENAI_API_KEY` et `TAVILY_API_KEY`, dans l'environnement ou dans un fichier `.env`.
-
----
-
-## 13. Coûts et limites
-
-- **Coût** : environ quelques centimes par fiche avec `gpt-5.4-mini` (5 à 10 appels LLM et 3 à 6 recherches Tavily). Tu peux changer de modèle sans toucher au code, avec les variables `CARNET_MODEL` et `CARNET_REVIEW_MODEL`.
-- **Pages inaccessibles** : celles qui demandent une connexion (comme le Jupyter des cours) ne peuvent pas être lues. Une vidéo sans transcript ne donne rien.
-- **Pas d'exécution du code** : l'agent ne lance pas le code des fiches, il le relit seulement. C'est une raison de plus pour bien relire la Pull Request.
+Il faut `OPENAI_API_KEY` et `TAVILY_API_KEY` dans l'environnement ou dans un fichier `.env`. `--dry-run` écrit la page dans ton dossier sans ouvrir de Pull Request.

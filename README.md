@@ -23,9 +23,12 @@ folder of its section, e.g. `agents/memory/short-term-memory.qmd`.
 
 ## Adding a note
 
-1. Open an issue with the **New source** form: a URL, and optionally other URLs and instructions in *Notes*.
-2. The agent posts a **plan** on the issue. Reply `/approve`, `/replan …` or `/cancel`.
-3. After `/approve`, it writes the page and opens a **pull request**. Merge it to publish.
+1. Open an issue with the **New source** form: a URL (or a course page), and optionally other URLs and
+   instructions in *Notes*.
+2. The agent posts a **plan**: where the content goes, the parts it will write, and extra facts found on
+   the web. Reply `/approve`, `/approve F1 F3` (to keep some web facts), `/replan …` or `/cancel`.
+3. The agent writes the page and opens a **pull request**, with a link to a **preview** of the page on the
+   site. Read it, then merge to publish.
 
 ## How the site is built
 

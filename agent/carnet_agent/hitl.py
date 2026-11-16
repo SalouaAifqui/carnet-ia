@@ -3,16 +3,14 @@
 How the pause works across two separate GitHub Actions runs:
 
 1. Run 1 (issue opened): the graph runs until `interrupt_before=["human_approval"]` stops it.
-   We post the plan as an issue comment, with the graph state saved inside it
-   (hidden in an HTML comment, compressed).
-2. The person answers with /approve, /replan or /cancel.
-3. Run 2 (comment posted): a fresh process starts. We read the saved state back from the
-   issue, load it into a new graph with `update_state(..., as_node=...)` and resume with
-   `stream(None, config)`, exactly like in the Human in the Loop lesson.
-
-`as_node` decides where the graph restarts:
-* as_node="human_approval" → the next node is `write`   (approve)
-* as_node="read"           → the next node is `categorize` (re-plan with new instructions)
+   The plan is posted as an issue comment, with the graph state saved inside it (hidden in an
+   HTML comment, compressed). The source text itself is NOT saved: only chunk fingerprints.
+2. The person answers: /approve (optionally with the web facts to keep: /approve F1 F3, or
+   /approve all), /replan with instructions, or /cancel.
+3. Run 2 (comment posted): a fresh process loads the saved state into a new graph with
+   `update_state(..., as_node="human_approval")` and resumes with `stream(None, config)`,
+   exactly like in the Human in the Loop lesson. The sources are fetched again and the
+   chunks found back from their fingerprints.
 """
 from __future__ import annotations
 
@@ -23,17 +21,16 @@ import re
 import subprocess
 import zlib
 
-from .graph import describe_plan
-from .site import split_front_matter, split_sources
-from .state import Finding, PageOutline, Query, Route, Source, SourceNotes
+from .state import ArticlePlan, Proposal
 
 MARKER = "carnet-agent-state"
+COURSE_MARKER = "carnet-agent-course-state"
 COMMANDS = ("approve", "replan", "cancel")
 
-# What we save at the pause. The raw page text is not needed any more, so it is left out.
-_MODELS = {"notes": SourceNotes, "route": Route, "outline": PageOutline}
-_LISTS = {"findings": Finding, "sources": Source, "queries": Query}
-_PLAIN = ["url", "urls", "gaps", "human_feedback"]
+# What we save at the pause (no source text: it is fetched again).
+_MODELS = {"plan": ArticlePlan}
+_LISTS = {"proposals": Proposal}
+_PLAIN = ["url", "urls", "titles", "fingerprints", "human_feedback", "existing_body"]
 
 
 # --- Saving and restoring the state ------------------------------------------------
@@ -66,21 +63,10 @@ def load_state(blob: str) -> dict:
     return _load(_unpack(blob))
 
 
-# Course mode: the state is the list of prepared pages (each one a single-page state).
-COURSE_MARKER = "carnet-agent-course-state"
-
-
 def save_course_state(state: dict) -> str:
-    """Only what is needed to write the pages: the full transcripts are fetched again after the
-    pause, so the detailed notes are trimmed to keep the comment within GitHub's size limit."""
-    pages = []
-    for page in state.get("pages") or []:
-        data = _dump(page)
-        if "notes" in data:
-            data["notes"] = {k: data["notes"][k] for k in ("title", "content_type", "summary", "key_points")}
-        pages.append(data)
     return _pack({"url": state["url"], "course_title": state.get("course_title", ""),
-                  "human_feedback": state.get("human_feedback", ""), "pages": pages})
+                  "human_feedback": state.get("human_feedback", ""),
+                  "pages": [_dump(p) for p in state.get("pages") or []]})
 
 
 def load_course_state(blob: str) -> dict:
@@ -89,44 +75,42 @@ def load_course_state(blob: str) -> dict:
             "human_feedback": data.get("human_feedback", ""), "pages": [_load(p) for p in data["pages"]]}
 
 
-def existing_body(root, route: Route) -> str:
-    """When updating a page, the writer needs its current content (re-read from disk)."""
-    if route.action != "update":
-        return ""
-    _, body = split_front_matter((root / route.target_path).read_text())
-    return split_sources(body)[0]
+# --- The comments shown to the human ------------------------------------------------
+
+_HOW_TO_ANSWER = (
+    "\n\n---\n**Reply with one of:**\n"
+    "- `/approve`: write as planned, without the web facts.\n"
+    "- `/approve F1 F3`: write, and use the web facts F1 and F3 (or `/approve all`).\n"
+    "  Instructions can follow on the next lines, e.g. *keep the examples short*.\n"
+    "- `/replan` followed by instructions: redo the plan, e.g. `/replan put it in agents, memory`.\n"
+    "- `/cancel`: stop here.\n")
 
 
-# --- The comment shown to the human -------------------------------------------------
+def _with_state(text: str, marker: str, blob: str) -> str:
+    if len(blob) > 60_000:
+        raise RuntimeError("The plan is too large to save in a GitHub comment: split the sources over several issues.")
+    return f"{text}{_HOW_TO_ANSWER}\n<!-- {marker}\n{blob}\n-->"
+
 
 def plan_comment(state: dict) -> str:
-    return (
-        describe_plan(state)
-        + "\n\n---\n**Reply with one of:**\n"
-        "- `/approve`: write the page as planned. Add instructions on the next lines if you want, "
-        "e.g. `/approve` then *keep it short, add a table comparing X and Y*.\n"
-        "- `/replan` followed by instructions: redo the plan, e.g. `/replan put it in agents, "
-        "folder memory, and focus on the code`.\n"
-        "- `/cancel`: stop here.\n"
-        f"\n<!-- {MARKER}\n{save_state(state)}\n-->"
-    )
+    from .article import describe_plan
+    return _with_state(describe_plan(state), MARKER, save_state(state))
 
 
 def course_plan_comment(state: dict) -> str:
     from .course import describe_course_plan
-    blob = save_course_state(state)
-    if len(blob) > 60_000:
-        raise RuntimeError("The course plan is too large to save in a GitHub comment. "
-                           "Split the course over several issues (one module per issue).")
-    return (
-        describe_course_plan(state)
-        + "\n\n---\n**Reply with one of:**\n"
-        "- `/approve`: write all these pages. Add instructions on the next lines if you want.\n"
-        "- `/replan` followed by instructions: read the course again and redo the plan, e.g. "
-        "`/replan make one page for LLM judges and one for code evaluators`.\n"
-        "- `/cancel`: stop here.\n"
-        f"\n<!-- {COURSE_MARKER}\n{blob}\n-->"
-    )
+    return _with_state(describe_course_plan(state), COURSE_MARKER, save_course_state(state))
+
+
+def parse_approval(feedback: str, proposal_ids: list[str]) -> tuple[list[str], str]:
+    """'F1 F3 keep it short' -> (['F1', 'F3'], 'keep it short'); 'all …' -> every id."""
+    first, _, rest = feedback.partition("\n")
+    wanted = re.findall(r"\b(?:P\d+\.)?F\d+\b", first)
+    if re.match(r"^\s*all\b", first, re.I):
+        wanted, first = list(proposal_ids), re.sub(r"^\s*all\b", "", first, flags=re.I)
+    first = re.sub(r"\b(?:P\d+\.)?F\d+\b", "", first)
+    instructions = "\n".join(part.strip() for part in [first, rest] if part.strip())
+    return [w for w in wanted if w in proposal_ids], instructions
 
 
 def parse_issue(text: str) -> tuple[list[str], str]:

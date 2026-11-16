@@ -124,7 +124,14 @@ def describe_site(root: Path) -> str:
         for sec in topic_sections:
             lines.append(f"  ## Section `{sec.folder}` ({sec.title}): {sec.description or 'no description'}")
             in_section = [p for p in pages if p.topic == topic and p.folder == sec.folder]
-            lines += [f"    - page {p.path} | {p.title}: {p.subtitle}" for p in in_section] or ["    (empty)"]
+            for p in in_section:
+                lines.append(f"    - page {p.path} | {p.title}: {p.subtitle}")
+                _, body = split_front_matter((root / p.path).read_text())
+                parts = [t for t, _ in split_parts(split_sources(body)[0])[1]]
+                if parts:
+                    lines.append("        parts: " + " · ".join(parts))
+            if not in_section:
+                lines.append("    (empty)")
     return "\n".join(lines)
 
 
@@ -301,3 +308,74 @@ def _add_folder_to_sidebar(config_file: Path, topic: str, folder: str, folder_ti
                 contents.append({"section": folder_title, "contents": glob})
                 config_file.write_text(yaml.safe_dump(config, sort_keys=False, allow_unicode=True, width=1000))
             return
+
+
+# --- Reading and rebuilding a page made of blocks ------------------------------------
+#
+# A page body is: pills, summary (.tldr), concept cards (.concepts), then '##' parts, with the
+# "Remember" callout at the end. The editor rewrites summary, cards and Remember; parts are
+# inserted or replaced by code, so existing content is never silently dropped.
+
+def find_block(body: str, opener: str) -> tuple[int, int] | None:
+    """Character span of the ':::' block whose first line starts with `opener` (nested ::: counted)."""
+    lines = body.split("\n")
+    offsets, pos = [], 0
+    for line in lines:
+        offsets.append(pos)
+        pos += len(line) + 1
+    for i, line in enumerate(lines):
+        if line.startswith(opener):
+            depth = 0
+            for j in range(i, len(lines)):
+                if re.match(r"^:::+\s*\{", lines[j]):
+                    depth += 1
+                elif re.match(r"^:::+\s*$", lines[j]):
+                    depth -= 1
+                    if depth == 0:
+                        return offsets[i], offsets[j] + len(lines[j])
+            return None
+    return None
+
+
+def remember_block(body: str) -> tuple[int, int] | None:
+    match = re.search(r"^::: \{\.callout-tip\}\n## Remember\n", body, re.M)
+    if not match:
+        return None
+    span = find_block(body[match.start():], "::: {.callout-tip}")
+    return (match.start(), match.start() + span[1]) if span else None
+
+
+def split_parts(body: str) -> tuple[str, list[tuple[str, str]], str]:
+    """(before the first part, [(title, full text of the part)], after the parts).
+    'After' starts at the Remember callout, if any."""
+    remember = remember_block(body)
+    tail = body[remember[0]:] if remember else ""
+    main = body[:remember[0]] if remember else body
+    starts, in_code, previous, pos = [], False, "", 0
+    for line in main.split("\n"):
+        if line.startswith("```"):
+            in_code = not in_code
+        elif not in_code and line.startswith("## ") and not previous.startswith("::: {.callout"):
+            starts.append(pos)
+        if line.strip():
+            previous = line
+        pos += len(line) + 1
+    if not starts:
+        return main.rstrip(), [], tail
+    head = main[:starts[0]].rstrip()
+    parts = []
+    for k, start in enumerate(starts):
+        end = starts[k + 1] if k + 1 < len(starts) else len(main)
+        text = main[start:end].rstrip()
+        title = re.sub(r"\s*\{[^}]*\}\s*$", "", text.split("\n", 1)[0][3:]).strip()
+        parts.append((title, text))
+    return head, parts, tail
+
+
+def render_synthesis_blocks(tldr: str, concepts: list, remember: list[str]) -> tuple[str, str, str]:
+    """Markdown for the summary, the concept cards and the Remember callout."""
+    tldr_md = f"::: {{.tldr}}\n{tldr.strip()}\n:::"
+    cards = "\n".join(f"::: {{.concept}}\n`{c.name}`\n\n{c.text.strip()}\n:::" for c in concepts)
+    concepts_md = f"::: {{.concepts}}\n{cards}\n:::"
+    remember_md = "::: {.callout-tip}\n## Remember\n" + "\n".join(f"- {r.strip()}" for r in remember) + "\n:::"
+    return tldr_md, concepts_md, remember_md

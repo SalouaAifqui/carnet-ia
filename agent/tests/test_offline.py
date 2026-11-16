@@ -1,72 +1,67 @@
-"""Offline tests: the whole graph runs with fake models and a fake web.
+"""Offline tests: the whole agent runs with fake models and a fake web. No API key, no cost.
 
-No API key, no cost. From the agent/ folder:
-    python tests/test_offline.py
+    cd agent && python tests/test_offline.py
 """
+import re
 import shutil
 import sys
 import tempfile
+import threading
 from pathlib import Path
 
-import yaml
 from langchain_core.messages import AIMessage, HumanMessage
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from carnet_agent import hitl  # noqa: E402
+from carnet_agent.article import ArticleAgent  # noqa: E402
+from carnet_agent.chunks import chunk_text, fingerprint, remap  # noqa: E402
 from carnet_agent.config import TOPICS  # noqa: E402
-from carnet_agent.graph import CarnetAgent, Services  # noqa: E402
-from carnet_agent.run import new_thread, resume, run  # noqa: E402
-from carnet_agent.site import split_front_matter, split_sources  # noqa: E402
-from carnet_agent.state import (Finding, Findings, OutlineSection, PageOutline, Query,  # noqa: E402
-                                ResearchPlan, Review, Route, Source, SourceNotes, SourceTitle)
+from carnet_agent.core import BudgetExceeded, Services, ask, validate_route  # noqa: E402
+from carnet_agent.run import Budget, resume, run  # noqa: E402
+from carnet_agent.site import (check_page, find_block, split_front_matter, split_parts,  # noqa: E402
+                               split_sources)
+from carnet_agent.state import (ArticlePlan, ConceptCard, CoursePlan, Finding, Findings,  # noqa: E402
+                                LessonNotes, MissingDetails, PlannedPage, Query, ResearchPlan, Route,
+                                SectionPlan, Synthesis)
 
 REPO = Path(__file__).resolve().parents[2]
-LONG_BODY = ("::: {.tldr}\nSummary.\n:::\n\n```{mermaid}\nflowchart LR\n  A --> B\n```\n\n"
-             "| a | b |\n|---|---|\n| 1 | 2 |\n\n::: {.example}\n**An example.** Text.\n:::\n\n## Key ideas\n\n"
-             + "Words to make the page long enough. " * 30)
-OUTLINE = PageOutline(sections=[OutlineSection(heading="Key ideas", points=["What a guardrail is"])],
-                      code_examples=["A minimal input check"])
+SOURCE = "https://source.example.com/article"
 
 
-class FakeModel:
-    """Answers from scripted queues: one queue per structured-output schema, one for plain replies.
-    It also records every prompt it receives, so tests can check what the LLM was told."""
+class Fake:
+    """A fake chat model. Answers are computed from the request (calls run in parallel threads),
+    and every request is recorded so tests can check what each role was given."""
 
-    def __init__(self, structured=None, replies=None):
-        self.structured = {k: list(v) for k, v in (structured or {}).items()}
-        self.replies = list(replies or [])
-        self.prompts = []
+    def __init__(self, structured=None, text=None):
+        self.structured = structured or {}      # schema -> object, or function(messages) -> object
+        self.text = text                        # function(messages) -> str
+        self.calls = []
+        self.lock = threading.Lock()
+
+    def _record(self, kind, messages):
+        with self.lock:
+            self.calls.append((kind, "\n".join(m.content for m in messages)))
 
     def with_structured_output(self, schema):
-        model = self
+        outer = self
 
         class _Runner:
             def invoke(self, messages):
-                model.prompts.append(messages[-1].content)
-                return model.structured[schema].pop(0)
+                outer._record(schema.__name__, messages)
+                answer = outer.structured[schema]
+                return answer(messages) if callable(answer) else answer.model_copy(deep=True)
         return _Runner()
 
-    def bind_tools(self, tools):
-        return self
-
     def invoke(self, messages):
-        self.prompts.append(messages[-1].content)
-        return self.replies.pop(0) if self.replies else AIMessage(content="Looks fine.")
+        self._record("text", messages)
+        return AIMessage(content=self.text(messages))
+
+    def prompts(self, kind):
+        return [c for k, c in self.calls if k == kind]
 
 
-class FakeTool:
-    name = "web_search"
-
-    def __init__(self):
-        self.calls = []
-
-    def invoke(self, args):
-        self.calls.append(args)
-        return "result"
-
-
-def make_site_copy() -> Path:
+def site_copy() -> Path:
     tmp = Path(tempfile.mkdtemp())
     for name in ["_quarto.yml", "index.qmd", *TOPICS]:
         src = REPO / name
@@ -74,310 +69,257 @@ def make_site_copy() -> Path:
     return tmp
 
 
-def services(root, model, review_model, tool=None, today="2026-11-15"):
-    return Services(
-        root=root, model=model, review_model=review_model,
-        fetch=lambda url: "page text",
-        search=lambda qs: [{"query": qs[0], "title": "Injection docs",
-                            "url": "https://docs.example.com/injection", "content": "..."},
-                           {"query": qs[0], "title": "Our own site",
-                            "url": "https://salouaaifqui.github.io/carnet-ia/agents/", "content": "..."}],
-        tools=[tool] if tool else [], today=today,
-    )
+# A source of 6 paragraphs of ~180 words: chunked into several numbered chunks.
+PARAGRAPHS = [f"PARA{i} " + f"detail{i} about guardrails and validation number {i}. " * 25 for i in range(1, 7)]
+SOURCE_TEXT = "# Input validation for LLM apps\n\n" + "\n\n".join(PARAGRAPHS)
 
 
-NOTES = SourceNotes(title="Input validation for LLM apps", content_type="article",
-                    summary="How to validate inputs.", key_points=["Validate inputs"])
-ROUTE = Route(concept="input validation", reasoning="New guardrail subject.", action="create", topic="evaluation",
-              folder="Guardrails", folder_title="Guardrails", target_path="",
-              title="Validating LLM inputs", subtitle="Check what goes into the model.")
-PLAN = ResearchPlan(gaps=["What is prompt injection?"],
-                    queries=[Query(query="prompt injection definition", why="term not explained")])
-GOOD = Finding(fact="Prompt injection hides instructions in user input.", why="definition",
-               source_url="https://docs.example.com/injection", source_title="Injection docs")
-INVENTED = Finding(fact="Made up.", why="-", source_url="https://not-in-results.com", source_title="?")
-SELF = Finding(fact="From our own site.", why="-", source_url="https://salouaaifqui.github.io/carnet-ia/agents/",
-               source_title="Our own site")
+def writer_text(messages):
+    """Writes the part named in the request; patches add the missing details."""
+    prompt = messages[-1].content
+    if "Missing details:" in prompt:
+        part = prompt.split("The part:\n", 1)[1]
+        return part + "\n\nPATCHED: " + prompt.split("Missing details:\n", 1)[1].split("\n", 1)[0]
+    heading = re.search(r"Write the part: (.+)", prompt).group(1)
+    return (f"## {heading}\n\nText for {heading}.\n\n::: {{.example}}\n**Example.** Concrete.\n:::\n\n"
+            f"| a | b |\n|---|---|\n| 1 | 2 |\n\n```{{mermaid}}\nflowchart LR\n  A --> B\n```\n\n" + "Words. " * 130)
 
 
-def test_pause_then_approve_creates_page():
-    root = make_site_copy()
-
-    # ---- Run 1: until the pause (like the GitHub "plan" step)
-    planner = FakeModel(structured={SourceNotes: [NOTES], Route: [ROUTE], ResearchPlan: [PLAN],
-                                    Findings: [Findings(findings=[GOOD, INVENTED, SELF])], PageOutline: [OUTLINE]})
-    graph = CarnetAgent(services(root, planner, FakeModel())).build()
-    state, paused = run(graph, {"url": "https://source.example.com/article"}, new_thread())
-    assert paused, "the graph must stop before writing"
-    assert not list((root / "evaluation").glob("guardrails/*.qmd")), "nothing is written before approval"
-    comment = hitl.plan_comment(state)
-    assert "Validating LLM inputs" in comment and "What a guardrail is" in comment
-    assert "not-in-results.com" not in comment, "invented source dropped by code"
-    assert "salouaaifqui.github.io" not in comment, "the site never cites itself"
-
-    # ---- The state travels through the comment, then a NEW process resumes
-    blob = comment.split(f"<!-- {hitl.MARKER}", 1)[1].split("-->", 1)[0].strip()
-    saved = hitl.load_state(blob)
-    assert saved["route"].title == ROUTE.title and saved["outline"] == OUTLINE
-
-    tool = FakeTool()
-    writer = FakeModel(replies=[
-        AIMessage(content="", tool_calls=[{"name": "web_search", "args": {"query": "x"}, "id": "t1"}]),
-        AIMessage(content="---\ntitle: x\n---\n" + LONG_BODY + "\n## Sources\n- [x](https://x.com)"),
-        AIMessage(content=LONG_BODY + "\n\nNow with the fix."),
-    ])
-    reviewer = FakeModel(structured={Review: [Review(approved=False, issues=["Explain prompt injection."]),
-                                              Review(approved=True)]})
-    graph2 = CarnetAgent(services(root, writer, reviewer, tool)).build()
-    command, feedback = hitl.parse_command("/approve\nKeep it short.")
-    final, paused = resume(graph2, saved, command, feedback, root=root)
-
-    assert not paused
-    assert "Keep it short." in writer.prompts[0], "the human's instructions reach the writer"
-    assert "Approved outline" in writer.prompts[0], "the approved outline reaches the writer"
-    assert "<sources>\n=== Source 1: https://source.example.com/article ===\npage text" in writer.prompts[0], \
-        "the writer gets the FULL source text, fetched again after the pause"
-    page = (root / final["page_path"]).read_text()
-    front_matter, body = split_front_matter(page)
-    _, sources = split_sources(body)
-    assert final["page_path"] == "evaluation/guardrails/validating-llm-inputs.qmd"
-    assert final["revision_number"] == 2
-    assert tool.calls == [{"query": "x"}]
-    assert front_matter["title"] == "Validating LLM inputs"
-    assert [u for _, u in sources] == ["https://source.example.com/article", "https://docs.example.com/injection"]
-    assert "https://x.com" not in page and "[Evaluation & Guardrails]{.pill .t-eval} [Guardrails]{.pill .muted}" in page
-    index = (root / "evaluation/index.qmd").read_text()
-    guard_part = index.split('data-folder="guardrails"')[1]
-    assert "{#guardrails}" in guard_part, "the Guardrails section now lists its page"
-    assert '## Guardrails {.group-title data-folder="guardrails"}' in index, "no longer marked as coming soon"
-    assert '.planned data-folder="llms"' in index, "Evaluating LLMs is still waiting for its first page"
-    sidebar = yaml.safe_load((root / "_quarto.yml").read_text())["website"]["sidebar"]
-    ev = next(s for s in sidebar if s["id"] == "evaluation")
-    assert {"section": "Guardrails", "contents": "evaluation/guardrails/*.qmd"} in ev["contents"]
-    print("✓ pause → plan comment → /approve in a new process → page, sources, menus")
+def checker(messages):
+    written = messages[-1].content
+    return MissingDetails(missing=["the number 3"] if "## Inputs" in written else [])
 
 
-def test_replan_redoes_the_plan_with_instructions():
-    root = make_site_copy()
-    saved = {"url": "https://source.example.com/article", "notes": NOTES, "route": ROUTE,
-             "sources": [Source(title="Input validation", url="https://source.example.com/article",
-                                role="primary")],
-             "findings": [GOOD], "outline": OUTLINE}
-    new_route = ROUTE.model_copy(update={"topic": "agents", "folder": "control", "folder_title": "Control"})
-    model = FakeModel(structured={Route: [new_route], ResearchPlan: [ResearchPlan(gaps=[], queries=[])],
-                                  PageOutline: [OUTLINE]})
-    graph = CarnetAgent(services(root, model, FakeModel())).build()
-    state, paused = resume(graph, saved, "replan", "Put it in agents.", root=root)
-    assert paused, "after /replan the agent stops again with a new plan"
-    assert state["route"].topic == "agents"
-    assert "Put it in agents." in model.prompts[0], "instructions reach categorize"
-    assert state.get("findings") == [], "old research is not carried over"
-    print("✓ /replan → categorize again with the instructions → new plan, paused again")
+SYNTHESIS = Synthesis(tldr="A new summary.", concepts=[ConceptCard(name="Guardrail", text="A check.")],
+                      remember=["Check inputs.", "Check outputs."])
 
 
-def test_update_existing_page():
-    root = make_site_copy()
-    target = "agents/foundations/building-agents-with-langgraph.qmd"
-    old_front_matter, old_body = split_front_matter((root / target).read_text())
-    _, old_sources = split_sources(old_body)
-    notes = SourceNotes(title="LangGraph docs: Graph API", content_type="documentation",
-                        summary="Nodes and edges.", key_points=["Nodes", "Edges"])
-    route = Route(concept="graph API", reasoning="Same concept.", action="update", topic="agents", folder="foundations",
-                  folder_title="Foundations", target_path=target,
-                  title="Building agents with LangGraph", subtitle="...")
-    model = FakeModel(
-        structured={SourceNotes: [notes], Route: [route], ResearchPlan: [ResearchPlan(gaps=[], queries=[])],
-                    PageOutline: [OUTLINE]},
-        replies=[AIMessage(content=LONG_BODY)],
-    )
-    reviewer = FakeModel(structured={Review: [Review(approved=True)]})
-    graph = CarnetAgent(services(root, model, reviewer, today="2026-11-16")).build(pause_for_approval=False)
-    final = graph.invoke({"url": "https://docs.example.com/graph-api"})
-
-    front_matter, body = split_front_matter((root / target).read_text())
-    _, sources = split_sources(body)
-    assert final["page_path"] == target
-    assert front_matter["date"] == old_front_matter["date"]
-    assert front_matter["date-modified"] == "2026-11-16"
-    assert front_matter.get("aliases") == old_front_matter.get("aliases")
-    assert sources[:len(old_sources)] == old_sources
-    assert sources[-1][1] == "https://docs.example.com/graph-api"
-    assert body.lstrip().startswith("::: {.lesson-meta}")
-    print("✓ update: dates, sources, pills kept")
+def services(root, models, fetch=lambda url: SOURCE_TEXT, search=None, today="2026-11-16", budget=None):
+    return Services(root=root, fetch=fetch, models=models, today=today,
+                    search=search or (lambda qs: [
+                        {"query": qs[0], "title": "Guard docs", "url": "https://docs.example.com/guard", "content": "…"},
+                        {"query": qs[0], "title": "Our own site", "url": "https://salouaaifqui.github.io/carnet-ia/x", "content": "…"}]),
+                    check_budget=budget.check if budget else None)
 
 
-def route_only(route):
-    """Run only the categorize node with a given LLM decision; return the validated route."""
-    root = make_site_copy()
-    agent = CarnetAgent(services(root, FakeModel(structured={Route: [route]}), FakeModel()))
-    return agent.categorize({"notes": NOTES})["route"], root
+# --------------------------------------------------------------------------- unit tests
+
+def test_chunks():
+    chunks = chunk_text("=== Source 1: a ===\n\n" + "\n\n".join(PARAGRAPHS) + "\n\n=== Source 2: b ===\n\nShort.")
+    assert len(chunks) >= 4 and chunks[-1].startswith("=== Source 2"), "a chunk never mixes two sources"
+    prints = [fingerprint(c) for c in chunks]
+    shifted = ["Some new intro paragraph."] + chunks          # the page changed a little on re-fetch
+    assert remap(prints, shifted) == {i: i + 1 for i in range(1, len(chunks) + 1)}
+    print("✓ chunks: grouped by size, one source per chunk, found back after a re-fetch")
 
 
-def test_routing_uses_existing_sections():
-    base = dict(concept="x", reasoning="x", action="create", target_path="", title="T", subtitle="S")
-    # An EMPTY section is a valid target, chosen by id.
-    route, _ = route_only(Route(topic="evaluation", folder="llms", folder_title="LLMs", **base))
-    assert (route.folder, route.new_section) == ("llms", False)
-    # The model gives the section TITLE instead of its id: code maps it to the id.
-    route, _ = route_only(Route(topic="llms", folder="Foundation models", folder_title="Foundation models", **base))
-    assert (route.folder, route.folder_title, route.new_section) == ("foundation-models", "Foundation models", False)
-    # A section that doesn't exist is flagged as new, even if the model didn't say so…
-    route, _ = route_only(Route(topic="evaluation", folder="agent-evaluation", folder_title="Agent Evaluation", **base))
-    assert route.new_section is True
-    # …and the plan shown to the human says it loudly.
-    plan = hitl.plan_comment({"url": "u", "route": route, "outline": OUTLINE, "sources": []})
-    assert "New section proposed" in plan
-    print("✓ routing: empty sections usable, titles mapped to ids, new sections flagged")
+def test_page_blocks():
+    body = split_sources(split_front_matter((REPO / "agents/foundations/what-is-an-agent.qmd").read_text())[1])[0]
+    head, parts, tail = split_parts(body)
+    assert [t for t, _ in parts] == ["The ReAct loop", "Who does what", "Key ideas", "Building one by hand"]
+    assert tail.startswith("::: {.callout-tip}\n## Remember") and find_block(head, "::: {.tldr}")
+    print("✓ page blocks: summary, parts and Remember found in an existing page")
 
 
-def test_page_must_be_visual():
-    from carnet_agent.site import check_page
+def test_checks():
+    good = "---\ntitle: T\n---\n\n" + writer_text([HumanMessage("Write the part: A")]) + "\n\n## Sources {.sources}\n\n- [a](https://a.com)\n"
+    assert check_page(good, []) == []
     flat = "---\ntitle: T\n---\n\n" + "Just words. " * 150 + "\n\n## Sources {.sources}\n\n- [a](https://a.com)\n"
-    errors = check_page(flat, [])
-    assert any("Not visual enough" in e for e in errors) and any("No concrete example" in e for e in errors)
-    rich = "---\ntitle: T\n---\n\n" + LONG_BODY + "\n\n## Sources {.sources}\n\n- [a](https://a.com)\n"
-    assert check_page(rich, []) == []
-    many = rich.replace("## Key ideas", "## A\n\n## B\n\n## C\n\n## D\n\n## E")
+    assert any("Not visual enough" in e for e in check_page(flat, []))
+    many = good.replace("## A", "## A\n\n## B\n\n## C\n\n## D\n\n## E")
     assert any("Too many main parts" in e for e in check_page(many, []))
-    broken = rich.replace("::: {.example}\n**An example.** Text.\n:::", "::: {.example}\n**An example.** Text.")
-    assert any("not closed" in e for e in check_page(broken, []))
-    print("✓ a flat page is sent back to the writer, a visual one passes")
+    print("✓ code checks: visuals, examples, at most 4 parts")
 
 
-def test_issue_with_several_sources():
-    # The body GitHub writes for the "New source" form.
-    body = ("Source: memory\n### URL\n\nhttps://a.com/one\n\n### Notes (optional)\n\n"
-            "https://b.com/two\nhttps://c.com/three.\nFocus on the code.\n")
-    urls, notes = hitl.parse_issue(body)
-    assert urls == ["https://a.com/one", "https://b.com/two", "https://c.com/three"]
-    assert notes == "Focus on the code."
-    assert hitl.parse_issue("Source: x\n### URL\n\nhttps://a.com\n\n### Notes (optional)\n\n_No response_") \
-        == (["https://a.com"], "")
-
-    # fetch reads every source; a broken link doesn't stop the others.
-    root = make_site_copy()
-    def fetch(url):
-        if "broken" in url:
-            raise RuntimeError("404")
-        return f"text of {url}"
-    notes_model = FakeModel(structured={SourceNotes: [NOTES.model_copy(update={"source_titles": [
-        SourceTitle(url="https://a.com/one", title="Page one")]})]})
-    agent = CarnetAgent(Services(root=root, model=notes_model, review_model=FakeModel(), fetch=fetch,
-                                 search=lambda q: []))
-    state = {"urls": ["https://a.com/one", "https://broken.com", "https://b.com/two"]}
-    state |= agent.fetch(state)
-    assert "text of https://a.com/one" in state["raw_text"] and "text of https://b.com/two" in state["raw_text"]
-    sources = agent.read(state)["sources"]
-    assert [(s.title, s.url) for s in sources] == [("Page one", "https://a.com/one"),
-                                                   ("https://broken.com", "https://broken.com"),
-                                                   ("https://b.com/two", "https://b.com/two")]
-    print("✓ several URLs in one issue: all read together, notes become instructions")
+def test_commands():
+    body = ("Source: x\n### URL\n\nhttps://a.com/one\n\n### Notes (optional)\n\nhttps://b.com/two\nFocus on code.\n")
+    assert hitl.parse_issue(body) == (["https://a.com/one", "https://b.com/two"], "Focus on code.")
+    assert hitl.parse_command("/approve F1 F3\nkeep it short") == ("approve", "F1 F3\nkeep it short")
+    assert hitl.parse_approval("F1 F3\nkeep it short", ["F1", "F2", "F3"]) == (["F1", "F3"], "keep it short")
+    assert hitl.parse_approval("all", ["F1", "F2"]) == (["F1", "F2"], "")
+    assert hitl.parse_approval("", ["F1"]) == ([], "")
+    print("✓ commands: several URLs, notes as instructions, /approve F1 F3 or all")
 
 
-def test_incomplete_structured_answer_is_retried():
-    from carnet_agent.graph import ask
-    from pydantic import ValidationError
+def test_retry_and_budget():
+    calls = []
 
     class Flaky:
-        def __init__(self):
-            self.calls = []
-
         def with_structured_output(self, schema):
-            outer = self
-
-            class _R:
+            class R:
                 def invoke(self, messages):
-                    outer.calls.append(messages[-1].content)
-                    if len(outer.calls) == 1:
-                        schema.model_validate({})          # raises: required fields missing
-                    return schema(gaps=[], queries=[])
-            return _R()
+                    calls.append(messages[-1].content)
+                    if len(calls) == 1:
+                        schema.model_validate({})
+                    return ResearchPlan(gaps=[], queries=[])
+            return R()
+    assert ask(Flaky(), ResearchPlan, [HumanMessage("x")]).queries == [] and len(calls) == 2
 
-    flaky = Flaky()
-    assert ask(flaky, ResearchPlan, [HumanMessage("plan")]) == ResearchPlan(gaps=[], queries=[])
-    assert len(flaky.calls) == 2 and "fill every required field" in flaky.calls[1]
-    print("✓ an incomplete structured answer is retried with the error explained")
+    budget = Budget(limit=0.01)
+    budget.handler.usage_metadata = {"gpt-5.4-mini-2026-03-17": {"input_tokens": 10_000, "output_tokens": 1_000}}
+    assert abs(budget.cost() - (0.0075 + 0.0045)) < 1e-9          # mini, not nano: longest price name wins
+    try:
+        budget.check()
+        raise AssertionError("should stop")
+    except BudgetExceeded:
+        pass
+    print("✓ incomplete answers retried; cost computed per model; run stopped above the cap")
 
 
-def test_parse_command():
-    assert hitl.parse_command("/approve") == ("approve", "")
-    assert hitl.parse_command("/replan put it in agents") == ("replan", "put it in agents")
-    assert hitl.parse_command("/approve\nshorter\nmore code") == ("approve", "shorter\nmore code")
-    assert hitl.parse_command("thanks!") == (None, "")
-    print("✓ commands parsed")
+def test_routing():
+    root = site_copy()
+    base = dict(concept="x", reasoning="x", action="create", target_path="", title="T", subtitle="S")
+    r = validate_route(root, Route(topic="evaluation", folder="Evaluating LLMs", folder_title="x", **base))["route"]
+    assert (r.folder, r.new_section) == ("llms", False), "section title mapped to its id"
+    r = validate_route(root, Route(topic="evaluation", folder="agent-eval", folder_title="Agent eval", **base))["route"]
+    assert r.new_section
+    print("✓ routing: titles mapped to ids, unknown sections flagged")
+
+
+# --------------------------------------------------------------------------- whole runs
+
+def test_article_create_with_pause_and_research():
+    root = site_copy()
+    route = Route(concept="input validation", reasoning="guardrail", action="create", topic="evaluation",
+                  folder="guardrails", folder_title="Guardrails", target_path="", title="Validating inputs",
+                  subtitle="Check what goes in.")
+    plan = ArticlePlan(route=route, summary="How to validate inputs.", sections=[
+        SectionPlan(heading="Why validate", covers="why", chunks=[1], example="e", visual="v"),
+        SectionPlan(heading="Inputs", covers="how", chunks=[2, 99], example="e", visual="v"),
+    ])
+    planner = Fake(structured={
+        ArticlePlan: plan,
+        ResearchPlan: ResearchPlan(gaps=["?"], queries=[Query(query="guardrails", why="?")]),
+        Findings: Findings(findings=[
+            Finding(fact="A useful fact.", why="?", source_url="https://docs.example.com/guard", source_title="Guard docs"),
+            Finding(fact="Invented.", why="?", source_url="https://invented.com", source_title="?"),
+            Finding(fact="Self.", why="?", source_url="https://salouaaifqui.github.io/carnet-ia/x", source_title="?")]),
+    })
+    budget = Budget(limit=10)
+    graph = ArticleAgent(services(root, {"plan": planner, "research": planner}, budget=budget)).build()
+    state, paused = run(graph, {"url": SOURCE, "urls": [SOURCE]}, budget)
+    assert paused and not list((root / "evaluation").glob("guardrails/*.qmd")), "nothing written before approval"
+    assert 99 not in state["plan"].sections[1].chunks
+    used = sorted(c for s in state["plan"].sections for c in s.chunks)
+    assert used == list(range(1, len(state["chunks"]) + 1)), "every chunk is used by some part"
+    assert [p.id for p in state["proposals"]] == ["F1"], "invented and self-citing facts dropped by code"
+    comment = hitl.plan_comment(state)
+    assert "**F1** A useful fact." in comment and "PARA1" not in comment, "plan shown, source text not saved"
+
+    # A new process resumes from the comment, as on GitHub.
+    saved = hitl.load_state(comment.split(f"<!-- {hitl.MARKER}\n", 1)[1].split("-->", 1)[0].strip())
+    writer, check, editor = Fake(text=writer_text), Fake(structured={MissingDetails: checker}), \
+        Fake(structured={Synthesis: SYNTHESIS})
+    budget2 = Budget(limit=10)
+    graph2 = ArticleAgent(services(root, {"write": writer, "check": check, "edit": editor}, budget=budget2)).build()
+    final, paused = resume(graph2, budget2, saved, "approve", "F1\nKeep it short.")
+    assert not paused
+
+    writes = [p for p in writer.prompts("text") if "Write the part:" in p]
+    why = next(p for p in writes if "Write the part: Why validate" in p)
+    assert "PARA1" in why and "PARA6" not in why, "each writer gets only its own chunks"
+    assert "A useful fact." in why and "Keep it short." in why, "approved facts and instructions reach the writer"
+    assert len([p for p in writer.prompts("text") if "Missing details:" in p]) == 1, "one targeted patch, no rewrite"
+
+    page = (root / final["page_path"]).read_text()
+    fm, body = split_front_matter(page)
+    head, parts, tail = split_parts(split_sources(body)[0])
+    assert final["page_path"] == "evaluation/guardrails/validating-inputs.qmd" and fm["title"] == "Validating inputs"
+    assert [t for t, _ in parts] == ["Why validate", "Inputs"] and "PATCHED: - the number 3" in parts[1][1]
+    assert "A new summary." in head and "`Guardrail`" in head and "Check outputs." in tail
+    assert [u for _, u in split_sources(body)[1]] == [SOURCE, "https://docs.example.com/guard"]
+    assert final["check_errors"] == []
+    index = (root / "evaluation/index.qmd").read_text()
+    assert '## Guardrails {.group-title data-folder="guardrails"}' in index and "{#guardrails}" in index
+    print("✓ create: plan → pause → /approve F1 in a new process → parts written from their chunks, "
+          "checked, patched, assembled")
+
+
+def test_article_update_keeps_existing_content():
+    root = site_copy()
+    target = "agents/foundations/what-is-an-agent.qmd"
+    old_fm, old_body = split_front_matter((root / target).read_text())
+    old_parts = dict(split_parts(split_sources(old_body)[0])[1])
+    route = Route(concept="agents", reasoning="same", action="update", topic="agents", folder="foundations",
+                  folder_title="Foundations", target_path=target, title="What is an agent", subtitle="…")
+    plan = ArticlePlan(route=route, summary="More on agents.", sections=[
+        SectionPlan(heading="Who does what", kind="extend", existing_heading="Who does what", covers="c",
+                    chunks=[1], example="e", visual="v"),
+        SectionPlan(heading="Inputs", kind="new", existing_heading="The ReAct loop", covers="c",
+                    chunks=[2], example="e", visual="v"),
+    ])
+    models = {"plan": Fake(structured={ArticlePlan: plan}), "write": Fake(text=writer_text),
+              "check": Fake(structured={MissingDetails: MissingDetails()}), "edit": Fake(structured={Synthesis: SYNTHESIS})}
+    import carnet_agent.article as article_module
+    article_module.RESEARCH = False
+    try:
+        final = ArticleAgent(services(root, models)).build(pause_for_approval=False).invoke({"url": SOURCE, "urls": [SOURCE]})
+    finally:
+        article_module.RESEARCH = True
+    fm, body = split_front_matter((root / target).read_text())
+    _, parts, _ = split_parts(split_sources(body)[0])
+    titles = [t for t, _ in parts if t != "Key ideas"]
+    assert len(titles) == 4, "existing 3 parts + 1 new part (the plan respected the 4-part limit)"
+    assert "`Guardrail`" in dict(parts)["Key ideas"], "the concept cards are replaced where they are"
+    assert titles[:2] == ["The ReAct loop", "Inputs"], "new part inserted after the part named by the librarian"
+    assert dict(parts)["The ReAct loop"] == old_parts["The ReAct loop"], "untouched parts stay byte for byte"
+    assert dict(parts)["Building one by hand"] == old_parts["Building one by hand"]
+    assert dict(parts)["Who does what"].startswith("## Who does what\n\nText for Who does what."), "extended part replaced"
+    extend_prompt = next(p for p in models["write"].prompts("text") if "Write the part: Who does what" in p)
+    assert "The existing part:" in extend_prompt and "The LLM | The runtime" in extend_prompt
+    assert fm["date"] == old_fm["date"] and fm["date-modified"] == "2026-11-16" and fm.get("aliases") == old_fm.get("aliases")
+    assert split_sources(body)[1][-1][1] == SOURCE and len(split_sources(body)[1]) == len(split_sources(old_body)[1]) + 1
+    assert final["page_path"] == target
+    print("✓ update: existing parts kept byte for byte, one part extended, one inserted at its place")
 
 
 def test_course_mode():
-    from carnet_agent.course import CourseAgent, is_course_url, list_lessons
-    from carnet_agent.run import resume_course
-    from carnet_agent.state import CoursePlan, LessonNotes, PlannedPage
-
+    from carnet_agent.course import CourseAgent, describe_course_plan, list_lessons
     course = "https://www.deeplearning.ai/courses/my-course"
-    assert is_course_url(course) and not is_course_url(course + "/lesson/abc/intro")
     landing = ("# My Course\n\n[a](/courses/my-course/lesson/aaa/what-agents-do)"
                "[b](/courses/my-course/lesson/bbb/using-an-llm-judge)"
-               "[c](/courses/my-course/lesson/ccc/lab-1%3A-build-evaluators)"
-               "[d](/courses/my-course/lesson/ddd/module-1-quiz)[a again](/courses/my-course/lesson/aaa/what-agents-do)")
-    lessons = list_lessons(landing, "my-course")
-    assert [l.title for l in lessons] == ["What agents do", "Using an llm judge"], "labs, quizzes, duplicates dropped"
-    from carnet_agent.course import clean_lesson_text
-    assert clean_lesson_text("[menu](/a)\n\nSign up for $30\n\nshort text") == "", "no transcript, no noise"
+               "[c](/courses/my-course/lesson/ccc/lab-1%3A-build)[d](/courses/my-course/lesson/ddd/module-1-quiz)")
+    assert [l.title for l in list_lessons(landing, "my-course")] == ["What agents do", "Using an llm judge"]
+    prose = "The instructor explains SPECIFIC_DETAIL about judges and agents in a long sentence here. " * 12
 
-    prose = "The instructor explains a SPECIFIC_DETAIL about judges and agents in a long sentence. " * 10
     def fetch(url):
-        if url == course:
-            return landing
-        return "[menu](/x) [plans](/y)\n\nSign up $30\n\n" + prose + "\n\n[next](/z)"
+        return landing if url == course else "[menu](/x)\n\nSign up $30\n\n" + prose + ("LESSON_B" if "bbb" in url else "LESSON_A")
 
-    root = make_site_copy()
-    note = LessonNotes(summary="s", key_points=["k"], details=["SPECIFIC_DETAIL"], examples=["an example"])
-    judge_page = Route(concept="LLM judges", reasoning="lesson 2", action="create", topic="evaluation", folder="llms",
-                       folder_title="Evaluating LLMs", target_path="", title="LLM judges", subtitle="Models grading models.")
-    agent_page = Route(concept="agents", reasoning="lesson 1", action="update", topic="agents", folder="foundations",
-                       folder_title="Foundations", target_path="agents/foundations/what-is-an-agent.qmd",
-                       title="What is an agent", subtitle="…")
-    planner = FakeModel(structured={
-        LessonNotes: [note.model_copy(), note.model_copy()],
-        CoursePlan: [CoursePlan(pages=[PlannedPage(route=judge_page, lessons=[2, 99]),
-                                       PlannedPage(route=agent_page, lessons=[1])])],
-        ResearchPlan: [ResearchPlan(gaps=[], queries=[]), ResearchPlan(gaps=[], queries=[])],
-        PageOutline: [OUTLINE, OUTLINE],
+    root = site_copy()
+    judge = Route(concept="LLM judges", reasoning="l2", action="create", topic="evaluation", folder="llms",
+                  folder_title="Evaluating LLMs", target_path="", title="LLM judges", subtitle="Models grading models.")
+    planner = Fake(structured={
+        LessonNotes: LessonNotes(summary="s", key_points=["k"]),
+        CoursePlan: CoursePlan(pages=[PlannedPage(route=judge, lessons=[2, 99])], skipped=[1]),
+        ArticlePlan: lambda m: ArticlePlan(route=judge, summary="Judges.", sections=[
+            SectionPlan(heading="Using a judge", covers="c", chunks=[1], example="e", visual="v")]),
+        ResearchPlan: ResearchPlan(gaps=[], queries=[]),
     })
-    graph = CourseAgent(Services(root=root, model=planner, review_model=FakeModel(), fetch=fetch,
-                                 search=lambda q: [], today="2026-11-16")).build()
-    state, paused = run(graph, {"url": course}, new_thread())
-    assert paused and len(state["lessons"]) == 2 and len(state["pages"]) == 2
-    assert state["plan"].pages[0].lessons == [2], "unknown lesson numbers are dropped by code"
+    budget = Budget(limit=10)
+    graph = CourseAgent(services(root, {"read": planner, "plan": planner, "research": planner}, fetch=fetch,
+                                 budget=budget)).build()
+    state, paused = run(graph, {"url": course}, budget)
+    assert paused and len(state["lessons"]) == 2 and len(state["pages"]) == 1
+    assert state["plan"].pages[0].lessons == [2], "unknown and skipped lessons are dropped"
+    assert "Page 1: LLM judges" in describe_course_plan(state)
     comment = hitl.course_plan_comment(state)
-    assert "2 page(s)" in comment and "LLM judges" in comment and "Lessons read:** 2" in comment
+    saved = hitl.load_course_state(comment.split(f"<!-- {hitl.COURSE_MARKER}\n", 1)[1].split("-->", 1)[0].strip())
 
-    # A new process resumes from the comment, as on GitHub.
-    blob = comment.split(f"<!-- {hitl.COURSE_MARKER}\n", 1)[1].split("-->", 1)[0].strip()
-    saved = hitl.load_course_state(blob)
-    writer = FakeModel(replies=[AIMessage(content=LONG_BODY), AIMessage(content=LONG_BODY)])
-    reviewer = FakeModel(structured={Review: [Review(approved=True), Review(approved=True)]})
-    graph2 = CourseAgent(Services(root=root, model=writer, review_model=reviewer, fetch=fetch,
-                                  search=lambda q: [], today="2026-11-16")).build()
-    final, paused = resume_course(graph2, saved, "approve", "Keep the examples.")
-    assert not paused
-    assert final["written"] == ["evaluation/llms/llm-judges.qmd", "agents/foundations/what-is-an-agent.qmd"]
-    assert "SPECIFIC_DETAIL" in writer.prompts[0] and "Sign up" not in writer.prompts[0], \
-        "the writer gets the cleaned transcript of its lessons, fetched again after the pause"
-    assert "Keep the examples." in writer.prompts[0]
-    _, sources = split_sources(split_front_matter((root / "evaluation/llms/llm-judges.qmd").read_text())[1])
-    assert [u for _, u in sources] == [course, lessons[1].url], "course page + the lesson used are cited"
-    index = (root / "evaluation/index.qmd").read_text()
-    assert '## Evaluating LLMs {.group-title data-folder="llms"}' in index and "{#llms}" in index
-    print("✓ course mode: lessons read in parallel, regrouped into concept pages, approved, written")
+    writer = Fake(text=writer_text)
+    budget2 = Budget(limit=10)
+    graph2 = CourseAgent(services(root, {"write": writer, "check": Fake(structured={MissingDetails: MissingDetails()}),
+                                         "edit": Fake(structured={Synthesis: SYNTHESIS})}, fetch=fetch,
+                                  budget=budget2)).build()
+    final, paused = resume(graph2, budget2, saved, "approve", "", course=True)
+    assert not paused and final["written"] == ["evaluation/llms/llm-judges.qmd"]
+    prompt = writer.prompts("text")[0]
+    assert "LESSON_B" in prompt and "LESSON_A" not in prompt and "Sign up" not in prompt, \
+        "the writer gets the cleaned transcript of ITS lesson only, fetched again after the pause"
+    print("✓ course: lessons read in parallel, grouped by concept, parts planned, approved, written")
 
 
 if __name__ == "__main__":
-    test_parse_command()
-    test_incomplete_structured_answer_is_retried()
-    test_issue_with_several_sources()
-    test_page_must_be_visual()
-    test_routing_uses_existing_sections()
-    test_pause_then_approve_creates_page()
-    test_replan_redoes_the_plan_with_instructions()
-    test_update_existing_page()
-    test_course_mode()
+    for test in [test_chunks, test_page_blocks, test_checks, test_commands, test_retry_and_budget, test_routing,
+                 test_article_create_with_pause_and_research, test_article_update_keeps_existing_content,
+                 test_course_mode]:
+        test()

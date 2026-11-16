@@ -1,126 +1,143 @@
 """Command line entry point.
 
-On your computer (interactive approval in the terminal):
-    python -m carnet_agent.run https://example.com/article
-    python -m carnet_agent.run https://example.com/article --dry-run      # no pull request
+On your computer (approval in the terminal):
+    python -m carnet_agent.run https://example.com/article [more URLs…]
+    python -m carnet_agent.run https://www.deeplearning.ai/courses/<course>     # course mode
+    add --dry-run to write the page locally without a pull request
 
 In GitHub Actions (approval through issue comments):
     python -m carnet_agent.run --mode plan   --issue 12 --from-text "<issue title and body>"
-    python -m carnet_agent.run --mode resume --issue 12 --command "<the comment, e.g. /approve>"
+    python -m carnet_agent.run --mode resume --issue 12 --command "<the comment, e.g. /approve F1>"
 """
 from __future__ import annotations
 
 import argparse
-import re
 import uuid
 from pathlib import Path
 
 from langchain.chat_models import init_chat_model
+from langchain_core.callbacks import UsageMetadataCallbackHandler
 
 from . import hitl
-from .config import MODELS
-from .graph import CarnetAgent, Services, describe_plan, describe_run
+from .article import ArticleAgent, describe_plan, describe_run
+from .config import MAX_COST, MAX_COST_COURSE, MODELS, PRICES
+from .core import BudgetExceeded, Services
 from .course import CourseAgent, describe_course_plan, describe_course_run, is_course_url
 from .publish import make_course_publisher, make_publisher
-from .web import fetch_source, make_tools, run_searches
+from .web import fetch_source, run_searches
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 
 
+# --- Models and cost ------------------------------------------------------------------
+
 def make_model(name: str):
-    """'provider:model'. DeepSeek models run with thinking disabled: our tasks don't need it,
-    it costs extra tokens, and it refuses the forced structured outputs the agent relies on."""
+    """'provider:model'. DeepSeek runs with thinking disabled (needed for structured answers)."""
     if name.startswith("deepseek:"):
         return init_chat_model(name, extra_body={"thinking": {"type": "disabled"}})
     return init_chat_model(name)
 
 
-def make_services(dry_run: bool, issue: int | None, course: bool = False) -> Services:
+class Budget:
+    """Counts the tokens of every model call of the run, and stops the run above a cap."""
+
+    def __init__(self, limit: float):
+        self.limit = limit
+        self.handler = UsageMetadataCallbackHandler()
+
+    def cost(self) -> float:
+        total = 0.0
+        for model, usage in self.handler.usage_metadata.items():
+            price = next((p for name, p in sorted(PRICES.items(), key=lambda kv: -len(kv[0]))
+                          if model.startswith(name)), None)
+            if price:
+                total += usage["input_tokens"] / 1e6 * price[0] + usage["output_tokens"] / 1e6 * price[1]
+        return total
+
+    def check(self) -> None:
+        if self.cost() > self.limit:
+            raise BudgetExceeded(f"Stopped: this run cost ${self.cost():.2f}, above the cap of ${self.limit:.2f} "
+                                 "(CARNET_MAX_COST).")
+
+
+def make_services(dry_run: bool, issue: int | None, course: bool, budget: Budget) -> Services:
     try:                                   # local runs: read keys from a .env file if present
         from dotenv import load_dotenv
         load_dotenv()
     except ImportError:
         pass
-    services = Services(
-        root=REPO_ROOT,
-        model=None, review_model=None,
+    publisher = make_course_publisher if course else make_publisher
+    return Services(
+        root=REPO_ROOT, fetch=fetch_source, search=run_searches,
         models={role: make_model(name) for role, name in MODELS.items()},
-        fetch=fetch_source,
-        search=run_searches,
-        tools=make_tools(),
-        publish=None if dry_run else (make_course_publisher if course else make_publisher)(REPO_ROOT, issue),
+        publish=None if dry_run else publisher(REPO_ROOT, issue, cost=budget.cost),
+        check_budget=budget.check,
     )
-    return services
 
 
-def build_agent(dry_run: bool, issue: int | None, pause: bool = True, course: bool = False):
-    services = make_services(dry_run, issue, course)
-    if course:
-        return CourseAgent(services).build(pause_for_approval=pause)
-    return CarnetAgent(services).build(pause_for_approval=pause)
+def build(dry_run: bool, issue: int | None, course: bool):
+    budget = Budget(MAX_COST_COURSE if course else MAX_COST)
+    services = make_services(dry_run, issue, course, budget)
+    agent = CourseAgent(services) if course else ArticleAgent(services)
+    return agent.build(), budget
 
 
-def new_thread() -> dict:
-    return {"configurable": {"thread_id": str(uuid.uuid4())}}
+# --- Running and resuming --------------------------------------------------------------
 
-
-def run(graph, graph_input, config) -> tuple[dict, bool]:
-    """Stream the graph, printing each node. Returns (state, paused?)."""
+def _stream(graph, graph_input, budget: Budget) -> tuple[dict, bool]:
+    config = {"configurable": {"thread_id": str(uuid.uuid4())}, "callbacks": [budget.handler]}
+    if graph_input is not None and "__resume__" in graph_input:        # approve: load the saved plan first
+        graph.update_state(config, graph_input["__resume__"], as_node="human_approval")
+        graph_input = None
     for update in graph.stream(graph_input, config, stream_mode="updates"):
         for node in update:
             if node != "__interrupt__":
-                print(f"✓ {node}", flush=True)
+                print(f"✓ {node}  (${budget.cost():.3f} so far)", flush=True)
+        budget.check()
     snapshot = graph.get_state(config)
-    return snapshot.values, bool(snapshot.next)
+    return snapshot.values | {"cost": budget.cost()}, bool(snapshot.next)
 
 
-def finish(state: dict) -> None:
-    print("\n" + describe_run(state))
-    print(f"\nPage: {state.get('page_path')}")
-    if state.get("pr_url"):
-        print(f"Pull request: {state['pr_url']}")
+def run(graph, graph_input, budget: Budget) -> tuple[dict, bool]:
+    """Stream the graph on a new thread, printing each step and checking the budget."""
+    return _stream(graph, graph_input, budget)
 
 
-def resume(graph, saved: dict, command: str, feedback: str, root: Path = REPO_ROOT) -> tuple[dict, bool]:
-    """Load a saved plan into a fresh thread and continue, like update_state + stream(None)."""
-    config = new_thread()
-    # The issue's notes and the instructions given with the command both apply.
-    feedback = "\n".join(part for part in [saved.get("human_feedback", ""), feedback] if part)
+def resume(graph, budget: Budget, saved: dict, command: str, feedback: str, course: bool = False):
+    """/approve: load the saved plan and continue to writing (update_state + stream(None)).
+    /replan: plan again from the start with the instructions."""
+    previous = saved.get("human_feedback", "")
     if command == "approve":
-        values = saved | {"human_feedback": feedback, "revision_number": 0,
-                          "existing_body": hitl.existing_body(root, saved["route"])}
-        graph.update_state(config, values, as_node="human_approval")   # next node: write
-    else:  # replan: keep the source, redo categorize → research → outline with the instructions
-        primary = [s for s in saved.get("sources", []) if s.role == "primary"]
-        values = {"url": saved["url"], "urls": saved.get("urls") or [saved["url"]],
-                  "notes": saved["notes"], "sources": primary,
-                  "human_feedback": feedback, "revision_number": 0}
-        graph.update_state(config, values, as_node="read")             # next node: categorize
-    return run(graph, None, config)
-
-
-def resume_course(graph, saved: dict, command: str, feedback: str) -> tuple[dict, bool]:
-    """Course mode. /approve: load the prepared pages and continue to write_pages.
-    /replan: read the course again with the instructions (the plan depends on every lesson)."""
-    config = new_thread()
-    feedback = "\n".join(part for part in [saved.get("human_feedback", ""), feedback] if part)
-    if command == "approve":
-        graph.update_state(config, saved | {"human_feedback": feedback}, as_node="human_approval")
-        return run(graph, None, config)
-    return run(graph, {"url": saved["url"], "human_feedback": feedback}, config)
+        ids = [p.id for page in (saved["pages"] if course else [saved]) for p in page.get("proposals") or []]
+        approved, instructions = hitl.parse_approval(feedback, ids)
+        values = saved | {"approved": approved,
+                          "human_feedback": "\n".join(x for x in [previous, instructions] if x)}
+        return _stream(graph, {"__resume__": values}, budget)
+    start = {"url": saved["url"], "human_feedback": "\n".join(x for x in [previous, feedback] if x)}
+    if not course:
+        start["urls"] = saved.get("urls") or [saved["url"]]
+    return _stream(graph, start, budget)
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Turn a web page into a Carnet IA note.")
-    parser.add_argument("urls", nargs="*", help="One or more source URLs about the same subject.")
-    parser.add_argument("--from-text", help="Text containing the URL (e.g. a GitHub issue).")
+    parser = argparse.ArgumentParser(description="Turn web pages into Carnet IA notes.")
+    parser.add_argument("urls", nargs="*", help="One or more source URLs, or one course page.")
+    parser.add_argument("--from-text", help="Text containing the URLs (e.g. a GitHub issue).")
     parser.add_argument("--mode", choices=["local", "plan", "resume"], default="local")
     parser.add_argument("--issue", type=int, help="GitHub issue number (plan / resume modes).")
-    parser.add_argument("--command", help="The human's answer (resume mode), e.g. '/approve'.")
-    parser.add_argument("--dry-run", action="store_true", help="Write the page locally, no pull request.")
-    parser.add_argument("--yes", action="store_true", help="Skip the approval step (not recommended).")
+    parser.add_argument("--command", help="The human's answer (resume mode), e.g. '/approve F1'.")
+    parser.add_argument("--dry-run", action="store_true", help="Write locally, no pull request.")
     args = parser.parse_args()
+    try:
+        _main(args)
+    except BudgetExceeded as error:
+        print(error)
+        if args.issue:
+            hitl.post_comment(args.issue, f"🛑 {error} Nothing was published.")
+        raise SystemExit(1)
 
+
+def _main(args) -> None:
     # ---- resume: a person answered on the issue
     if args.mode == "resume":
         command, feedback = hitl.parse_command(args.command or "")
@@ -131,77 +148,47 @@ def main() -> None:
             hitl.close_issue(args.issue, "Cancelled. Nothing was written.")
             return
         kind, saved = hitl.latest_saved_state(args.issue)
-        if kind == "course":
-            graph = build_agent(args.dry_run, args.issue, course=True)
-            state, paused = resume_course(graph, saved, command, feedback)
-            if paused:
-                hitl.post_comment(args.issue, hitl.course_plan_comment(state))
-            else:
-                print(describe_course_run(state))
-                hitl.post_comment(args.issue, f"✅ {len(state.get('written') or [])} page(s) written. "
-                                              f"Pull request: {state.get('pr_url') or '(dry run)'}")
+        course = kind == "course"
+        graph, budget = build(args.dry_run, args.issue, course)
+        state, paused = resume(graph, budget, saved, command, feedback, course)
+        if paused:                                            # after /replan: a new plan
+            hitl.post_comment(args.issue, (hitl.course_plan_comment if course else hitl.plan_comment)(state))
             return
-        graph = build_agent(args.dry_run, args.issue)
-        state, paused = resume(graph, saved, command, feedback)
-        if paused:                                       # after /replan: a new plan to approve
-            hitl.post_comment(args.issue, hitl.plan_comment(state))
-        else:
-            finish(state)
-            hitl.post_comment(args.issue, f"✅ Page written. Pull request: {state.get('pr_url') or '(dry run)'}")
+        print((describe_course_run if course else describe_run)(state))
+        preview = f"\n👀 Preview: {state['preview_url']}" if state.get("preview_url") else ""
+        hitl.post_comment(args.issue, f"✅ Written for ${state['cost']:.3f}. Pull request: "
+                                      f"{state.get('pr_url') or '(dry run)'}{preview}")
         return
 
-    # ---- plan / local: start from a URL
+    # ---- plan / local: start from the URLs
     urls, instructions = list(args.urls), ""
     if not urls and args.from_text:
         urls, instructions = hitl.parse_issue(args.from_text)
     if not urls:
-        parser.error("No URL given.")
+        raise SystemExit("No URL given.")
+    course = len(urls) == 1 and is_course_url(urls[0])
+    graph, budget = build(args.dry_run, args.issue, course)
+    start = {"url": urls[0], "human_feedback": instructions} | ({} if course else {"urls": urls})
+    state, paused = run(graph, start, budget)
+    describe = describe_course_plan if course else describe_plan
 
-    # ---- course mode: one course page given → read every lesson, several pages
-    if len(urls) == 1 and is_course_url(urls[0]):
-        graph = build_agent(args.dry_run, args.issue, pause=not args.yes, course=True)
-        start = {"url": urls[0], "human_feedback": instructions}
-        state, paused = run(graph, start, new_thread())
-        if args.mode == "plan":
-            hitl.post_comment(args.issue, hitl.course_plan_comment(state))
-            print("Course plan posted on the issue. Waiting for /approve, /replan or /cancel.")
-            return
-        while paused:
-            print("\n" + describe_course_plan(state))
-            command, feedback = hitl.parse_command(input("\n/approve [instructions] · /replan <instructions> · /cancel\n> "))
-            if command == "cancel":
-                print("Cancelled. Nothing was written.")
-                return
-            if command is None:
-                continue
-            state, paused = resume_course(graph, dict(state), command, feedback)
-        print(describe_course_run(state))
+    if args.mode == "plan":                                   # GitHub: post the plan and stop
+        hitl.post_comment(args.issue, (hitl.course_plan_comment if course else hitl.plan_comment)(state)
+                          + f"\n\n*Planning cost: ${state['cost']:.3f}*")
         return
 
-    graph = build_agent(args.dry_run, args.issue, pause=not args.yes)
-    start = {"url": urls[0], "urls": urls}
-    if instructions:
-        start["human_feedback"] = instructions        # the issue's notes guide every step
-    state, paused = run(graph, start, new_thread())
-
-    if args.mode == "plan":                              # GitHub: post the plan and stop
-        hitl.post_comment(args.issue, hitl.plan_comment(state))
-        print("Plan posted on the issue. Waiting for /approve, /replan or /cancel.")
-        return
-
-    # local: approve in the terminal
-    while paused:
-        print("\n" + describe_plan(state))
-        answer = input("\n/approve [instructions] · /replan <instructions> · /cancel\n> ")
+    while paused:                                             # local: approve in the terminal
+        print("\n" + describe(state) + f"\n\nPlanning cost: ${state['cost']:.3f}")
+        answer = input("\n/approve [F1 F2 | all] [instructions] · /replan <instructions> · /cancel\n> ")
         command, feedback = hitl.parse_command(answer)
         if command == "cancel":
             print("Cancelled. Nothing was written.")
             return
         if command is None:
-            print("Please answer with /approve, /replan or /cancel.")
             continue
-        state, paused = resume(graph, {k: v for k, v in state.items()}, command, feedback)
-    finish(state)
+        state, paused = resume(graph, budget, dict(state), command, feedback, course)
+    print((describe_course_run if course else describe_run)(state))
+    print(f"\nTotal cost: ${state['cost']:.3f}")
 
 
 if __name__ == "__main__":
