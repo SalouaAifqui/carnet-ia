@@ -61,6 +61,8 @@ website:
     - evaluation/index.qmd
     - section: Evaluating agents
       contents: evaluation/agents/*.qmd
+    - section: Evaluating LLMs
+      contents: evaluation/llms/*.qmd
   page-footer:
     left: Carnet IA · notes written while learning
     right:

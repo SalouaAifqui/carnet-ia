@@ -1,0 +1,369 @@
+---
+title: Test cases and benchmarks
+subtitle: How to turn requirements and real failures into a curated benchmark for repeated evaluation.
+date: '2026-11-16'
+categories:
+- Evaluation & Guardrails
+- Evaluating LLMs
+---
+
+::: {.lesson-meta}
+[Evaluation & Guardrails]{.pill .t-eval} [Evaluating LLMs]{.pill .muted}
+:::
+
+::: {.tldr}
+This page explains how to turn requirements, real failures, and operational feedback into a curated benchmark you can reuse for repeated evaluation. It starts by showing how one requirement should be expanded into multiple test cases that each combine the user request, relevant context, and expected outcome. It then shows how to identify missing or thin coverage from failures, bug reports, support notes, and reviews, how to prune redundant cases while keeping truly different checks, and how to preserve a stable benchmark with fixed cases and judgments so version-to-version comparisons stay fair and meaningful.
+:::
+
+::: {.concepts}
+::: {.concept}
+`Requirement-to-case translation`
+
+A single requirement usually implies many distinct test situations. Good test design varies safe vs. unsafe conditions, missing information, and wording, then packages each situation as a case with request, context, and expected outcome.
+:::
+::: {.concept}
+`Test-case structure`
+
+Each case should keep together the user request, the relevant records or context, and the expected result. This makes the case self-contained and easier to run, review, and interpret consistently.
+:::
+::: {.concept}
+`Coverage gap finding`
+
+Use failures, requirements, real requests, bug reports, support tickets, recorded runs, and manual notes to spot missing situations and thin coverage. The goal is not just to catch errors, but also to confirm that normal cases still work.
+:::
+::: {.concept}
+`Case pruning and usefulness`
+
+When building a benchmark, compare new cases against existing ones to remove duplicates and keep cases that test genuinely different situations. A case is useful if it covers a meaningful situation or protects against a meaningful failure.
+:::
+::: {.concept}
+`Reusable benchmark stability`
+
+A benchmark should be a curated, stable set of cases with expected results, reviewed judgments, and failure labels. Keeping the same cases over time makes score comparisons fair and prevents the benchmark itself from changing the result.
+:::
+:::
+
+## From requirements to cases
+
+A single requirement can lead to many test situations. To test it well, vary the safe and unsafe conditions, missing information, and the wording of the request. Then turn each situation into a test case with three parts:
+
+- the user request
+- the relevant context or records
+- the expected outcome
+
+Each test case should keep together the user request, the relevant records or context, and the expected outcome.
+
+### Step-by-step flow
+
+```{mermaid}
+flowchart LR
+    A[Requirement] --> B[Choose situations]
+    B --> C[Write each test case]
+    C --> D[Request + context + expected outcome]
+```
+
+### How to choose situations
+
+One requirement should cover a meaningful range of cases. A single case is not enough if the rule can fail in different ways.
+
+For the shelter example, the requirement is: the application must only match volunteers with dogs they can safely handle. To test that, vary things like:
+
+- different levels of volunteer experience
+- dogs with different handling needs
+- missing information about the volunteer or the dog
+- wording that says the same thing in a different way
+
+You do not need every possible combination. Start with situations the application is likely to face, and problems you have already seen. Focus especially on cases where a mistake could put someone at risk.
+
+::: {.steps}
+1. **Start from the requirement**: identify what the application should and should not do.
+2. **Choose a few situations**: vary safe and unsafe conditions, missing information, and wording.
+3. **Write the case**: include the request, the relevant context, and the expected outcome.
+4. **Check the expectation**: make sure the correct answer is clear, or note when the requirement is still unclear.
+:::
+
+### Example: shelter safe matching
+
+::: {.example}
+**Safe match or not?** A shelter volunteer is experienced, but the dog is 130 pounds and too strong for them to control safely. In this case, the expected outcome is to reject the match, because experience alone is not enough. Another case uses the same volunteer, but now the dog is one they have both the experience and physical ability to handle safely. In that case, the expected outcome is approval, if the other eligibility and availability conditions are also met.
+:::
+
+### Vary the information you give
+
+You can also change what the application knows about the situation:
+
+- one case with clear handling notes
+- one case where the notes are missing
+- one case where two notes disagree
+
+This helps you test what the application does when information is incomplete or contradictory.
+
+### Vary the wording too
+
+You can keep the facts the same but ask the request in different ways. For example:
+
+- “Can I take Buddy out for a walk?”
+- “I’d like to walk Buddy. Would that be okay?”
+
+You can also try shorter messages or spelling mistakes. The point is to check whether the application makes the same decision when the request is phrased differently.
+
+### When the expected outcome is unclear
+
+Sometimes the requirement does not answer the question yet. For example, if the dog's handling notes are missing, should the agent ask for more information or reject the match? If the policy does not say, check the shelter's policy, and if it doesn't answer the question, ask the people responsible to decide.
+
+If the decision is to ask for missing information before recommending a match, add that rule to the requirement and write it as the expected outcome. Until that decision is made, you do not yet know what response counts as correct. That's a requirement problem that the test case helped reveal.
+
+Sometimes more than one answer can be right. If several dogs would be safe matches, do not make one specific dog the only acceptable answer. Instead, describe what makes a dog suitable. You can also include an example of an acceptable response, but another suitable dog or different wording can still be correct.
+
+### Northwind example: building a benchmark
+
+In the Northwind workflow, you start from a trace and write down the unsupported behavior. For example, a customer asks, “How should I care for my merino wool sweater?” The agent has washing information, but no drying information, yet it answers, “You can machine wash it on wool cycle and then tumble dry.” The unsupported part is the drying advice.
+
+From there, the requirement should be broad enough to cover more than one product or claim. A useful version is: **Only make product claims that are supported by Northwind data.**
+
+Then turn that requirement into test cases that cover different information states:
+
+- **Complete information**: the data supports the answer, so the agent should use only supported claims.
+- **Partial information**: for the merino sweater, the agent may say the drying instructions are not available, but it should **not add drying advice**.
+- **Missing information**: if Northwind has no relevant data, the agent is expected to say the information is not available.
+
+For example, with the classic tee, if the catalog lists the colors white, black, navy, and heather gray, the expected outcome is to answer with those colors and avoid adding unsupported ones. For the sweater, the agent should use the supported washing instruction and not add drying advice. If the customer asks about a return policy and Northwind has no return policy data, the agent is expected to say the information is not available or that it cannot help with that request.
+
+### How to generate and use test data
+
+For the information you'll give the application, you can use examples you already have or create new ones for the situations you want to test. If an LLM helps generate them, check that they're realistic and fit the situation. Keep a note of where each example came from. Later, that source will help you decide how much weight to give the case and whether it belongs in the reusable benchmark.
+
+## Find gaps and add coverage
+
+Use what you already learned to find what is missing in your test set. Good clues are:
+
+- failed runs and the mistakes you grouped
+- requirements
+- real requests
+- bug reports
+- support tickets
+- recorded runs
+- manual review notes
+
+Look for two kinds of gaps:
+
+- **Missing situations**: you never tested an important case.
+- **Thin coverage**: you tested a situation, but only in one simple form.
+
+A benchmark should catch failures, but it should also confirm that normal cases still work. So do not build a set that is only full of refusals or only full of easy wins.
+
+::: {.compare}
+::: {.col .bad}
+**Too narrow**
+
+- Many cases with missing information
+- Very few cases where the agent should answer directly
+- Many nearly identical questions
+- No check for harder variations
+:::
+::: {.col .good}
+**Better coverage**
+
+- Mix missing information and complete information
+- Add hard variants of the same requirement
+- Keep only cases that test something new
+- Use real examples when you can, starting from traces, reviewed runs, user questions, bug reports, or support examples
+:::
+:::
+
+### How to fill a gap
+
+::: {.steps}
+1. **Start from a clue**: a failed run, a requirement, or a real user request.
+2. **Change one important detail**: for example, make the volunteer experienced but not eligible for outings, or change a product question so the required information is only partly present from catalog data.
+3. **Check the case is realistic**: the request and data should look like a real situation.
+4. **Check the case is actually useful**: it should test the intended requirement, not a different one.
+5. **Keep notes**: record where the case came from, including anything you created or changed.
+:::
+
+If you cannot find a real example, you can create one yourself or ask an LLM to draft one. Then review it carefully. Check three things:
+
+- Does it test the situation you meant to test?
+- Is the data realistic?
+- Is the expected outcome clear?
+
+Also make sure it did not quietly change the requirement. Only keep the case if it adds useful coverage. Remove it if it is redundant or if it quietly changes the requirement.
+
+::: {.example}
+**Northwind return-policy coverage.** You want to test three related cases in Northwind: one with complete product information, one with partial information, and one with missing return-policy information. For example, one customer asks about a product with enough data to answer directly, another asks about a product where only part of the needed information is present, and another asks, “What is your return policy?” when Northwind has no return-policy information. The last case should expect the agent to say the information is not available, not invent a policy.
+:::
+
+A useful case should do at least one of these:
+
+- cover a meaningful situation
+- protect against an important regression
+- clarify a boundary in the requirement
+
+If it does none of these, revise it or remove it.
+
+Pay special attention to difficult cases. A benchmark with 98 easy cases and only 2 difficult ones can still hide weak performance on the hard situations. That does not make the benchmark wrong. It means you must read the score in context. The overall score shows performance on the benchmark you built, not the true rate in production. During development, it is often useful to include more difficult cases than you expect to see in everyday use, so you can measure whether the agent improves on the behaviors you care about.
+
+For Northwind, keep the case pieces together for later use:
+
+| What to keep | Why it matters |
+|---|---|
+| Customer query | The exact user request |
+| Relevant product data | The facts the agent may use |
+| Expected outcome | What the agent should do |
+| Source of the case | Where the case came from |
+| Failure label | What went wrong in a failed run |
+
+When you review a failed run, also keep the failure label that describes the problem. For example:
+
+- **Scope violation**: the agent invents a return policy when Northwind has no return-policy information.
+- **Faithfulness drift**: the agent adds unsupported drying advice when the data only says, “Machine washable on wool cycle.”
+
+## Keep only useful cases
+
+When you build a benchmark, compare each new case with the ones you already have. Some cases repeat the same check. You can remove those. Other cases look similar, but they test a different situation. Keep those.
+
+As you tune your test sets, remember that each case takes work to run and review again. So think about what you would stop checking if you left it out. A case is useful if it does at least one of these:
+
+- covers a meaningful situation
+- protects against an important regression
+- clarifies a boundary in the requirement
+
+If it does none of these, remove it or revise it.
+
+### Remove duplicates, keep different checks
+
+If you already have a shelter case where the volunteer’s experience is missing, you probably do not need another case that only changes the volunteer’s name. That is too close to the first one.
+
+But a case where the dog’s handling notes are missing is different. Handling missing volunteer information correctly does not tell you whether the agent will also handle missing dog information correctly. So both cases can be useful, even if they test the same requirement and have the same expected outcome.
+
+::: {.example}
+**Keep the dog-handling-notes case.** You already have a shelter case where the volunteer’s experience is missing. A new case only changes the volunteer’s name, so it is redundant. But if the dog’s handling notes are missing, that checks a different gap. Keep the missing dog-handling-notes case, even if the missing volunteer-info case already exists.
+:::
+
+::: {.compare}
+::: {.col .bad}
+**Without it**
+
+You keep cases that say almost the same thing.
+
+You spend time running and reviewing checks that do not add new coverage.
+
+You may think the benchmark is broad, but it is actually narrow.
+:::
+::: {.col .good}
+**With it**
+
+You keep one case for each important difference.
+
+You remove checks that repeat work.
+
+You keep cases that reveal new failures or boundaries.
+:::
+:::
+
+### Keep difficult cases on purpose
+
+Do not let easy cases hide weak spots. A benchmark can look strong even when the application struggles with hard cases.
+
+For example, if the agent passes 98 straightforward cases but fails the only 2 difficult ones, the score is still 98%. That score looks high, but both difficult cases failed.
+
+So look at difficult cases separately. Keep enough of them to see whether changes help on the situations you care about. During development, it is often useful to include more difficult cases than you expect to see in everyday use.
+
+Keep ordinary cases too. They help you check that improvements do not break something that already worked.
+
+### Update or remove cases as requirements change
+
+Review old cases, too.
+
+- Remove a case if the shelter drops the rule it was testing.
+- Keep a case if it is still useful, even after a related mistake was fixed.
+- Update the expected outcome if the requirement changes but the case still matters.
+
+Be careful about removing a case only because you fixed a bug. A later change could bring that bug back.
+
+::: {.steps}
+1. **Compare the new case with existing cases**: decide whether it repeats an old check or tests something new.
+2. **Keep cases that matter**: retain meaningful situations, regression guards, and boundary cases.
+3. **Remove or revise duplicates**: drop cases that add no new coverage.
+4. **Update when requirements change**: change the expected result if the rule changes, or remove the case if the rule is gone.
+5. **Check difficult cases separately**: do not let many easy passes hide failures on hard examples.
+:::
+
+### Read the score in context
+
+The overall score describes performance on the benchmark you built. It does not tell you the true frequency of success or failure in production.
+
+That is why difficult cases matter. They show whether the application improves on the behaviors that are hardest to get right.
+
+When you compare versions, use the same cases and the same expected results for both versions. Otherwise, a change in the tests could make one version look better when it is not.
+
+At the end of this process, each Northwind benchmark case should keep together the pieces you need later: the customer query, the relevant product data, the expected outcome, the source of the case, and, after you have reviewed a failed run, the failure label that describes what went wrong.
+
+This is what a complete case might look like:
+
+- **Customer query**
+- **Relevant product data**
+- **Expected outcome**
+- **Source of the case**
+- **Failure label** after a failed run
+
+For example:
+
+- If the customer asks, **“What is your return policy?”** and Northwind has no return policy information available, the expected outcome is to say that the information is not available. If the agent invents a return policy, label the failure as **Scope violation**.
+- If the customer asks, **“How should I care for the Merino Wool Sweater?”** and Northwind says **“Machine washable on wool cycle,”** the expected outcome is to use only the supported machine-washing instruction and not add drying advice. If the agent adds unsupported drying instructions, label the failure as **Faithfulness drift**.
+
+## Save a reusable benchmark
+
+A benchmark is a curated set of cases that you can run again and again. It should contain:
+
+- stable cases
+- ordinary cases and difficult cases
+- expected results
+- reviewed judgments
+- failure labels
+
+Keep the same cases and the same expected results when you compare versions. That way, a change in the tests does not make one version look better than another. Re-running the same benchmark gives you a fair way to compare versions over time.
+
+Do not treat the benchmark score as the true success rate in production. It only describes performance on the benchmark you built. You can include more difficult cases than you usually see in everyday use, so you have enough examples to check them, but keep ordinary cases too so you can verify that changes do not break what already worked.
+
+### What to store with each case
+
+| Field | What it means |
+|---|---|
+| Requirement | The behavior the application should or should not show |
+| Test case | The input you give the application |
+| Expected result | The answer you want to see |
+| Reviewed judgment | The human review of whether the run passed or failed |
+| Failure label | What went wrong, such as hallucination or scope violation |
+
+::: {.example}
+**Northwind benchmark cases.** One case checks product claims for the Classic Tee. The expected outcome is to answer with the listed colors: white, black, navy, and heather gray. If the agent adds another color, label it **Hallucination**. Another case checks a return-policy question. If Northwind has no return-policy information and the agent invents one, label it **Scope violation**. A third case checks the merino wool sweater. If the agent says it can be machine washed on a wool cycle and then tumble dried, the unsupported drying advice is labeled **Hallucination** because Northwind did not provide drying instructions.
+::}
+
+::: {.mermaid}
+flowchart TD
+    A[Curated test cases] --> B[Expected results]
+    B --> C[Run the benchmark]
+    C --> D[Review judgments]
+    D --> E[Failure labels]
+    E --> F[Save benchmark]
+    F --> G[Re-run later with the same cases]
+    G --> H[Compare versions fairly]
+::}
+
+When you save the curated set as a benchmark, you can use it again as the application changes. Because the cases stay the same, you can compare versions against a stable standard.
+
+::: {.callout-tip}
+## Remember
+- Turn requirements into multiple test situations, not one generic test.
+- Keep request, context, and expected outcome together in every case.
+- Use real failures and feedback sources to find missing coverage.
+- Drop redundant cases; keep similar cases only when they test something different.
+- Keep benchmark cases and judgments stable so comparisons over time stay fair.
+:::
+
+## Sources {.sources}
+
+- [Lesson: Turn requirements into test cases](https://learn.deeplearning.ai/courses/evaluating-and-improving-agentic-applications/lesson/sh7zq0bk/turn-requirements-into-test-cases)
+- [Lesson: Build a test set you can trust](https://learn.deeplearning.ai/courses/evaluating-and-improving-agentic-applications/lesson/a4ui13bl/build-a-test-set-you-can-trust)
+- [Lesson: Build the northwind benchmark](https://learn.deeplearning.ai/courses/evaluating-and-improving-agentic-applications/lesson/txe2f9/build-the-northwind-benchmark)
