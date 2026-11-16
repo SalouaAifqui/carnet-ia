@@ -1,0 +1,262 @@
+---
+title: Action and tool-use evaluation
+subtitle: How to check whether an agent chose the right tool, used it correctly, and followed the right sequence.
+date: '2026-11-16'
+categories:
+- Evaluation & Guardrails
+- Evaluating agents
+---
+
+::: {.lesson-meta}
+[Evaluation & Guardrails]{.pill .t-eval} [Evaluating agents]{.pill .muted}
+:::
+
+::: {.tldr}
+This page explains how to evaluate an agent’s behavior beyond the final answer by inspecting the tool trace. The core idea is to judge action choice, tool invocation details, required versus forbidden actions, and whether the full sequence of steps makes sense. A tool can be the right one but used incorrectly, and even a correct tool call can still lead to a bad outcome if later steps, arguments, or ordering are wrong. Good evaluation therefore checks both whether the agent did the right things and whether it did them in the right way and sequence.
+:::
+
+::: {.concepts}
+::: {.concept}
+`Tool choice vs. execution`
+
+First determine whether the agent selected the right action or tool for the request. Then check whether it carried out that action correctly, since good tool choice and correct execution are separate judgments.
+:::
+::: {.concept}
+`Tool invocation details`
+
+A tool call should be inspected as a concrete invocation, not just as “the tool ran.” The evaluator should verify the tool name, the arguments, and whether any missing information should have been requested.
+:::
+::: {.concept}
+`Required and forbidden actions`
+
+Some evaluations are policy-based, so the trace must be checked for both necessary actions and disallowed ones. Success means the required action happened and forbidden actions did not appear.
+:::
+::: {.concept}
+`Sequence validity`
+
+Even a correct tool call can fail if the rest of the run does not fit the result. The evaluator should check whether later steps are consistent with earlier evidence and whether the tool order is appropriate.
+:::
+::: {.concept}
+`Structured trace evidence`
+
+Tool traces provide inspectable evidence such as tool names, arguments, presence or absence of calls, and argument values like an order ID. These details let you assess correctness more precisely than by reading the final answer alone.
+:::
+:::
+
+## Tool choice
+
+When you evaluate an agent, do not check only the final answer. First check whether the agent chose the right action or tool for the request.
+
+### What to judge
+
+There are two separate questions:
+
+1. **Did the agent choose the right action or tool?**
+2. **Did it carry out that action correctly?**
+
+These are different. An agent can pick the right tool and still pass the wrong details. Or it can give a good-looking answer after using the wrong tool.
+
+For example, in the dog shelter case, a volunteer says, “I can’t make Saturday anymore. Please cancel my outing.” If the agent confirms the outing instead of canceling it, the problem is the **action choice**. Even if it found the right volunteer, dog, and date, that does not matter. The request was to cancel.
+
+### Wrong-tool and required-tool cases
+
+You also need to check for cases where:
+
+- the agent uses the **wrong tool**
+- the agent **fails to use a required tool**
+- the agent uses a tool that **should not be used at all**
+
+For Northwind, actions are tool calls. If a customer asks, “Where is order 4521?”, the agent may need to call an **order lookup** tool. If it calls a **product search** tool instead, that is a tool selection failure. The tool may work perfectly, but it is the wrong operation.
+
+If the agent does choose the right tool, you still need to check the arguments. For example, `order_lookup(order_id="4512")` is wrong if the customer asked about order **4521**. The tool can succeed and return valid-looking information, but for the wrong order.
+
+Sometimes a tool is required but never called. If a customer asks for the status of an order and the status must come from the current order system, the evaluator should check that the required tool call appears in the trace. In other words, the agent should not answer without ever calling order lookup when the status has to be retrieved from the live order system.
+
+Sometimes a tool is forbidden. If a customer asks for a refund, but the order is outside Northwind’s refund window, then `process_refund` should not appear at all. In that case, the evaluator checks for the **absence** of the tool call. This is the same policy framing as saying the refund cannot be processed, so the tool must not be invoked.
+
+Before evaluating, you also need to handle cases where there is **insufficient information**. For example, if a customer says, “Can you refund my purchase?” but there’s no order number and no other way to identify which purchase they mean, the correct behavior may be to ask which order first rather than guessing or calling `process_refund`. So before you evaluate, define what correct behavior is in that situation.
+
+::: {.compare}
+::: {.col .bad}
+**Wrong tool or missing tool**
+
+The agent uses `product_search` for an order question, skips a required lookup, answers without ever calling order lookup when the status must come from the current order system, or calls `process_refund` when policy forbids it.
+:::
+::: {.col .good}
+**Right tool choice**
+
+The agent calls the correct tool for the request, uses it when required, asks for missing information when needed, and avoids tools that should not be used.
+:::
+:::
+
+::: {.example}
+**Order 4521.** A customer asks, “Where is order 4521?” The agent calls a product search tool instead of an order lookup tool. The final answer may still sound fluent, but the tool choice is wrong.
+:::
+
+### Why this matters
+
+Tool choice is separate from tool execution. An agent can make the right decision and still pass the wrong information into the tool. It can also skip a required action, do something it should never do, or answer without calling the tool that the current system requires. So when you evaluate tool use, check the **tool selection** first, then check the **tool invocation** details of the call.
+
+## Tool call details
+
+When you check tool use, do not stop at “the tool ran.” Check whether the agent called the **right tool with the right arguments**.
+
+A **tool invocation** is the actual call the agent makes. The trace shows the tool name and the arguments, so you can inspect them directly.
+
+### What to check
+
+- **Tool selection**: Did the agent choose the correct tool for the task?
+- **Tool invocation**: Did it call that tool correctly, including the arguments?
+- **Missing information**: Did the agent ask a clarifying question when it did not know enough?
+- **Premature action**: Did it act before it had the needed information?
+- **Required or forbidden actions**: Beyond picking the right tool, did the agent skip something it was required to do, or perform something policy says should never happen?
+
+::: {.steps}
+1. **Check the tool name**: Make sure the chosen tool matches the user’s request.
+2. **Check the arguments**: Compare the values in the call with the information the user gave.
+3. **Check for missing info**: If the request is incomplete, see whether the agent asked a clarifying question instead of guessing.
+4. **Check the trace**: Look for required calls, forbidden calls, or wrong values in the tool arguments.
+5. **Check for required or forbidden tools**: Verify that tools that must appear do appear, and tools that should not appear at all are absent when policy says they are not allowed.
+:::
+
+### Why arguments matter
+
+A tool can run successfully and still be wrong. For example, if the customer asks about order `4521` and the agent calls `order_lookup(order_id="4512")`, the call is valid-looking but it uses the wrong order ID.
+
+That is a tool invocation failure. The agent chose the right kind of tool, but it did not pass the right data.
+
+::: {.example}
+**Wrong order ID in the call.** A customer asks, “Where is order 4521?” The agent calls `order_lookup(order_id="4512")`. The tool can still return a real order, but it is the wrong one.
+:::
+
+### Missing information and clarifying questions
+
+Sometimes the agent does not have enough information to act safely. For example, if the customer says, “Can you refund my purchase?” but gives no order number and no other way to identify the purchase, the agent should not guess.
+
+If the correct behavior is to ask for the missing detail first, then that question should appear in the trace before any refund action.
+
+### Required tools and forbidden tools
+
+Sometimes the issue is not just whether a tool was used correctly, but whether it was used at all when it was required, or whether it appeared when policy said it should not.
+
+For example, if a customer asks for the status of an order and Northwind’s policy says the answer must come from the current order system, then `order_lookup` should appear in the trace. If the agent answers without calling it, that is a missing required action.
+
+Likewise, if a customer asks for a refund but the order is outside Northwind’s refund window, then `process_refund` should not appear at all. In that case, the evaluator should check for the **absence** of a forbidden tool call, not just whether a different tool ran successfully.
+
+### Tool calls can still fail as a run
+
+Even if the selection and invocation of tools are both correct, the overall run can still be wrong.
+
+For example, Northwind might call the right inventory tool with the right product ID, and the tool may correctly report that the item is out of stock, but then the agent tells the customer, “Yes, it’s available.” In that case, tool selection passed and tool invocation passed, but the final conclusion is still wrong.
+
+Or several tool calls may each be valid on their own, but happen in the wrong order. A run can have correct-looking calls and still fail because the sequence is wrong.
+
+::: {.callout-warning}
+## Watch out
+
+Do not judge a run only by whether the tool returned something. A tool call can succeed and still be wrong if the agent used the wrong arguments, skipped a required call, performed a forbidden action, or gave the wrong final answer after correct tool use.
+:::
+
+### Trace inspection example
+
+```{mermaid}
+flowchart TD
+    A[Customer asks about order 4521] --> B{Tool call}
+    B --> C[order_lookup(order_id=\"4512\")]
+    C --> D[Tool returns valid-looking result]
+    D --> E[Agent answers about the wrong order]
+```
+
+The trace makes the mistake visible. You can see that the tool was called, but the `order_id` did not match the user’s request.
+
+## Required and forbidden actions
+
+When you evaluate an agent, do not only ask, “Did it do something?” Ask two separate questions:
+
+- **Did a required action happen?**
+- **Did a forbidden action stay out of the trace?**
+
+This matters because some behavior is defined by policy. A policy says what the agent must do, and what it must not do.
+
+For example, if a customer asks for an order status, the agent may need to call `order_lookup`. If the status has to come from the current order system, then answering without that tool call is a problem. But the key nuance is that it may need to call `order_lookup` depending on the source of truth required by policy, not merely because a status question was asked.
+
+If a customer asks for a refund but the order is outside Northwind’s refund window, then `process_refund` should not appear at all. In that case, the correct behavior is not “call the tool badly.” The correct behavior is “do not call it.”
+
+You also need to define correct behavior before you evaluate it. If the policy says the agent should ask for missing information first, then that question becomes the required action. For example, if a customer asks, “Can you refund my purchase?” but gives no order number, the correct behavior is to ask for the missing order identifier before calling the refund tool. If the agent guesses or calls the refund tool too early, it fails.
+
+::: {.example}
+**Refund tool should not appear.** A customer asks for a refund, but the order is outside the refund window. The evaluator should check that `process_refund` does not appear in the trace at all.
+:::
+
+::: {.callout-warning}
+## Watch out
+
+A tool call can be missing when it was required, or present when it was forbidden. Both are evaluation failures.
+
+Do not check only whether a tool call succeeded. Check whether the trace contains the right actions, in the right places, according to the policy. Sometimes you check for the presence of a tool call, and sometimes you check for its absence, depending on what the policy requires.
+
+Also compare the tool choice and the arguments against the information the tool is supposed to act on. A trace can be wrong even if the tool runs successfully, for example if the agent calls `order_lookup(order_id="4512")` when the customer asked about order `4521`.
+:::
+
+::: {.steps}
+1. **Define correct behavior first**: decide what the agent must do, or must not do, for this case.
+2. **Check the trace against that expectation**: use the trace as evidence after the rule is clear.
+3. **Check presence or absence as needed**: confirm that any required action appears, and that any forbidden action does not appear.
+4. **Compare with policy**: decide correctness from the explicit rule, not from the tool’s success alone.
+:::
+
+## Sequences can still fail
+
+A single tool call can be correct, but the full run can still be wrong. This happens when later steps do not fit the earlier result, or when the agent uses the right tools in the wrong order.
+
+### Why a sequence can fail
+
+Tool traces give you structured evidence. You can inspect:
+
+- the **tool name**
+- the **arguments**
+- whether a **required** tool appeared
+- whether a **forbidden** tool appeared
+- whether the **order_id** argument matches the order the customer actually asked about
+
+When the important information is explicit in the trace, a deterministic check is often enough. You do not need an LLM judge to tell you that `4521` and `4512` are different order IDs.
+
+But this only checks each action on its own. Even if every tool call looks correct, the run can still fail as a sequence.
+
+::: {.steps}
+1. **Check the tool call**: suppose Northwind calls the right inventory tool with the right product ID.
+2. **Read the tool result**: the tool says the item is out of stock.
+3. **Check the final response**: the agent still tells the customer, “Yes, it’s available.”
+4. **Judge the sequence**: tool selection passed, tool invocation passed, but the final outcome is wrong.
+:::
+
+::: {.example}
+**Out of stock, but reported as available.** Northwind calls the correct inventory tool with the correct product ID. The tool returns that the item is out of stock. Later, the agent still tells the customer, “Yes, it’s available.” Each individual call looks fine, but the sequence fails.
+:::
+
+::: {mermaid}
+sequenceDiagram
+    participant C as Customer
+    participant A as Agent
+    participant T as Inventory tool
+
+    C->>A: Ask if item is available
+    A->>T: Check product ID
+    T-->>A: Out of stock
+    A-->>C: Yes, it is available
+:::
+
+Another sequence problem is valid calls in the wrong order. That gives you a new evaluation question: not just whether the actions were correct, but whether the trajectory, the sequence of steps, made sense end to end.
+
+::: {.callout-tip}
+## Remember
+- Don’t judge only the final answer; inspect the tool trace.
+- Separate tool selection from tool correctness.
+- Check both required actions and forbidden actions.
+- A correct tool call can still be followed by a wrong sequence.
+- Verify arguments, not just tool names.
+:::
+
+## Sources {.sources}
+
+- [Lesson: Evaluating actions and tool calls](https://learn.deeplearning.ai/courses/evaluating-and-improving-agentic-applications/lesson/60q53a/evaluating-actions-and-tool-calls)

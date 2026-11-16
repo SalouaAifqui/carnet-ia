@@ -1,0 +1,285 @@
+---
+title: Agent evaluation workflow
+subtitle: How to move from traces and requirements to systematic evaluation and improvement.
+date: '2026-11-16'
+categories:
+- Evaluation & Guardrails
+- Evaluating agents
+---
+
+::: {.lesson-meta}
+[Evaluation & Guardrails]{.pill .t-eval} [Evaluating agents]{.pill .muted}
+:::
+
+::: {.tldr}
+The page explains how to build a practical evaluation workflow for AI agents, starting from real traces and clear requirements instead of assuming traditional software testing will work. Because agents are probabilistic, the goal is to inspect their actual behavior, turn observed failures and rules into reusable tests and rubrics, automate judgment where possible, and then keep iterating through measurement, improvement, and monitoring. Evaluation is presented not as a one-time gate but as a continuous loop that helps teams catch subtle failures, align the agent with real-world requirements, and steadily improve reliability.
+:::
+
+::: {.concepts}
+::: {.concept}
+`Probabilistic behavior`
+
+Unlike regular code, agents can produce different outputs for the same input. That means a pass on one run does not guarantee correct behavior on the next, so evaluation has to account for variability.
+:::
+::: {.concept}
+`Traces as evidence`
+
+A trace records what the agent did step by step, including tool calls and outputs. Reading traces is the starting point for understanding real behavior before designing tests.
+:::
+::: {.concept}
+`Requirements and rules`
+
+Tests should come from explicit requirements: what the agent must do and must not do. These requirements can come from policies, domain experts, and patterns found in traces.
+:::
+::: {.concept}
+`Error analysis to test cases`
+
+Evaluation begins with analyzing failures and then turning them into reusable test cases and rubrics. This makes the process systematic instead of relying on ad hoc spot checks.
+:::
+::: {.concept}
+`Automated judging`
+
+Once tests and scoring criteria exist, evaluation can be partially automated with code or an LLM-as-a-judge. This speeds up measurement while keeping the review tied to the defined requirements.
+:::
+::: {.concept}
+`Continuous improvement loop`
+
+Evaluation is ongoing: measure, improve, retest, and monitor after deployment. The workflow is a cycle, not a one-time checkpoint.
+:::
+:::
+
+## Why evals matter
+
+AI agents do not behave like regular code. Regular code is deterministic: the same input under the same conditions gives the same result. Agents are probabilistic: they can give a different answer on the next run, even when the input is the same.
+
+That makes simple testing less reliable. An agent can look successful while still doing the wrong thing. It may finish the task, update the cart, or answer politely, but still ignore the user’s real need or invent a false explanation.
+
+Real-world inputs are also much more varied than a few test cases. People ask for things in different ways, and the agent may respond differently as the conversation continues. So you need tests that reflect the situations users will actually bring, including follow-up questions during multi-turn interactions.
+
+Systematic evaluation helps you answer two key questions:
+
+- Is the agent ready for real users?
+- Where should I focus my next improvement?
+
+It gives you evidence about where the agent works well and where it fails. Then you can decide what to change, such as the instructions, the model, or the tools, and check whether the change actually helped.
+
+::: {.compare}
+::: {.col .bad}
+**Deterministic code**
+
+- Same input, same result.
+- Failures are usually easier to spot.
+- A passing test is more trustworthy.
+:::
+
+::: {.col .good}
+**Probabilistic agent**
+
+- Same input can give different results.
+- The agent can look successful while being wrong.
+- You need repeated checks across realistic situations.
+:::
+:::
+
+::: {.example}
+**Northwind on a winter trip.** A customer asks Northwind for help with a winter camping trip. One run may recommend suitable cold-weather clothes. Another run may recommend cargo shorts. In another case, the agent may answer with a sweater recommendation and invent tumble-drying instructions that were never given. This kind of hallucination is especially easy to miss if the agent did not properly check the product details before responding.
+:::
+
+Evaluations help you see those problems early, before users do. Over the next two videos, you’ll get an overview of evals and labs/practice.
+
+Overall, you’re dealing with behavior that can change from run to run, mistakes that can look like success, and a range of situations that you can’t cover in a few examples. So you build confidence through systematic evaluation across realistic situations and repeated runs.
+
+## Start from traces
+
+Traces are the starting point for the evaluation process. A trace is a record of what the agent did: which tools it called, what happened at each step, and what it said. Start by reading traces one by one. Use them to understand the agent’s real behavior before you build tests or metrics.
+
+If you do not have traces yet, create a few realistic requests yourself, or with an LLM, and run them through the application. This helps you learn from behavior before you have real users.
+
+The course uses traces as the first step in a broader evaluation pipeline: read traces, figure out what “good performance” means for your application, and then build cases that test it. In practice, that means using hands-on labs to inspect what the agent actually did, including which tools it called, then using those findings to define performance criteria and create test cases. Evaluations are iterative, too: they reflect developer and human preferences about what counts as good or bad, so you often need to evaluate the evals themselves to decide when to tune or improve them.
+
+### Inspect what actually happened
+
+Look at the trace and the data the agent received. Then compare that with the final answer. Ask:
+
+- What information did the agent have?
+- What did it say that was supported?
+- What did it say that was not supported?
+- What went wrong at the exact step where the failure happened?
+
+This is where human judgment matters. You are not just checking whether the output looks good. You are identifying the specific failure so you can turn it into a testable problem.
+
+::: {.steps}
+1. **Read the trace step by step**: see what the agent received, what tools it used, and what it produced.
+2. **Check the source data**: compare the answer with the information available in the trace.
+3. **Mark the failure**: write down the exact wrong behavior.
+4. **Group repeated failures**: look for the same pattern appearing in multiple traces.
+5. **Turn the pattern into a problem**: write a concrete issue you can investigate and later test.
+:::
+
+### Example: Northwind sweater advice
+
+::: {.example}
+**Unsupported drying advice.** A customer asks, “How should I care for my merino wool sweater?” The Northwind application answers: “You can machine wash it on a wool cycle and then tumble dry.” But the trace shows that the product information only says the sweater is machine washable on a wool cycle. It says nothing about drying. The washing advice is supported, but the tumble-drying advice is invented and could ruin the sweater.
+:::
+
+### From trace to concrete problem
+
+Use the trace to write down the mistake in a clear way. For this example, you could note:
+
+- The application recommended tumble drying.
+- The trace had no drying instructions for the sweater.
+- The mistake is unsupported advice about product care.
+
+That note becomes the first version of a problem to investigate. Later, you can turn that kind of observation into a requirement such as: “Only make claims about products that are supported by Northwind data.” That broader problem can cover unsupported claims about sizing, color, availability, care instructions, or return policies too. And to catch invented details about other products as well, you can ask: “Does the Northwind data support what the application told the customer?”
+
+::: {mermaid}
+flowchart TD
+    A[Read a saved trace] --> B[Check the data the agent received]
+    B --> C[Compare the answer with the data]
+    C --> D[Find the unsupported or wrong step]
+    D --> E[Write the failure in plain language]
+    E --> F[Group similar failures across traces]
+    F --> G[Turn the pattern into a concrete problem to investigate]
+:::
+
+## Define requirements and tests
+
+Start by writing down what the agent must do and must not do. These are your requirements: the rules you will use to judge the agent.
+
+### Where requirements come from
+
+Look in three places:
+
+- existing policies or rules
+- people who understand the work
+- the agent’s traces, which show what it actually did
+
+Ask: **What should the application do, or avoid doing?**
+
+For example, in an animal shelter, a rule says volunteers with a **do-not-adopt** flag cannot take dogs on outings. From that rule, you can write a requirement: if the application arranges outings, it **must not** match a flagged volunteer with any dog.
+
+You do **not** need to see the application fail first. A policy can already tell you what counts as wrong.
+
+You can also use experts and traces to find requirements that were not written down yet. If you show staff a few volunteer and dog records, they can explain which matches they would accept or reject, and why. Keep the reason with the requirement. That makes the rule easier to test later.
+
+::: {.example}
+**Northwind and shelter rules.** For Northwind, one requirement is: “Only make claims about products that are supported by Northwind data.” For Northwind clothes, if a customer leaves out their size, you still need to decide whether the agent should ask before recommending clothes or can suggest first. Good recommendations should suit the customer’s needs and reflect the catalog and stock information. There may be several good recommendations for the same customer, so you can evaluate each one against the customer’s needs without requiring one correct answer. For the shelter example, the rule is: “A volunteer with a do-not-adopt flag must not be matched with any dog.”
+:::
+
+### Refine unclear requirements
+
+After you write requirements, review them for two things:
+
+1. **Unclear wording**
+2. **Missing situations**
+
+If a requirement says “recommend a suitable dog,” ask what **suitable** means. For example, if a dog needs an experienced handler, then the requirement should say that a volunteer without that experience must not be matched with that dog. This turns a vague word into a clear check.
+
+Also check edge cases. It is easy to describe what should happen when information is complete. It is harder to define what should happen when data is missing or conflicts. If no suitable dog is available, check whether the shelter already has a rule for that case. If it does not, you still need to decide what should happen before you can judge the result. More generally, requirements are often working expectations: you may start with incomplete understanding, then clarify and add to them as you examine what the agent actually does.
+
+### Turn requirements into tests and a rubric
+
+Once the requirements are clear, turn them into reusable test cases. A test case is a situation you want the agent to handle, with the result you expect.
+
+Use cases from:
+
+- past failures, so you can check whether they were fixed
+- normal tasks, so you can test everyday work
+- hard cases, so you can see where the agent struggles
+
+Keep updating the set as you find new problems or clarify old ones.
+
+Then write a **rubric**: a written guide that says how to judge each result. It should spell out:
+
+- what information you will check
+- what counts as success
+- what counts as failure
+
+Be specific. If you only check availability, you might accept clothes that are in stock but do not suit the customer. Separate the checks when needed, so you can see which requirement passed and which one failed.
+
+You do **not** need a formal evaluation system or metrics to begin learning what needs improvement. Start by looking closely at a handful of examples, then add structure as needed.
+
+::: {.steps}
+1. **Write the requirement** from a policy, an expert, or a trace.
+2. **Refine the wording** until the rule is specific and testable.
+3. **Create test cases** that cover normal, failed, and difficult situations.
+4. **Write the rubric** with clear pass/fail criteria for each requirement.
+5. **Reuse and update** the set as the application and your understanding change.
+:::
+
+```{mermaid}
+flowchart LR
+A[Policies, experts, traces] --> B[Requirements]
+B --> C[Refine wording and gaps]
+C --> D[Test cases]
+D --> E[Rubric]
+E --> F[Pass / fail judgment]
+F --> D
+```
+
+::: {.callout-warning}
+## Watch out
+
+Do not mix up what the agent **must do** with what it **must not do**. Keep both in the requirements, tests, and rubric. If you leave a rule vague, different evaluators may judge the same result differently.
+
+When you look at failures, separate two kinds of problems: ones caused by prompting, agent setup, or missing instructions, and ones where the model still struggles even though the instructions are clear. For example, if you expected Northwind to recommend clothes available in the customer's size but never told the agent to check that, the fix is in the instructions or agent setup. If the instructions are already clear and the model still fails, that is a different problem.
+:::
+
+## Measure and improve
+
+Evaluation is not a one-time check. It is a loop: improve, test, measure, and monitor. Broadly, this evaluation process has 4 parts: analyzing behavior and doing error analysis, building and refining reusable test cases, using evaluators to measure performance, and then making changes and retesting. These four parts form an ongoing cycle that you keep using throughout development and after deployment.
+
+### Automate the evaluation
+
+After you define your tests and rubric, you can automate the judging step with code or with an **LLM-as-a-judge**. An LLM-as-a-judge is a language model that scores or labels results against your criteria.
+
+Use automation to:
+
+- check whether a change actually helped
+- compare the new version with the old one
+- look for recurring failures
+- check how reliably the evaluator works
+- measure performance and confirm that changes improve the agent without breaking broader cases
+
+This matters because a change that fixes one example may still break other cases, or it may not solve the broader problem. The evaluator is there not just to judge a result, but to help you measure whether your changes are truly helping over the whole evaluation set.
+
+::: {.steps}
+1. **Analyze behavior**: review what the agent should do and what it actually does, looking for recurring errors.
+2. **Build or refine tests**: turn the failures you find into reusable test cases and update them as requirements evolve.
+3. **Use evaluators**: run code or an LLM-as-a-judge to measure performance against your criteria.
+4. **Make a change and retest**: update the agent, prompt, or workflow, then run the evals again to see what improved and whether anything got worse.
+5. **Keep monitoring after deployment**: use real user behavior to find new failures and bring those back into the eval cycle, improving both the agent and the evaluation criteria/models over time.
+:::
+
+::: {.example}
+**Checking a recommendation fix.** An agent gives a bad recommendation, and you use an LLM-as-a-judge to check whether your change fixed it. Later, a new failure appears in real user traffic, so you add that case to the eval set and test again. Over time, this kind of ongoing process can evolve, and AI agents can even help automate parts of the “hill climbing” on evals or try to figure out what goes wrong, though that may still need human steering and context to make the results reliable.
+:::
+
+### Keep the cycle going
+
+Once people use the application, do not stop evaluating. New failures will appear after deployment. Feed those real-world problems back into your tests so the evaluation set stays useful. Use what you learn from real users to improve both the agent and the evaluations, so the cycle keeps getting better as the application changes.
+
+```{mermaid}
+flowchart LR
+    A[Improve the agent] --> B[Test on eval set]
+    B --> C[Measure results]
+    C --> D[Review failures and reliability]
+    D --> E[Update evals with new cases]
+    E --> A
+```
+
+::: {.callout-tip}
+## Remember
+- Start with traces, not assumptions.
+- Write down what the agent must do and must avoid.
+- Turn observed failures into reusable tests.
+- Automate judging once your rubric is clear.
+- Keep evaluating after changes and after deployment.
+:::
+
+## Sources {.sources}
+
+- [Lesson: A conversation between laurie voss and andrew ng](https://learn.deeplearning.ai/courses/evaluating-and-improving-agentic-applications/lesson/53tpudpi/a-conversation-between-laurie-voss-and-andrew-ng)
+- [Lesson: Why evals matter](https://learn.deeplearning.ai/courses/evaluating-and-improving-agentic-applications/lesson/ldijc37i/why-evals-matter)
+- [Lesson: The evals process part 1](https://learn.deeplearning.ai/courses/evaluating-and-improving-agentic-applications/lesson/bvl0kh83/the-evals-process-part-1)
+- [Lesson: Define application requirements](https://learn.deeplearning.ai/courses/evaluating-and-improving-agentic-applications/lesson/a4ui1p/define-application-requirements)

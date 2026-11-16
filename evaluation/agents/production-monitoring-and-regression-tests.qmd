@@ -1,0 +1,219 @@
+---
+title: Production monitoring and regression tests
+subtitle: How to learn from live traffic and turn real failures into lasting offline tests.
+date: '2026-11-16'
+categories:
+- Evaluation & Guardrails
+- Evaluating agents
+---
+
+::: {.lesson-meta}
+[Evaluation & Guardrails]{.pill .t-eval} [Evaluating agents]{.pill .muted}
+:::
+
+::: {.tldr}
+Offline evaluation gives you a stable way to compare versions, but production reveals the messy reality that benchmarks miss: ambiguous wording, missing context, mixed intents, and unexpected user behavior. The page teaches a closed loop: observe failures in live traffic through monitoring, manual review, feedback, and A/B tests; then convert real failures into regression tests so they become permanent parts of your offline benchmark. Over time, this turns production into a source of durable evaluation cases and keeps future versions from reintroducing old bugs.
+:::
+
+::: {.concepts}
+::: {.concept}
+`Offline vs. production signals`
+
+Offline evals are fixed and repeatable, which makes comparison easy. Production is less controlled but more representative, so it exposes failures your test set did not anticipate.
+:::
+::: {.concept}
+`Monitoring`
+
+Run evaluators on live traces and track metrics over time to spot patterns and regressions at scale. It is the broadest way to see how the agent behaves in the wild.
+:::
+::: {.concept}
+`Manual review`
+
+Inspect individual traces by hand when you need to understand a specific failure in detail. This helps you see where the interaction first diverged from the intended behavior.
+:::
+::: {.concept}
+`User feedback and A/B tests`
+
+Explicit feedback like thumbs down, and behavioral signals like repeated rephrasing or abandonment, point to user pain. A/B tests compare current and revised behavior on real traffic to validate fixes.
+:::
+::: {.concept}
+`Regression tests from failures`
+
+When a live failure is worth fixing, preserve the original user wording, define the expected behavior, and add it to the offline dataset. This makes the bug a lasting test case.
+:::
+:::
+
+## Why production matters
+
+Offline evaluation is useful before release. It gives you a fixed set of cases, so you can change the agent and run the same cases again to see what improved and what regressed.
+
+But once the agent is live, production shows things your benchmark missed. People ask new questions. They use familiar requests in unfamiliar words. They leave out context. They combine several needs in one message, and sometimes behave in ways that are hard to anticipate in advance.
+
+### Offline benchmark vs production signals
+
+| Offline benchmark | Production signals |
+|---|---|
+| Fixed set of cases | Real traffic changes over time |
+| Good for repeatable comparison before release | Good for finding what the benchmark missed |
+| Tests known failures and regressions | Surfaces new phrasing, missing context, and combined requests |
+| Can be automated, and some evals may need to meet a threshold before release | Produces evidence for optimization once the agent is live |
+| Controlled and stable | Messier, but closer to real use |
+
+Production can surface issues that a benchmark did not cover, such as:
+
+- A volunteer says, “I can only walk for about ten minutes.”
+- A user asks, “Is Pepper free Saturday, and if not, can I switch to Sunday?”
+- The agent gives the right answer, but it takes 14 seconds instead of 2.
+- A shelter policy changes, so behavior that was correct last month is no longer correct today.
+- A new kind of dog record appears with fields the original benchmark never covered.
+
+::: {.example}
+**New wording, same underlying need.** A dog shelter volunteer says, “I can only walk for about ten minutes.” Another user asks, “Is Pepper free Saturday, and if not, can I switch to Sunday?” These live requests may expose a constraint, an availability check plus fallback request, or missing context that offline tests did not include.
+:::
+
+::: {.example}
+**Operational cost from grounding.** Suppose you add the rule, “Never state a product detail unless a tool result supports it.” That can reduce ungrounded answers, but it may also cause unnecessary tool calls, which can increase latency and cost.
+:::
+
+::: {.callout-warning}
+## Watch out
+Do not treat offline evals as enough once the agent is live. A good benchmark only tests the situations you put into it. Production is where you discover what you did not think to test, and it becomes another source of evidence for improvement. Monitoring, manual review, user feedback, and A/B testing can help you find where the next optimization work should focus.
+:::
+
+Once you find a production failure, you can turn it into a new offline test:
+
+1. Monitor production and notice a behavior failure.
+2. Find the first place in the trace where the behavior goes wrong.
+3. Decide what the agent should have done instead.
+4. Save the conversation with the original wording as a new test case.
+5. Add the expected behavior to your offline evaluation set.
+
+## Find the failure
+
+Production gives you evidence that offline evals cannot show. You usually look at four sources:
+
+- **Monitoring**: run evaluators on live traces and watch metrics over time.
+- **Manual review**: read traces by hand to understand a specific failure.
+- **User feedback**: use explicit signals like thumbs down, or behavioral signals like repeated rephrasing and abandonment.
+- **A/B tests**: send some traffic to the current version and some to the revised version, then compare outcomes on real traffic.
+
+These sources complement each other:
+
+- Monitoring tells you **where** something is happening.
+- Manual review tells you **what happened**.
+- User feedback tells you **what matters to users**.
+- A/B testing tells you **whether a change still looks useful** under live traffic.
+
+::: {.mermaid}
+flowchart LR
+  A[Metric changes in production\nfor example, more failed evaluations] --> B[Open traces]
+  B --> C[Read a few examples by hand]
+  C --> D[Find the failure pattern]
+  D --> E[Decide what to fix]
+:::
+
+::: {.example}
+**37 failed shelter conversations.** A policy or eligibility evaluator flags 37 shelter conversations. The count shows there is a problem, but not the pattern. You open a few traces to see whether the agent skipped the eligibility check, used the right tool with the wrong argument, got the correct lookup result and ignored it, or followed the right process and still reached the wrong conclusion.
+:::
+
+### Trace inspection turns a metric into a diagnosis
+
+A metric can tell you that something is wrong, but not why. Trace inspection is the step that turns a number into a specific failure pattern you can work on. For example, if average tool use or response latency starts creeping higher after a release, monitoring can alert you. Then you inspect the traces to see the pattern behind it. A policy evaluator might start flagging more conversations after a release, and the key question production monitoring helps answer is: **Where should I look?**
+
+Offline evals still have an important role too. Before release, you can run a candidate change against known failures and regression cases in a repeatable way. Depending on the product, you may even require certain evals to meet a threshold before a release goes out. The important part is that offline evaluation gives you a stable place to compare versions before the new behavior reaches users.
+
+User feedback can point you to the right traces, even when it does not explain the failure itself. A user might:
+
+- give a thumbs down,
+- complain,
+- ask the same question again,
+- rephrase three times,
+- abandon the conversation,
+- ask to talk to a human agent.
+
+A/B tests are different again. They let you compare the current version and a revised version on live traffic. That helps you check whether the change still improves the outcome, for example by reducing policy failures or the number of follow-up turns users need to get to the result they're looking for. It can also show that the agent stays just as accurate but takes longer.
+
+The important thing is that these methods answer different questions, and you'll often use more than one production evidence method on the same problem. Monitoring helps you find where something is happening. Manual review helps you understand what happened. User feedback helps surface problems that matter to the people using the system. And A/B testing can help you see whether a change still looks useful under real traffic.
+
+## Turn it into a test
+
+When production shows a real failure, turn it into a regression test. A regression test is a test you keep so the same bug does not come back later.
+
+### How to convert the failure
+
+::: {.steps}
+1. **Open the trace**: find where the behavior first goes wrong.
+2. **Keep the original wording**: copy the user message exactly as it appeared in production.
+3. **Write the expected behavior**: say what the agent should have done instead.
+4. **Add it to the offline dataset**: save the case in your benchmark so you can run it again later.
+5. **Re-run the updated agent**: test the new version against the new case and the rest of the benchmark, not just this one example.
+:::
+
+In the Northwind example, the production message is:
+
+> “I bought this last week and it doesn't fit. Can I get my money back?”
+
+This was missing from the offline test set because it does not use the word “refund.” The agent should still recognize it as a refund request, follow the refund policy, and do the needed customer and order checks before processing it. In the trace, the failure happens before any refund-related actions: there is no customer verification, no order lookup, and no refund tool call, because the agent never recognized the message as refund intent. To evaluate the fix, use a policy evaluator to verify the refund rules were followed, and tool evaluators to verify that the required lookups and actions actually happened.
+
+::: {.example}
+**A new regression test from production.** A customer writes, “I bought this last week and it doesn't fit. Can I get my money back?” Add this exact message as a new test case. Then record the expected behavior: the agent should treat it as a refund request, follow the refund workflow, and use the required checks before it processes anything.
+:::
+
+The trace also gives you a clue about where to look next. The failure happens before the agent calls any refund tools, because it never recognizes the request as a refund in the first place. So one place worth investigating is the instruction that tells the agent when to enter the refund workflow. You might also look at the examples the agent has been given. If every refund example says something explicit like "refund this order", the agent may not have enough guidance for requests such as "can I get my money back?" That gives you a direction for your next change, You could clarify the refund routing instruction, or maybe add a few examples that express refund intent in different ways.
+
+After you add the case, do not run only that one test. Run the full benchmark again. That protects the older cases too. For example, if you make the agent better at indirect refund requests, you still want explicit cases like “Refund order 1842” and “refund … 2271” to work the same way, and you do not want ordinary product questions to start looking like refund requests.
+
+```{mermaid}
+flowchart TD
+    A[Production trace shows a failure] --> B[Open the trace and find where it starts]
+    B --> C[Keep the user's original wording]
+    C --> D[Write the expected behavior]
+    D --> E[Add the case to the offline dataset]
+    E --> F[Run the updated agent on the full benchmark]
+    F --> G{Did the new case work?}
+    G -->|Yes| H[Check older cases and the rest of the benchmark]
+    G -->|No| I[Make a targeted change and test again]
+    H --> J[Release the stronger version]
+    J --> A
+```
+
+## Keep the loop going
+
+Once you fix a production failure, keep it in the benchmark. Future versions must still pass it.
+
+That is how production becomes part of your offline eval set. Each real failure you decide is worth fixing becomes a case the next version has to handle too. Over time, your benchmark becomes more representative of the situations your agent actually meets.
+
+::: {.example}
+**One fix, then a new case.** You fix the 10-minute walking constraint and add that case to the benchmark. The same case stays there for later versions. Then a new volunteer says, “I’m fine with short walks, but nothing strenuous.” That new phrasing may become the next candidate case to inspect and add.
+:::
+
+::: {.steps}
+1. **Observe**: watch real conversations and find a failure.
+2. **Benchmark**: turn the failure into a reproducible case with expected behavior. Inspect the trace, establish the expected behavior, add the case to the benchmark, and use it to guide the next change.
+3. **Evaluate**: run the updated agent against the new case and also the rest of your benchmark — don’t run only this one. Make sure the change for the new phrasing doesn’t break scheduling requests that were already working.
+4. **Improve**: only release or consider a stronger candidate if the new version handles the 10-minute walking constraint correctly and the rest of the benchmark stays healthy. Once it’s live, keep monitoring the same kinds of conversations, and when another volunteer introduces new constraints, repeat the loop.
+:::
+
+```{mermaid}
+flowchart LR
+    A[Observe] --> B[Benchmark]
+    B --> C[Evaluate]
+    C --> D[Improve]
+    D --> A
+```
+
+This creates a continuous loop: production reveals something your tests missed, you inspect it and turn it into a case, you test the change offline, and then you release the new version and look for the next failure.
+
+::: {.callout-tip}
+## Remember
+- Production finds what benchmarks miss.
+- Watch live traces, not just offline scores.
+- Turn real failures into regression tests.
+- Keep fixed failures in the benchmark.
+- Your eval set should grow with real traffic.
+:::
+
+## Sources {.sources}
+
+- [Lesson: Improving agents after deployment](https://learn.deeplearning.ai/courses/evaluating-and-improving-agentic-applications/lesson/zqwvtn/improving-agents-after-deployment)
+- [Lesson: Turning production failures into regression tests](https://learn.deeplearning.ai/courses/evaluating-and-improving-agentic-applications/lesson/hl9qjqa/turning-production-failures-into-regression-tests)

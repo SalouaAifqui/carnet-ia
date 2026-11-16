@@ -11,6 +11,14 @@ listing:
   fields:
   - title
   - subtitle
+- id: llms
+  contents: llms/*.qmd
+  type: grid
+  grid-columns: 2
+  sort: date desc
+  fields:
+  - title
+  - subtitle
 aliases:
 - /guardrails/index.html
 ---
@@ -42,12 +50,14 @@ How to know whether a model or an agent is good enough, and how to stop a bad an
 
 The two use the same tools in opposite directions. A guardrail is often an evaluator running live, like an LLM-as-a-judge that scores each answer before it is shown. And guardrails are themselves evaluated: choosing a threshold means counting false positives (good answers blocked) and false negatives (bad answers let through).
 
-## Evaluating LLMs {.group-title .planned data-folder="llms"}
+## Evaluating LLMs {.group-title data-folder="llms"}
 
 ::: {.group-meta}
 Evaluating models: benchmarks, test sets, metrics, LLM-as-a-judge, and comparing models for a given task.
 :::
 
+::: {#llms}
+:::
 
 ## Evaluating agents {.group-title data-folder="agents"}
 
