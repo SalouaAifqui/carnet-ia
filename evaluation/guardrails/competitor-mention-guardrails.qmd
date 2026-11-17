@@ -1,0 +1,220 @@
+---
+title: Competitor-mention guardrails
+subtitle: Prevent branded or disallowed entities from appearing in model outputs.
+date: '2026-11-17'
+categories:
+- Evaluation & Guardrails
+- Guardrails
+---
+
+::: {.lesson-meta}
+[Evaluation & Guardrails]{.pill .t-eval} [Guardrails]{.pill .muted}
+:::
+
+::: {.tldr}
+This page explains how to prevent a chatbot from mentioning competitor or otherwise disallowed entities in its responses. It starts with the motivating failure mode in a branded customer-facing assistant, then shows how to detect prohibited names with a cascading validator that checks for exact matches first, then named entities, and finally semantic similarity. The page also describes how to package that logic into a custom validator and deploy it through a Guardrails-based guarded client so model outputs are filtered before reaching the user.
+:::
+
+::: {.concepts}
+::: {.concept}
+`Brand-safety guardrail`
+
+In customer-facing chatbots, even mentioning a competitor by name can be unacceptable. The goal is to keep responses on-brand and avoid disallowed entities altogether.
+:::
+::: {.concept}
+`Cascading detection pipeline`
+
+The validator uses a step-by-step cascade to catch competitor mentions efficiently: exact string matching first, then NER-based entity extraction, then embedding similarity as a fallback.
+:::
+::: {.concept}
+`Exact match check`
+
+The fastest and most reliable first pass is to compare the output directly against a known list of competitor names. If a match is found, the response fails immediately.
+:::
+::: {.concept}
+`NER plus similarity`
+
+If no exact match exists, named entity recognition identifies candidate entities in the text, and vector similarity compares them to known competitor names to catch variations or paraphrases.
+:::
+::: {.concept}
+`Guarded client deployment`
+
+The validator is run through a guardrail server and exposed through a guarded OpenAI client. This inserts validation between the app and the model so unsafe outputs are intercepted before delivery.
+:::
+:::
+
+## Why block competitor names
+
+In a customer-facing chatbot, mentioning a competitor by name can be a failure mode. For branded applications, this is often not acceptable. The bot should stay on-brand and avoid naming other companies in its reply.
+
+This section specifically recreates an earlier failure mode using the Alfredo’s Pizza chatbot example from the course: it sets up an unguarded chatbot, then tries a large pizza order to compare how the bot behaves when the competitor “Pizza by Alfredo” is mentioned. The guardrail is built to prevent the chatbot from mentioning that main competitor by name.
+
+A simple word match is not enough. You might think that checking for one exact name would solve the problem, but companies can have multiple names or variations, so it can be hard to list every possible form. For example, a competitor might be referred to in more than one way, like GMC vs JPMorgan in other contexts. Because enumerating all common names is difficult, this page uses a cascading approach to detect competitor mentions.
+
+::: {.example}
+**Alfredo’s Pizza and Pizza by Alfredo.** A customer asks why they should order from Alfredo’s Pizza Cafe instead of Pizza by Alfredo. The unsafe chatbot reply names “Pizza by Alfredo” directly. In the safe version, the bot avoids mentioning the competitor by name.
+:::
+
+::: {.compare}
+::: {.col .bad}
+**Unsafe response**
+
+The chatbot mentions the competitor by name in a customer-facing reply, such as “Pizza by Alfredo.”
+:::
+::: {.col .good}
+**Safe response**
+
+The chatbot does not mention the competitor by name. It gives a branded answer without naming other companies.
+:::
+:::
+
+And if you want, you can ignore the specific validation error message and instead provide a more graceful user-facing message by catching the raised exception.
+
+## Cascading detection
+
+The validator uses a cascade, or step-by-step pipeline. It checks the easiest cases first.
+
+```{mermaid}
+flowchart TD
+    A[Text output] --> B[Exact string match]
+    B -->|exact match found| F[Fail]
+    B -->|no exact match| C[Named entity recognition]
+    C --> D[Extract entities]
+    D --> E[Embedding similarity vs known competitors]
+    E -->|similarity > threshold| F
+    E -->|similarity <= threshold| G[Pass]
+```
+
+### How the pipeline works
+
+1. **Exact string match first**: the validator checks whether the text contains an exact match to any one of the known competitor names. If it finds one, it immediately fails the validator.
+2. **Named entity recognition (NER) next**: if there is no exact match, the validator extracts named entities mentioned in the text. NER means a model finds names such as people, places, and organizations.
+3. **Embedding similarity last**: the validator compares the embeddings, or vector representations, of the extracted entities with the embeddings of known competitor names.
+4. **Threshold decides the result**: if similarity is greater than the chosen threshold, the validator fails. If not, it passes.
+
+### Example
+
+::: {.example}
+**“JPMC” after exact matching fails.** The text does not contain the full competitor name “JPMorgan”, so exact matching does not trigger. NER extracts “JPMC”, and the extracted entity is then compared by embedding similarity against known competitors. Since “JPMC” has a very close embedding to “JPMorgan”, and the similarity is above the threshold, the validator fails.
+:::
+
+### Watch out
+
+::: {.callout-warning}
+## Watch out
+A shorthand may not match by exact string. That is why the pipeline continues to NER and then similarity scoring.
+:::
+
+## Build the validator
+
+This validator uses a cascading check:
+
+1. First, it looks for an exact match with a competitor name.
+2. If there is no exact match, it extracts named entities with NER (Named Entity Recognition).
+3. Then it compares those entities with competitor names using vector similarity.
+4. If a match passes the threshold, it fails the validator.
+5. If nothing matches, it passes.
+
+### Validator structure
+
+The custom `CompetitorCheckMentionsValidator` has these parts:
+
+- an `__init__` method
+- a list of competitor names, stored as a class variable
+- an exact match function
+- an entity extraction function
+- an embedding model
+- precomputed embeddings for competitor names
+- a `validate` function that ties everything together
+
+It lowercases the competitor names for easier matching.
+
+It also imports standard machine learning tools such as Transformers, Sentence Transformers, sklearn metrics, and numpy.
+
+::: {.steps}
+1. **Initialize the validator**: take the competitor list in `__init__`, store it as a class variable, and lower it.
+2. **Check exact matches first**: scan the text for any competitor name using regex.
+3. **Extract named entities**: run the text through the NER pipeline.
+4. **Prepare similarity search**: load the embedding model and store precomputed embeddings for the known competitors.
+5. **Compare entities to competitors**: compute similarity and collect matches above the threshold.
+6. **Return the result**: fail if any competitor is found, otherwise pass.
+:::
+
+### Exact match, then NER, then similarity
+
+The exact match stage is simple regex-based checking. It iterates over the list of competitors and looks for an exact match to competitor names in the text. If one of the known competitor names is present in the text, the validator immediately fails. The exact match function also returns which competitors were detected in the text.
+
+If there is no exact match, the validator uses a NER pipeline built with a simple BERT base tokenizer and model. The NER model is initialized as a class variable, and the NER output is read entity by entity from the pipeline. Tokens that start with `B-` or `I-` are added to the extracted entity list. The cleanup step removes surrounding spaces and other extra characters.
+
+After that, the validator uses vector embeddings. It compares the vector embeddings of the extracted named entities with the embeddings of the known competitors. If the similarity is greater than the threshold, it adds the detected items to a list of matches and fails again, depending on whatever competitors are detected.
+
+::: {.example}
+**Lowercased competitor names and a fail result.** A `CompetitorCheckMentionsValidator` stores competitor names in lowercase. It checks text for exact matches first. If it finds a competitor name, it returns a fail result right away.
+:::
+
+```{mermaid}
+flowchart TD
+    A[Initialize validator] --> B[Store competitor names in lowercase]
+    B --> C[Exact match check]
+    C -->|Match found| D[Fail result]
+    C -->|No match| E[NER entity extraction]
+    E --> F[Precompute competitor embeddings]
+    F --> G[Compare entity embeddings with competitors]
+    G -->|Similarity above threshold| D
+    G -->|No match| H[Pass result]
+```
+
+### What the validator returns
+
+The validator uses the same pattern in both stages:
+
+- if any competitor is detected, it raises a fail result with the list of entities that were detected
+- if no competitor is detected, only then does it return a pass result
+
+It also includes the deployment pattern where a comparator check validator is downloaded from Guardrails Hub, an OpenAI client is swapped for a guarded OpenAI client that points to a guardrail server base URL, a RAG chatbot is created with that guarded client, and validation fails when `Pizza by Alfredo` is detected.
+
+## Run it in a guarded client
+
+Use Guardrails Hub to download the competitor-check validator. Then run it through a guardrail server. After that, swap your normal OpenAI client for a guarded OpenAI client. The guarded client uses a base URL that points to the guardrail server.
+
+This changes the flow:
+
+```{mermaid}
+flowchart LR
+  A[App] --> B[Guardrail server]
+  B --> C[Validator]
+  C --> D[Model response]
+  D --> B
+  B --> A
+```
+
+When the same prompt is sent through this guarded client, the validator checks the output before the response returns to the app. If it detects a competitor name, it raises a fail result. If no competitor is found, it passes the response.
+
+::: {.example}
+**Guarded client blocks a competitor mention.** A RAG chatbot is changed to use the guarded OpenAI client instead of the vanilla OpenAI client. The app sends the same prompt again, and validation fails because “Pizza by Alfredo” is detected in the output.
+:::
+
+### What happens in the guarded setup
+
+::: {.steps}
+1. **Download the validator from Guardrails Hub**: use a version of the comparator check validator from Guardrails Hub, which is a state of the art version of this validator.
+2. **Run it on the guardrail server**: the server exposes the guard endpoint with that validator.
+3. **Swap the client**: replace the vanilla OpenAI client with the guarded OpenAI client.
+4. **Send the same prompt**: the response is checked before it is returned.
+5. **Handle failure if needed**: you can catch the exception and show a more graceful message, such as telling the user you will not respond to the request.
+:::
+
+The validator logic should match the earlier detection step: it calls the vector similarity match function with the extracted entities. That match logic iterates over the entities, computes similarity with any of our known competitors, and adds a match only when the similarity is greater than a threshold. If any competitors are detected, it returns a fail result with the list of detected entities. If no entities are detected, it returns a pass result.
+
+::: {.callout-tip}
+## Remember
+- Start with exact matches; they are the cheapest and most precise filter.
+- Use NER and embeddings to catch renamed, paraphrased, or slightly altered competitor mentions.
+- A validator should fail the output before it reaches the user, not after.
+- Guardrails can be inserted transparently by pointing the client to a guardrail server.
+- This pattern applies to competitor names and any other disallowed entities.
+:::
+
+## Sources {.sources}
+
+- [Lesson: Preventing competitor mentions](https://learn.deeplearning.ai/courses/safe-and-reliable-ai-via-guardrails/lesson/bc597/preventing-competitor-mentions)

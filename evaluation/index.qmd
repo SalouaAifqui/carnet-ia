@@ -19,6 +19,14 @@ listing:
   fields:
   - title
   - subtitle
+- id: guardrails
+  contents: guardrails/*.qmd
+  type: grid
+  grid-columns: 2
+  sort: date desc
+  fields:
+  - title
+  - subtitle
 aliases:
 - /guardrails/index.html
 ---
@@ -68,8 +76,11 @@ Evaluating agents: final answers, the path they took, tool use, and behaviour ov
 ::: {#agents}
 :::
 
-## Guardrails {.group-title .planned data-folder="guardrails"}
+## Guardrails {.group-title data-folder="guardrails"}
 
 ::: {.group-meta}
 Runtime safeguards: checking inputs and outputs, prompt injection and jailbreaks, sensitive data, choosing thresholds, and the frameworks that implement them.
+:::
+
+::: {#guardrails}
 :::

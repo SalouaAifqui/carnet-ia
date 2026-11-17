@@ -63,6 +63,8 @@ website:
       contents: evaluation/agents/*.qmd
     - section: Evaluating LLMs
       contents: evaluation/llms/*.qmd
+    - section: Guardrails
+      contents: evaluation/guardrails/*.qmd
   page-footer:
     left: Carnet IA · notes written while learning
     right:
