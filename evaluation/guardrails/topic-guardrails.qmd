@@ -1,0 +1,229 @@
+---
+title: Topic guardrails
+subtitle: Use topic classification to keep model outputs on the intended subject.
+date: '2026-11-17'
+categories:
+- Evaluation & Guardrails
+- Guardrails
+---
+
+::: {.lesson-meta}
+[Evaluation & Guardrails]{.pill .t-eval} [Guardrails]{.pill .muted}
+:::
+
+::: {.tldr}
+This page explains how topic guardrails keep a chatbot or RAG app on its intended subject by checking user input at runtime before the model responds. It introduces zero-shot topic classification as a way to detect whether text fits a target domain, compares it with LLM-based classification, and then shows how to build a validator that flags or blocks banned topics using a score threshold. The main idea is that even a well-performing assistant needs a lightweight gate to prevent misuse, drift, or off-domain answers.
+:::
+
+::: {.concepts}
+::: {.concept}
+`Topic guardrails`
+
+A runtime check that keeps model outputs aligned with the intended business or application domain. It helps prevent the chatbot from answering requests that are outside scope, even when the prompt seems valid.
+:::
+::: {.concept}
+`RAG domain control`
+
+RAG systems can still drift off-topic because users may ask for unrelated tasks. Topic guards add a layer before generation to make sure the request belongs to the supported use case.
+:::
+::: {.concept}
+`Zero-shot topic classification`
+
+Topic detection can be framed as natural language inference: the text is the premise and “this text is about [topic]” is the hypothesis. The model scores whether the topic is entailed, neutral, or contradicted, which becomes a topic-fit score.
+:::
+::: {.concept}
+`Classifier tradeoffs`
+
+LLM-based classifiers are easy to use but can be inconsistent and opaque, since they are stochastic and do not always return detailed scores. Zero-shot classifiers are often more predictable for guardrails because they expose topic scores and are easier to threshold.
+:::
+::: {.concept}
+`Topic validator`
+
+The guard is implemented as a validator that checks text against banned topics using a threshold. If the detected topic score is above the threshold, the input can be rejected or handled differently.
+:::
+:::
+
+## Why topic guards
+
+A chatbot can drift outside its business domain. Then it may answer a request that looks useful, but it is not part of the intended service.
+
+This is a problem for RAG apps too, especially when you are keeping an LLM running RAG applications on the topic intended for your use case or your business. Even if the chatbot is working well, users can try to use it for other tasks. A runtime topic check helps stop that misuse before the response is shown.
+
+::: {.compare}
+::: {.col .bad}
+**Without a topic guard**
+
+A pizzeria chatbot is asked about the differences between a Ford F-150 and a Ford Ranger. The bot gives a detailed answer about versatility and convenience, even though it should stay on pizza-related topics.
+:::
+
+::: {.col .good}
+**With a topic guard**
+
+The app checks the topic first. If the request is outside the intended business topic, it can block or reject the answer before the user sees it.
+:::
+:::
+
+::: {.example}
+**Pizza chatbot, car question.** A pizzeria chatbot is asked to compare a Ford F-150 and a Ford Ranger. The unguarded bot answers with an amazing detail list about versatility and convenience, but this is off topic for a pizza business.
+:::
+
+Before building the validator, first understand the underlying model being used: a **zero-shot topic classification** model. The model used here is **BART**, a zero-shot topic classification model created by **Meta Labs**.
+
+The walkthrough also starts by reminding you of the prior setup: the same unguarded client vector database and system message are used again before demonstrating the off-topic behavior.
+
+## Zero-shot classifier
+
+Zero-shot topic classification means you do not train a task-specific model first. Instead, you turn topic detection into a natural language inference task.
+
+The idea is:
+
+- **Premise**: the input text
+- **Hypothesis**: “this text is about [target topic]”
+
+A model that was trained for NLI can then judge whether the hypothesis is **entailed**, **contradicted**, or neutral by the premise. For topic guards, that gives a score for how likely each topic is a fit for the text.
+
+And how it really works under the hood is actually **pretty similar to the natural language inference (NLI) model** we saw in the earlier hallucination lesson. The difference is that, in this specific NLI formulation, the **premise is our input text** and the **hypothesis is the topic claim** we want to test.
+
+### How it works
+
+We use a **Hugging Face `pipelines`** approach with a **BART MNLI** model. In the source example, the model used **as a zero-shot classifier** is **Facebook/BART-Large-mnli**.
+
+The pipeline gets:
+
+1. the input text
+2. a list of topics
+3. a hypothesis template, such as:  
+   **“This sentence above contains discussions of the following topics: [topics]”**
+
+The model then returns a score for each topic.
+
+```{mermaid}
+flowchart LR
+    A[Input text] --> B[Zero-shot topic classifier]
+    C[Topic list] --> B
+    B --> D[Score for each topic]
+    D --> E[Topic guardrail decision]
+```
+
+### Example
+
+::: {.example}
+**Chick-fil-A on Sundays.** The sentence is **“Chick-fil-A is closed on Sundays”**. We test it against three possible topics: **food**, **business**, and **politics**. The classifier gives scores close to what we expect: **food = 0.672**, **business = 0.179**, and **politics = 0.027**.
+:::
+
+This zero-shot topic classifier is the core of the topic guardrail. It lets you check whether a user message is about the topics you allow, without training a custom classifier for every topic list. Next, we compare how well this zero-shot classifier does versus an LLM.
+
+## Classifier tradeoffs
+
+A topic guard can use either an LLM-based classifier or a zero-shot classifier. They both classify text, but they behave differently in practice.
+
+::: {.compare}
+::: {.col .bad}
+**LLM-based classifier**
+
+- Can be a good option, especially at the POC phase.
+- Example: GPT-4o-mini, the latest model as of the time of filming, classified the same sentence ten times.
+- It returned **food** 9 times out of 10, but **business** once.
+- We can’t get the detailed scores.
+- This shows a reliability limit: LLMs are **stochastic**, so results can change from one run to the next.
+- Quality depends on the model you choose, so the results you get may differ each time you run it.
+- You are also limited by the hosted third-party server: **rate limits**, **uptime**, and all of that.
+- In the example, the 10 requests took about **30s**, and that will vary depending on traffic, terms of service changes, etc.
+:::
+::: {.col .good}
+**Zero-shot classifier**
+
+- Runs the same experiment with the exact same sentence.
+- In the learning environment, you only have access to basic CPUs, which reflects the actual production settings that you will deploy your guardrails in, so compute is very limited and this will actually take about five minutes to complete.
+- If you run this exact same code in your own computer with advanced CPUs or GPUs, the model will be much faster.
+- On a **MacBook Pro with an M1 chip**, the ten iterations finished in just a few seconds.
+- The result is **consistent**, which is important for reliability.
+- You can run it on a server or in a private environment.
+- That means you do not need to send user messages to a third-party service.
+- Your data stays inside your own environment.
+:::
+:::
+
+::: {.example}
+**Same sentence, two setups.** GPT-4o-mini classifies one sentence ten times and returns **food** nine times out of ten, but **business** once, so it is not always the same answer. The zero-shot classifier runs the same test on a local M1 MacBook Pro and returns the same result each time, with much more stable behavior.
+:::
+
+## Build the guard
+
+### Detect topics first
+
+Start by making a function that detects topics in a piece of text. Use the same classifier as before.
+
+This function takes:
+- the text
+- a list of topics
+- a threshold score
+
+It returns a list of strings: the topics whose score is **greater than the threshold**.
+
+### Wrap it in a validator
+
+Next, use that function in a validator called **`constraint_topic_validator`**.
+
+This validator takes:
+- a list of **banned topics**
+- a **threshold** value
+
+In the `validate` function:
+1. Call your `detect_topics` function.
+2. Check whether any banned topics were detected.
+3. If yes, raise a **fail** result.
+4. If not, raise a **pass** result.
+
+### Build the guard and test it
+
+Then build a guard with this validator and run it on example outputs.
+
+When you test it on a statement that is clearly political, the guard fails because the **politics** topic is detected. It also detects **automobiles**.
+
+::: {.example}
+**Blocking a forbidden topic.** A chatbot output talks about a political subject. The topic guard detects **politics**, so the guard fails instead of passing the text through.
+:::
+
+### Guarded chatbot with a server
+
+You can also use the topic guard in a guardrail server.
+
+The setup is:
+- a server running your topic guard
+- a guarded client, which is your **OpenAI client**
+- the client is sandwiched between the guard and the model output
+
+Then test a pizzeria chatbot with the prompt that tries to make it talk about **Ford vehicles**.
+
+The output mentions **Ford F-150 trucks**, which is a banned topic. Instead of returning the raw text, the system raises a **validation error**.
+
+You do not have to use that exact error message. You can catch the exception and handle it more gracefully for the user.
+
+::: {.example}
+**Pizzeria chatbot and Ford vehicles.** A pizzeria chatbot is asked the same prompt used before, but its answer mentions Ford F-150 trucks. The guard catches the banned topic and raises a validation error.
+:::
+
+```{mermaid}
+flowchart LR
+    A[Output text] --> B[Detect topics]
+    B --> C[Validator]
+    C --> D[Guard]
+    D --> E[Pass or validation error]
+
+    B --- F[Threshold]
+    C --- G[Banned topics]
+```
+
+::: {.callout-tip}
+## Remember
+- Guardrails are about keeping the assistant on-topic, not just making it sound good.
+- Use a runtime topic check to stop off-domain requests before a response is generated.
+- Zero-shot classification can detect topic fit without training a custom model.
+- LLM classifiers may vary from call to call, so they are less reliable for strict gating.
+- A threshold-based validator turns topic scores into a practical safety rule.
+:::
+
+## Sources {.sources}
+
+- [Lesson: Keeping a chatbot on topic](https://learn.deeplearning.ai/courses/safe-and-reliable-ai-via-guardrails/lesson/xi8uo/keeping-a-chatbot-on-topic)
