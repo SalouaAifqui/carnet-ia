@@ -338,9 +338,9 @@ Do not treat the benchmark score as the true success rate in production. It only
 
 ::: {.example}
 **Northwind benchmark cases.** One case checks product claims for the Classic Tee. The expected outcome is to answer with the listed colors: white, black, navy, and heather gray. If the agent adds another color, label it **Hallucination**. Another case checks a return-policy question. If Northwind has no return-policy information and the agent invents one, label it **Scope violation**. A third case checks the merino wool sweater. If the agent says it can be machine washed on a wool cycle and then tumble dried, the unsupported drying advice is labeled **Hallucination** because Northwind did not provide drying instructions.
-::}
+:::
 
-::: {.mermaid}
+```{mermaid}
 flowchart TD
     A[Curated test cases] --> B[Expected results]
     B --> C[Run the benchmark]
@@ -349,7 +349,7 @@ flowchart TD
     E --> F[Save benchmark]
     F --> G[Re-run later with the same cases]
     G --> H[Compare versions fairly]
-::}
+```
 
 When you save the curated set as a benchmark, you can use it again as the application changes. Because the cases stay the same, you can compare versions against a stable standard.
 

@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import datetime as dt
+import re
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Callable
@@ -83,10 +84,18 @@ def validate_route(root: Path, route: Route) -> dict:
 
 
 def clean_markdown(text: str) -> str:
-    """[code] Strip a code fence wrapping the whole answer, if the model added one."""
+    """[code] Make a model's markdown safe for the site:
+    - strip a code fence wrapping the whole answer;
+    - unwrap ```{table} / ```{markdown} blocks (content shown as is);
+    - turn any other ```{lang} into ```lang: with braces, Quarto would try to EXECUTE the code
+      when building the site (only ```{mermaid} diagrams are allowed)."""
     text = text.strip()
     if text.startswith("```") and text.endswith("```") and not text.startswith("```{"):
         text = text.split("\n", 1)[1].rsplit("```", 1)[0]
+    text = re.sub(r"(?m)^::\}[ \t]*$", ":::", text)                                     # '::}' typo
+    text = re.sub(r"(?ms)^::: \{\.mermaid\}\n(.*?)\n:::[ \t]*$", r"```{mermaid}\n\1\n```", text)  # diagram as a div
+    text = re.sub(r"```\{(?:table|markdown|md)\}\n(.*?)\n```", r"\1", text, flags=re.S)
+    text = re.sub(r"```\{(?!mermaid\})([a-zA-Z0-9_+-]+)[^}]*\}", r"```\1", text)
     return text.strip()
 
 

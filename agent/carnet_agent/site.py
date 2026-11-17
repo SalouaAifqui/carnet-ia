@@ -237,6 +237,8 @@ def check_page(text: str, findings: list[Finding]) -> list[str]:
             errors.append(f"Finding from {f.source_url} is not listed in Sources.")
     if body.count("```") % 2:
         errors.append("A code block is not closed (odd number of ```).")
+    if re.search(r"^```\{(?!mermaid\})", body, re.M):
+        errors.append("A code block uses ```{…} (other than mermaid): Quarto would try to execute it.")
     if not _blocks_balanced(body):
         errors.append("A ::: block is opened and not closed (or closed twice): the page would render badly.")
     if len(body.split()) < 120:

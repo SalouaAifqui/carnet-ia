@@ -128,7 +128,13 @@ def test_checks():
     assert any("Not visual enough" in e for e in check_page(flat, []))
     many = good.replace("## A", "## A\n\n## B\n\n## C\n\n## D\n\n## E")
     assert any("Too many main parts" in e for e in check_page(many, []))
-    print("✓ code checks: visuals, examples, at most 4 parts")
+    from carnet_agent.core import clean_markdown
+    cleaned = clean_markdown("## A\n\n```{table}\n| a | b |\n|---|---|\n```\n\n```{python}\nx = 1\n```\n\n```{mermaid}\nflowchart LR\n```")
+    assert "```{table}" not in cleaned and "| a | b |" in cleaned and "```python" in cleaned and "```{mermaid}" in cleaned
+    assert any("execute" in e for e in check_page(good.replace("```{mermaid}", "```{python}"), []))
+    fixed = clean_markdown("::: {.example}\nText.\n::}\n\n::: {.mermaid}\nflowchart LR\n  A --> B\n:::")
+    assert fixed == "::: {.example}\nText.\n:::\n\n```{mermaid}\nflowchart LR\n  A --> B\n```"
+    print("✓ code checks: visuals, examples, at most 4 parts, no executable code blocks")
 
 
 def test_commands():

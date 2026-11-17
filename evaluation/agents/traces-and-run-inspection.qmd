@@ -181,7 +181,6 @@ Do not assume a missing span means the agent did nothing. First check that the r
 
 ### Annotated span detail panel
 
-```{table}
 | Field | What it shows |
 |---|---|
 | Name | Which operation ran |
@@ -192,7 +191,6 @@ Do not assume a missing span means the agent did nothing. First check that the r
 | Model version | Which model ran |
 | Prompt | The prompt used |
 | Start / end time | When the operation began and ended |
-```
 
 ::: {.steps}
 1. **Open the run**: choose the run you want to inspect.
