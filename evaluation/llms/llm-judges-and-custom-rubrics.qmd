@@ -9,12 +9,14 @@ categories:
 - Evaluating LLMs
 ---
 
-::: {.lesson-meta}
-[Evaluation & Guardrails]{.pill .t-eval} [Evaluating LLMs]{.pill .muted}
+::: {.synthesis}
+![Three separate ingredients (judge model, five-part rubric, run data) give a verdict and an explanation.](/assets/visuals/llm-judges-and-custom-rubrics.svg){fig-alt="An LLM judge combines a judge model, a five-part rubric and run data into a label and an explanation"}
 :::
 
-::: {.tldr}
-This page explains how to automate evaluation of LLM applications with a judge model and a custom rubric, especially when judgments depend on context rather than simple output matching. It shows how to separate the judge model, rubric, and evaluation data so you can swap or compare components independently, then defines how to write a clear rubric that tells the judge what to inspect, which evidence to use, and how to report results. The page finishes with an operational workflow: pull recorded runs, assemble the right evidence, run the judge, and review the resulting scores and explanations to understand whether the app behaved well in realistic situations.
+::: {.in30}
+- An LLM judge scores recorded runs against written criteria, using context like the user's intent, the agent's decision and the tone.
+- Keep the judge model, the rubric and the data separate; the judge can be a stronger model, ideally from another provider.
+- Write the rubric in five parts (role, criteria, inputs, labeled examples, output), then run it and review the flagged runs.
 :::
 
 ::: {.concepts}
@@ -22,11 +24,6 @@ This page explains how to automate evaluation of LLM applications with a judge m
 `LLM judge`
 
 An LLM judge evaluates recorded runs against written criteria instead of only checking final outputs. It can be used for human-style review or automated scoring, and it should consider context like user intent, agent decisions, and tone.
-:::
-::: {.concept}
-`Separation of model, rubric, and data`
-
-Phoenix keeps the judge model, rubric, and examples independent so each can be changed without rewriting the others. That makes it easier to compare models, revise criteria, and understand how the evaluation changes.
 :::
 ::: {.concept}
 `Custom rubric`
@@ -80,29 +77,13 @@ For safe matching, the rubric can tell the judge to:
 
 Phoenix keeps the **model, rubric, and data separate**, so you can change one without changing the others. That means you can swap the judge model while keeping the same rubric and examples, or revise the rubric while keeping the same model and examples, and compare how the judgments differ.
 
-You do not have to use the same model for the judge that you use in the application. For the application, you might choose a faster, less expensive model to keep response times and costs down. But the judge can often evaluate completed runs afterward, so you may choose a more capable model for better evaluation quality, even if it is slower or more expensive. Mistakes by the judge affect your evaluation results, so how reliably it applies the rubric matters.
-
-The judge’s model can also come from a **different provider** than the application’s model. Using the same provider can create shared-bias risk, where both systems make similar mistakes in how they generate or evaluate responses. Choosing a different provider for the judge can help reduce that risk.
-
-Before writing a rubric from scratch, check whether Phoenix already has a built-in evaluator that fits your need. Phoenix templates cover things like **correctness**, **tool selection and tool invocation**, **document relevance**, and **refusal**. For the shelter safe-matching task, though, you will likely need a **custom rubric** that captures the shelter-specific idea of whether the volunteer can safely handle that particular dog.
-
-### How the results are used
-
-Once you have the model and rubric, you can run the judge across a set of recorded runs. The workflow is:
-
-1. retrieve the relevant spans from Phoenix as a dataframe
-2. prepare the inputs the judge needs
-3. set up the evaluator with the judge model and rubric
-4. run the evaluator across the recorded runs
-5. save the results back to Phoenix
-
-For safe matching, the judge needs the **volunteer profile**, the **dog record**, and the **agent recommendation**. In code, remember that the judge itself makes LLM calls, so you should use `suppress_tracing` during evaluation to prevent the grading traces from being recorded alongside the application runs.
-
-The judge then returns a **structured result**, such as a label, score, and explanation. Save those results back to Phoenix as annotations linked to the runs they evaluated, so you can find the responses the judge flagged and inspect what happened. That lets you sort by score or filter by label, such as **UNSAFE**, and open the relevant traces to review them more closely.
-
 ## Choose the judge model
 
 Phoenix keeps the model, rubric, and data separate. This means you can change one without changing the others. You can try another model with the same rubric and examples. Or you can revise the rubric while keeping the model and examples the same. This helps you compare evaluations and see how the judgments differ.
+
+::: {.column-margin .define label="Model, rubric, data"}
+Phoenix keeps the judge model, rubric, and examples independent so each can be changed without rewriting the others. That makes it easier to compare models, revise criteria, and understand how the evaluation changes.
+:::
 
 You do **not** have to use the same model for the judge that you use in the application. A common setup is to use a **faster, less expensive model** in the application, so response times and costs stay down. Then you can use a **more capable model** as the judge, even if it is slower or more expensive, because it can evaluate completed runs afterwards. Mistakes by the judge affect your evaluation results, so how reliably it applies the rubric matters.
 
@@ -110,7 +91,7 @@ The judge model can also come from a **different provider** than the application
 
 What matters most is whether the judge applies your criteria correctly. To check that, compare its judgments with **human judgments** of the same responses using the same criteria. In this course, the human is the **Reviewer** and the automated system is the **Evaluator**. Later, you will look at how well the Evaluator agrees with those Reviewers.
 
-Next, consider where the rubric will come from. Before writing one from scratch, check whether Phoenix already has an evaluator for the requirement you want to measure. Built-in templates cover questions such as **correctness, tool selection and tool invocation, document relevance, and refusal**.
+Next, consider where the rubric will come from. Before writing one from scratch, check whether Phoenix already has an evaluator for the requirement you want to measure. Built-in templates cover questions such as **correctness, tool selection and tool invocation, document relevance, and refusal**. For the shelter safe-matching task, though, you will likely need a **custom rubric** that captures the shelter-specific idea of whether the volunteer can safely handle that particular dog.
 
 ::: {.compare}
 ::: {.col .bad}
@@ -133,6 +114,10 @@ Use a fast, cheap model in the app, and a slower or more capable judge model for
 ## Write the rubric
 
 A custom rubric tells the judge **what to evaluate**, **what evidence to use**, and **how to report the result**. If you only ask, “Is this a good response?”, the judge must decide what “good” means by itself. So make the rubric explicit.
+
+::: {.column-margin .watch}
+Do not add extra labels or scores unless you can explain what each one means and why you need it. Also, examples can help, but they can pull the judge toward similar cases instead of the actual criteria. If you add labeled examples, include both SAFE and UNSAFE cases, especially the harder ones, and compare rubric performance with and without examples on the same benchmark cases.
+:::
 
 ### Five parts of a custom rubric
 
@@ -160,7 +145,7 @@ A good rubric has five labeled parts:
 
 The judge should not have to guess which text is instruction and which text is case data. Put the case information in a clearly marked section, and keep it separate from the rubric instructions. If relevant evidence is missing, the judge may not be able to apply the criteria reliably.
 
-```mermaid
+```{mermaid}
 flowchart TD
     A[Role: what job the judge is doing] --> B[Criteria: what to check]
     B --> C[Inputs: the case evidence]
@@ -194,12 +179,6 @@ Use one clear question for each evaluator, such as “Is this match safe?” and
 :::
 
 Treat your rubric like code. Keep a record of each version and its results. When you revise it, change one thing at a time and test it on the same cases. Keep earlier versions so you can go back if a change makes the judgments worse.
-
-::: {.callout-warning}
-## Watch out
-
-Do not add extra labels or scores unless you can explain what each one means and why you need it. Also, examples can help, but they can pull the judge toward similar cases instead of the actual criteria. If you add labeled examples, include both SAFE and UNSAFE cases, especially the harder ones, and compare rubric performance with and without examples on the same benchmark cases. Test the rubric with and without examples on the same reviewed cases, especially hard ones.
-:::
 
 ## Run and review evaluations
 
@@ -244,6 +223,27 @@ Now you can sort by score or filter by label to find the responses you want to i
 - A good rubric tells the judge what to evaluate, what evidence to use, and how to respond.
 - Use recorded runs and review the results to compare behavior across cases and models.
 :::
+
+<details class="quiz">
+<summary>Why might the judge use a different model, even a different provider, than the application?</summary>
+
+The judge grades completed runs afterwards, so it can be slower and more capable. A different provider reduces shared biases that would make both models overlook the same problems.
+
+</details>
+
+<details class="quiz">
+<summary>What are the five parts of a custom rubric?</summary>
+
+Role, criteria, inputs, labeled examples, and output instructions.
+
+</details>
+
+<details class="quiz">
+<summary>Why wrap the evaluation code in `suppress_tracing`?</summary>
+
+The judge makes LLM calls too; without it, the grading traces would be recorded alongside the application runs you are evaluating.
+
+</details>
 
 ## Sources {.sources}
 

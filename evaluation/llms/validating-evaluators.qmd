@@ -9,12 +9,14 @@ categories:
 - Evaluating LLMs
 ---
 
-::: {.lesson-meta}
-[Evaluation & Guardrails]{.pill .t-eval} [Evaluating LLMs]{.pill .muted}
+::: {.synthesis}
+![The dev / held-out split, and the judge-versus-human matrix that gives precision, recall and kappa.](/assets/visuals/validating-evaluators.svg){fig-alt="Validating an evaluator: a held-out split, a confusion matrix against human labels, precision, recall and kappa"}
 :::
 
-::: {.tldr}
-The page explains how to validate code evaluators and LLM judges before trusting them in practice. It emphasizes separating development cases from held-out test cases, measuring agreement with standard metrics like precision, recall, and kappa, then manually inspecting disagreements to determine whether the judge or the reviewed label is wrong. Finally, it recommends iterative improvement: revise the rubric or judge carefully, change one thing at a time, and revalidate on fresh held-out cases so you can tell whether the fix truly improved reliability.
+::: {.in30}
+- Test an evaluator on held-out reviewed cases that did not shape its rubric, with enough examples of the failures that matter.
+- Treat the judge as a classifier: precision counts false alarms, recall missed failures, kappa agreement beyond chance.
+- Read each disagreement to see whether the judge, the label or the rubric is wrong; change one thing, then revalidate on fresh cases.
 :::
 
 ::: {.concepts}
@@ -34,11 +36,6 @@ Treat the evaluator like a classification model that predicts labels such as SAF
 Metric scores are not the final answer. When the judge and the reviewed label differ, inspect the case, the rubric, and the explanation to find the real source of error.
 :::
 ::: {.concept}
-`Rubric correction`
-
-A disagreement can mean the judge is wrong, but it can also mean the reviewed label or rubric needs updating. Use the evidence from reviewed cases to correct the evaluation rules themselves.
-:::
-::: {.concept}
 `Revise and revalidate`
 
 Improving a judge should be done carefully and iteratively. Make one change at a time, then retest on held-out cases to confirm the change helped without introducing new mistakes.
@@ -48,6 +45,10 @@ Improving a judge should be done carefully and iteratively. Make one change at a
 ## Hold out cases
 
 Before you trust an evaluator, test it on reviewed cases it did not see while you were writing or tuning the rubric. These are called **held-out cases**: reviewed examples kept separate from the development set.
+
+::: {.column-margin .watch}
+A validation set is not just a random sample. It must include enough reviewed examples of the failure types you want to test. That way, you can see whether the evaluator really catches the mistakes that matter. In Northwind, it also helps to keep the results of the three evaluators separate so you can check labels and see which requirement failed.
+:::
 
 If you test only on examples that shaped the rubric, the results can look better than they really are. The evaluator has already been influenced by those cases. Use the held-out set only after the rubric is set.
 
@@ -64,17 +65,9 @@ When you choose the held-out set, make sure it covers the important failure type
 **Northwind or shelter cases kept aside.** You build a rubric for the shelter safe-matching evaluator, or for the Northwind evaluators, using one group of reviewed cases. Then you keep another group of reviewed shelter cases or Northwind cases out of the rubric-writing process. Later, you run the judge on those held-out cases and compare its labels with the reviewer labels. In the shelter example, treat the judge like a classifier: compare judge labels to reviewed benchmark labels and record matches and disagreements to assess reliability. For example, if an experienced handler is recommended a dog that a first-time volunteer should not handle, a human reviewer labels the recommendation **UNSAFE** but the judge labels it **SAFE**. That disagreement shows the judge missed a failure the reviewer caught. Across the validation set, those matches and disagreements help you measure reliability with **precision** and **recall**.
 :::
 
-::: {.callout-warning}
-## Watch out
-
-A validation set is not just a random sample. It must include enough reviewed examples of the failure types you want to test. That way, you can see whether the evaluator really catches the mistakes that matter. In Northwind, it also helps to keep the results of the three evaluators separate so you can check labels and see which requirement failed.
-:::
-
 ## Precision, recall, and kappa
 
 Treat the judge like a classifier. It assigns labels to cases, such as SAFE / UNSAFE or COMPLIANT / NON_COMPLIANT. Then compare its labels with the reviewed labels from your benchmark.
-
-Start with a held-out set: reviewed cases the judge has not seen as prompt examples, and that were not used to write or tune the rubric. If you test only on examples used to build the rubric, the results can look better than they really are.
 
 ### Validate the judge on held-out cases
 
@@ -106,19 +99,13 @@ Cohen’s kappa is useful because it adjusts for agreement you would expect by c
 
 As a concrete example, imagine you reviewed 10 shelter cases: 9 were labeled SAFE and 1 was labeled UNSAFE. If the judge labels every case SAFE, raw agreement looks like 9 out of 10. That sounds high, but the judge missed the only unsafe case. It did not show that it can distinguish safe from unsafe matches. It just benefited from choosing the most common label.
 
-### Use disagreement to investigate, not just to score
-
-When labels disagree, inspect the case. Read the input, go through the judge’s explanation, and then apply the requirement yourself. Then compare the result with the reviewed label.
-
-- If the judge followed the requirement, the reviewed label may need correction.
-- If the reviewed label is right, the judge may have misapplied the rubric.
-- If the case could reasonably go either way, the rubric may not make the boundary clear enough.
-
-A disagreement does not automatically mean “fix the judge.” It tells you where the evaluation needs investigation.
-
 ## Investigate disagreements
 
 When the judge and the reviewed label disagree, inspect the case one by one. Do not treat the metric as the final answer. Do not assume the disagreement automatically tells you which side is right; it tells you where to look.
+
+::: {.column-margin .define label="Rubric correction"}
+A disagreement can mean the judge is wrong, but it can also mean the reviewed label or rubric needs updating. Use the evidence from reviewed cases to correct the evaluation rules themselves.
+:::
 
 Read:
 - the volunteer profile, the dog record, and the agent’s recommendation
@@ -132,8 +119,6 @@ Then decide what went wrong:
 - if the case could reasonably go either way, the rubric boundary may be unclear
 
 Look for repeated patterns in the mistakes. Some errors are not random. A judge may do fine on obvious behavior-risk cases but fail on numeric-constraint cases. Or it may trust the agent’s “thoughtful” or calm explanation too much and ignore the evidence in the input, which can hurt recall on unsafe matches.
-
-Use metrics like recall, precision, and Cohen’s kappa as signals, not as the final answer. On a small validation set, one disagreement can move the score a lot. Kappa is chance-adjusted and only compares two sets of labels. It does not prove that either label is correct.
 
 ::: {.steps}
 1. **Open the disagreement case**: read the full volunteer profile, dog record, agent recommendation, and the judge’s explanation.
@@ -160,8 +145,6 @@ You see that the judge and reviewer disagree, but you do not inspect the input. 
 You read the case, compare the judge’s explanation with the evidence, and use the requirement to find whether the judge, the reviewer, or the rubric is wrong.
 :::
 ::: 
-
-When you revise a rubric from a disagreement, do not reuse that same case as clean validation data for the revised version. It has already influenced the evaluator. Test the new version on other reviewed cases that were not used to make the change. Also compare old and new versions on fresh cases: did recall improve on unsafe matches, did precision fall too far, and did kappa improve?
 
 ## Revise and revalidate
 
@@ -218,6 +201,27 @@ flowchart LR
 - Inspect disagreements case by case before deciding what is wrong.
 - Change one thing at a time, then revalidate on fresh held-out data.
 :::
+
+<details class="quiz">
+<summary>10 reviewed shelter cases: 9 SAFE, 1 UNSAFE. The judge labels everything SAFE. Is 9 out of 10 good?</summary>
+
+No. It missed the only unsafe case: recall on UNSAFE is zero. It just picked the most common label.
+
+</details>
+
+<details class="quiz">
+<summary>For the safe-matching judge, precision or recall first?</summary>
+
+Recall on UNSAFE: a missed unsafe match can put a volunteer or a dog at risk, while a false alarm only costs extra review.
+
+</details>
+
+<details class="quiz">
+<summary>You fixed the rubric using a disagreement case. Can that case still validate the new version?</summary>
+
+No. It has influenced the evaluator; test the revised rubric on fresh reviewed cases.
+
+</details>
 
 ## Sources {.sources}
 
