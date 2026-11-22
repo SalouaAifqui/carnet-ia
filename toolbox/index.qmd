@@ -1,7 +1,18 @@
 ---
-title: "Toolbox"
-body-classes: "topic t-tools"
+title: Toolbox
+body-classes: topic t-tools
 toc: false
+listing:
+- id: tools
+  contents: tools/*.qmd
+  type: grid
+  grid-columns: 3
+  sort: title
+  fields:
+  - title
+  - subtitle
+  - categories
+  categories: true
 ---
 
 ::: {.topic-hero}
@@ -12,8 +23,11 @@ toc: false
 Frameworks and tools that put the concepts of this site into practice. Each card says who makes the tool, what it does, how to use it and when to choose it, and is tagged with the topics it touches.
 :::
 
-## Tools {.group-title .planned data-folder="tools"}
+## Tools {.group-title data-folder="tools"}
 
 ::: {.group-meta}
 One card per tool or framework (agent frameworks, evaluation and observability platforms, guardrail libraries…), in the same format, filterable by topic.
+:::
+
+::: {#tools}
 :::

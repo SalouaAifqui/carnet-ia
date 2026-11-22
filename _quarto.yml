@@ -49,6 +49,8 @@ website:
     - section: Control
       contents:
       - agents/control/controlling-a-running-agent.qmd
+    - section: Foundations
+      contents: agents/foundations/*.qmd
   - id: llms
     title: LLMs
     style: docked
@@ -72,6 +74,8 @@ website:
     style: docked
     contents:
     - toolbox/index.qmd
+    - section: Tools
+      contents: toolbox/tools/*.qmd
   page-footer:
     left: Carnet IA · notes written while learning
     right:

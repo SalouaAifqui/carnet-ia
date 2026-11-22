@@ -1,12 +1,14 @@
 ---
-title: "What is an agent"
-subtitle: "An LLM in a loop with tools: it reasons, acts, observes, and repeats."
+title: What is an agent
+subtitle: 'An LLM in a loop with tools: it reasons, acts, observes, and repeats.'
 order: 1
 date: 2026-11-15
-categories: [Agents, Foundations]
+categories:
+- Agents
+- Foundations
 aliases:
-  - /notes/langgraph/01-agent-from-scratch.html
-  - /agents/langgraph/01-agent-from-scratch.html
+- /notes/langgraph/01-agent-from-scratch.html
+- /agents/langgraph/01-agent-from-scratch.html
 ---
 
 ::: {.lesson-meta}
@@ -137,6 +139,11 @@ def query(question, max_turns=5):
 
 Parsing text with a regex is fragile. Modern models solve this with **native tool calling**: they return structured tool calls instead of text. See [Tools and agentic search](tools-and-agentic-search.qmd). Frameworks such as LangGraph then take care of the loop: see [Building agents with LangGraph](building-agents-with-langgraph.qmd).
 
+::: {.callout-note .in-practice}
+## In practice: tools
+- [Anthropic skills ecosystem](../../toolbox/tools/anthropic-skills-ecosystem.qmd) (Anthropic): A set of pre-built skills for Claude, plus the public skills repository and the skill-creator workflow for creating or modifying skills.
+:::
+
 ::: {.callout-tip}
 ## Remember
 - Agent = LLM + loop + tools. The LLM **decides**, the code **executes**.
@@ -147,6 +154,7 @@ Parsing text with a regex is fragile. Modern models solve this with **native too
 
 ## Sources {.sources}
 
-- [AI Agents in LangGraph](https://learn.deeplearning.ai/courses/ai-agents-in-langgraph/), DeepLearning.AI × LangChain: lesson [Build an Agent from Scratch](https://learn.deeplearning.ai/courses/ai-agents-in-langgraph/lesson/c1l2c/build-an-agent-from-scratch)
-- [A simple Python implementation of the ReAct pattern for LLMs](https://til.simonwillison.net/llms/python-react-pattern), Simon Willison
-- [ReAct: Synergizing Reasoning and Acting in Language Models](https://arxiv.org/abs/2210.03629), Yao et al., 2022
+- [AI Agents in LangGraph](https://learn.deeplearning.ai/courses/ai-agents-in-langgraph/)
+- [Build an Agent from Scratch](https://learn.deeplearning.ai/courses/ai-agents-in-langgraph/lesson/c1l2c/build-an-agent-from-scratch)
+- [A simple Python implementation of the ReAct pattern for LLMs](https://til.simonwillison.net/llms/python-react-pattern)
+- [ReAct: Synergizing Reasoning and Acting in Language Models](https://arxiv.org/abs/2210.03629)
