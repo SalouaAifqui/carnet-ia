@@ -94,11 +94,17 @@ class Section:
 def list_sections(root: Path) -> list[Section]:
     sections = []
     for topic in TOPICS:
+        if topic == "toolbox":
+            sections.append(Section(topic, "tools", "Tools", "Tool cards only (one per product). Each card is "
+                                    "shown at the bottom of the theme of its tool, under 'Tools in practice'."))
+            continue
         index = root / topic / "index.qmd"
         _, body = split_front_matter(index.read_text()) if index.exists() else ({}, "")
         found = list(SECTION_RE.finditer(body))
         for i, match in enumerate(found):
             attrs = match.group(2)
+            if "data-theme=" in attrs:          # "Tools in practice" only shows cards: nothing is written there
+                continue
             folder = re.search(r'data-folder="([^"]+)"', attrs)
             chunk = body[match.end(): found[i + 1].start() if i + 1 < len(found) else len(body)]
             meta = re.search(r"::: \{\.(?:group-meta|empty-state)\}\n(.*?)\n:::", chunk, re.S)
@@ -325,9 +331,6 @@ def _add_listing_to_topic_page(index_file: Path, folder: str, folder_title: str,
     # a numbered reading path (see _templates/path.ejs), in the `order` of the notes
     listing = {"id": folder, "contents": f"{folder}/*.qmd", "template": "../_templates/path.ejs",
                "sort": "order", "fields": ["title", "subtitle", "image"]}
-    if index_file.parent.name == "toolbox":            # the catalogue: tags shown and filterable by topic
-        listing = {"id": folder, "contents": f"{folder}/*.qmd", "type": "grid", "grid-columns": 3, "sort": "title",
-                   "fields": ["image", "title", "subtitle", "categories"], "categories": True}
     listings.append(listing)
     fm["listing"] = listings
 
@@ -351,8 +354,8 @@ def _add_listing_to_topic_page(index_file: Path, folder: str, folder_title: str,
         if not sections:
             body = re.sub(r"::: \{\.empty-state\}.*?\n:::\n?", "", body, flags=re.S)
         meta = f"::: {{.group-meta}}\n{description}\n:::\n\n" if description else ""
-        body = body.rstrip() + (f'\n\n## {folder_title} {{.group-title data-folder="{folder}"}}\n\n'
-                                f"{meta}{placeholder}\n")
+        body = _insert_track(body, f'## {folder_title} {{.group-title data-folder="{folder}"}}\n\n'
+                                   f"{meta}{placeholder}", before_tools=True)
     index_file.write_text(join_front_matter(fm, body))
 
 
@@ -366,6 +369,81 @@ def _add_folder_to_sidebar(config_file: Path, topic: str, folder: str, folder_ti
                 contents.append({"section": folder_title, "contents": glob})
                 config_file.write_text(yaml.safe_dump(config, sort_keys=False, allow_unicode=True, width=1000))
             return
+
+
+def _insert_track(body: str, block: str, before_tools: bool = False) -> str:
+    """Add a track after the others: above the closing text of the page and, for a concept track,
+    above "Tools in practice", which stays last."""
+    at, seen = len(body), False
+    for match in re.finditer(r"(?m)^## .*$", body):
+        track = ".group-title" in match.group(0)
+        callout_title = body[:match.start()].rstrip().rsplit("\n", 1)[-1].startswith("::: {.callout")
+        if (before_tools and "data-theme=" in match.group(0)) or (seen and not track and not callout_title):
+            at = match.start()
+            break
+        seen = seen or track
+    return (f"{body[:at].rstrip()}\n\n{block.strip()}\n\n{body[at:].lstrip()}").rstrip() + "\n"
+
+
+TOOLS_TRACK = "tools-in-practice"
+
+
+def attach_tool(root: Path, page: str, theme: str) -> None:
+    """[code] Show a tool card at the bottom of its theme, under "Tools in practice": the track of
+    the theme page (created with the first card) and the sidebar of that theme only."""
+    path = root / page
+    front_matter, body = split_front_matter(path.read_text())
+    if front_matter.get("tool-theme") != theme:
+        front_matter["tool-theme"] = theme     # not "theme": Quarto's own key, it replaces the site's CSS
+        path.write_text(join_front_matter(front_matter, body.lstrip("\n")))
+
+    index = root / theme / "index.qmd"
+    front_matter, body = split_front_matter(index.read_text())
+    listings = front_matter.get("listing") or []
+    listings = [listings] if isinstance(listings, dict) else listings
+    if not any(lst.get("id") == TOOLS_TRACK for lst in listings):
+        listings.append({"id": TOOLS_TRACK, "contents": "../toolbox/tools/*.qmd", "include": {"tool-theme": theme},
+                         "template": "../_templates/path.ejs", "sort": "title",
+                         "fields": ["title", "subtitle", "image"]})
+        front_matter["listing"] = listings
+        body = _insert_track(body, f'''## Tools in practice {{#track-tools .group-title data-folder="{TOOLS_TRACK}" data-dir="toolbox/tools" data-theme="{theme}"}}
+
+::: {{.group-meta}}
+The products and frameworks that put these ideas to work, one card each.
+:::
+
+::: {{#{TOOLS_TRACK}}}
+:::''')
+        cards = find_block(body, "::: {.track-cards}")
+        if cards:
+            card = (f"::: {{.{TOPICS[theme][1]}}}\n[**Tools in practice** []{{.tc-stat data-stat=\"summary\" "
+                    f'data-topic="{theme}" data-section="{TOOLS_TRACK}"}}](#track-tools)\n:::\n')
+            end = body.rindex(":::", cards[0], cards[1])
+            body = body[:end] + card + body[end:]
+        index.write_text(join_front_matter(front_matter, body.lstrip("\n")))
+
+    config_file = root / "_quarto.yml"
+    config = yaml.safe_load(config_file.read_text())
+    before = yaml.safe_dump(config)
+    for sidebar in config["website"]["sidebar"]:
+        contents = sidebar.setdefault("contents", [])
+        track = next((c for c in contents if isinstance(c, dict) and c.get("section") == "Tools in practice"), None)
+        files = {f for f in (track["contents"] if track else []) if f != page}      # a card has one theme
+        if sidebar.get("id") == theme:
+            files.add(page)
+            if track is None:
+                track = {"section": "Tools in practice", "contents": []}
+                contents.append(track)
+        if track is not None:
+            track["contents"] = sorted(files, key=lambda f: _title_of(root / f))
+            if not files:
+                contents.remove(track)
+    if yaml.safe_dump(config) != before:
+        config_file.write_text(yaml.safe_dump(config, sort_keys=False, allow_unicode=True, width=1000))
+
+
+def _title_of(path: Path) -> str:
+    return str(split_front_matter(path.read_text())[0].get("title", path.stem)).lower() if path.exists() else path.stem
 
 
 # --- Reading and rebuilding a page made of blocks ------------------------------------

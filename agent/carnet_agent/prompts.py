@@ -64,6 +64,8 @@ First, classify the source (source_kind):
 - "mixed": teaches general concepts, using a product to show them.
 For "tool" and "mixed", fill `tool` (identity card; only facts from the source).
 - For "tool": the page is a TOOL CARD: topic `toolbox`, section `tools`, title = the product's name.
+  The card is shown in the theme of the tool: put that theme FIRST in tool.topics, judged on what the
+  tool is mainly for (e.g. skills -> agents, tracing and scoring -> evaluation, input checks -> guardrails).
 - For "mixed": plan the CONCEPT page here, written vendor-neutral (the product may appear only as an
   example). A separate tool card is planned automatically.
 

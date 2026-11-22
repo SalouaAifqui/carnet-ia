@@ -562,8 +562,12 @@ def test_mixed_source_gives_concept_page_and_tool_card():
     concept_page = (root / "agents/foundations/what-is-an-agent.qmd").read_text()
     assert "## In practice: tools" in concept_page and "](../../toolbox/tools/nemo-agent-toolkit.qmd)" in concept_page
     assert concept_page.index("## In practice: tools") < concept_page.index("## Remember"), "placed before Remember"
-    index = (root / "toolbox/index.qmd").read_text()
-    assert '## Tools {.group-title data-folder="tools"}' in index and "categories: true" in index
+    index = (root / "agents/index.qmd").read_text()
+    assert "theme" not in fm, "`theme` is reserved by Quarto: it would replace the design of the site"
+    assert fm["tool-theme"] == "agents", "shown in the main topic of the tool (the first one)"
+    assert index.count('data-theme="agents"') == 1 and index.count("[**Tools in practice**") == 1, "one track"
+    assert card_path in (root / "_quarto.yml").read_text(), "in the sidebar of its theme"
+    assert "data-theme" not in (root / "evaluation/index.qmd").read_text(), "not in its other topics"
     print("✓ mixed source: vendor-neutral concept page + tool card (fact sheet, tags) + 'In practice' link")
 
 
@@ -590,6 +594,15 @@ def test_tool_source_gives_only_a_tool_card():
         article_module.RESEARCH = True
     assert final["page_path"] == "toolbox/tools/phoenix.qmd" and not final.get("extra_pages")
     assert not (root / "evaluation/agents/phoenix.qmd").exists(), "a tool never lands in a concept section"
+    index = (root / "evaluation/index.qmd").read_text()
+    assert split_front_matter((root / final["page_path"]).read_text())[0]["tool-theme"] == "evaluation"
+    assert index.index("## Evaluating agents") < index.index("## Tools in practice") < index.index("## Measure, then protect"), \
+        "the first card of a theme creates its track, below the concept tracks"
+    from carnet_agent.site import ensure_listed, list_sections
+    assert all(s.folder != "tools-in-practice" for s in list_sections(root)), "never offered for concept notes"
+    ensure_listed(root, "evaluation", "costs", "Evaluation costs")
+    index = (root / "evaluation/index.qmd").read_text()
+    assert index.index("## Evaluation costs") < index.index("## Tools in practice"), "tools stay at the bottom"
     print("✓ tool source: one card in the Toolbox, never in a concept section")
 
 

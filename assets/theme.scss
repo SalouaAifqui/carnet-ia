@@ -93,7 +93,6 @@ a { text-underline-offset: .18em; }
 .navbar .nav-link[href*="agents/"] { --dot: #{$t-agents}; }
 .navbar .nav-link[href*="evaluation/"] { --dot: #{$t-eval}; }
 .navbar .nav-link[href*="guardrails/"] { --dot: #{$t-guardrails}; }
-.navbar .nav-link[href*="toolbox/"] { --dot: #{$t-tools}; }
 .navbar .quarto-color-scheme-toggle, .navbar .quarto-navigation-tool, .navbar .nav-link[aria-label="GitHub"] {
   min-width: 44px; min-height: 44px; display: inline-grid; place-items: center;
 }
@@ -546,9 +545,6 @@ body.home main.content { max-width: 1240px; margin-left: auto; margin-right: aut
   .lp-desc { font-size: .875rem; color: $muted; }
   .lp-stat { font: 600 .8rem $ui; color: var(--t); white-space: nowrap; }
   .lp-link { width: 2px; height: 18px; margin-left: 35px; background: $line-strong; }
-  .lp-step.extra { background: transparent; border: 1.5px dashed $line-strong; }
-  .lp-step.extra .lp-n { background: transparent; border: 2px solid var(--t); color: var(--t); }
-  .lp-step.extra .lp-stat { font-size: .75rem; }
 }
 @media (max-width: 500px) {
   .learning-path .lp-step { flex-wrap: wrap; }
@@ -674,6 +670,17 @@ body.all-notes #quarto-content > main.content { max-width: 1240px; }
 @media (min-width: 1400px) { @include note-grid(264px, 36px, 36px, 256px, 920px); }
 /* four cards: 2 x 2, never 3 + 1 */
 @media (min-width: 768px) { body:has(.note-meta) .concepts { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+
+/* tool cards have no visual of their own: a tile with the tool's name, in the colour of its theme */
+.note-card .note-thumb.tool-tile, .path-thumb.tool-tile {
+  display: flex; flex-direction: column; justify-content: center; align-items: center; gap: .5rem;
+  aspect-ratio: 520 / 300; padding: 1rem; text-align: center; background: var(--t-soft) !important;
+  .tool-kind {
+    padding: .2rem .6rem; border-radius: 999px; background: $paper; color: var(--t);
+    font: 600 .7rem $ui; letter-spacing: .08em; text-transform: uppercase;
+  }
+  .tool-name { font: 700 1.15rem/1.25 $headings-font-family; color: var(--t); }
+}
 
 /* ---------- footer ---------- */
 .nav-footer { border-top: 1px solid $line; font-family: $ui; font-size: .875rem; color: $muted; min-height: 64px; }

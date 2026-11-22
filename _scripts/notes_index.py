@@ -15,7 +15,7 @@ import re
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-TOPICS = ["llms", "agents", "evaluation", "guardrails", "toolbox"]       # navbar order
+TOPICS = ["llms", "agents", "evaluation", "guardrails"]       # navbar order
 WORDS_PER_MINUTE = 200
 SECTION = re.compile(r'^## (.+?) \{([^}]*\.group-title[^}]*)\}\s*$', re.M)
 
@@ -58,10 +58,13 @@ def build() -> dict:
             if not folder:
                 continue
             files = []
+            theme = re.search(r'data-theme="([^"]+)"', attrs)    # "Tools in practice": cards of this theme
             where = re.search(r'data-dir="([^"]+)"', attrs)      # notes kept elsewhere (URLs unchanged)
             notes_dir = ROOT / where.group(1) if where else ROOT / topic / folder.group(1)
             for path in sorted(notes_dir.glob("*.qmd")):
                 note_meta, note_body = front_matter(path.read_text(encoding="utf-8"))
+                if theme and note_meta.get("tool-theme") != theme.group(1):
+                    continue
                 order = note_meta.get("order")
                 try:
                     order = float(order)

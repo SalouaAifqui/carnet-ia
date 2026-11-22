@@ -1,21 +1,23 @@
 <%
 const esc = (s) => String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-const pillOf = (p) => {
+const THEMES = { llms: 't-llms', agents: 't-agents', evaluation: 't-eval', guardrails: 't-guardrails' };
+const pillOf = (p, theme) => {
+  if (String(p || '').includes('toolbox/')) return [THEMES[theme] || 't-tools', 'Tool'];
   p = String(p || '');
   if (p.includes('/guardrails/')) return ['t-guardrails', 'Guardrails'];
   if (p.includes('evaluation/agents/')) return ['t-eval', 'Evaluating agents'];
   if (p.includes('evaluation/llms/')) return ['t-eval', 'Evaluating LLMs'];
   if (p.includes('agents/')) return ['t-agents', 'Build Agents'];
   if (p.includes('llms/')) return ['t-llms', 'Inside LLMs'];
-  if (p.includes('toolbox/')) return ['t-tools', 'Toolbox'];
   return ['t-agents', ''];
 };
 const showDate = (typeof templateParams !== 'undefined') && templateParams && templateParams['show-date'];
 let html = '<div class="note-cards">';
 items.forEach((item) => {
-  const pill = pillOf(item.path);
+  const pill = pillOf(item.path, item['tool-theme']);
   html += '<a class="note-card ' + pill[0] + '" href="' + esc(item.path) + '" ' + metadataAttrs(item) + '>' +
-    (item.image ? '<span class="note-thumb"><img src="' + esc(item.image) + '" alt="" loading="lazy"></span>' : '') +
+    (String(item.path).includes('toolbox/') ? '<span class="note-thumb tool-tile" aria-hidden="true"><span class="tool-kind">Tool</span><span class="tool-name">' + esc(item.title) + '</span></span>' :
+     item.image ? '<span class="note-thumb"><img src="' + esc(item.image) + '" alt="" loading="lazy"></span>' : '') +
     '<span class="note-body"><span class="note-tags"><span class="pill ' + pill[0] + '">' + pill[1] + '</span>' +
     '<span class="rt' + (showDate ? ' with-date' : '') + '"></span></span>' +
     '<span class="note-title">' + esc(item.title) + '</span>' +

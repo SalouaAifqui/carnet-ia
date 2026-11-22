@@ -30,6 +30,16 @@ listing:
   - title
   - subtitle
   - image
+- id: tools-in-practice
+  contents: ../toolbox/tools/*.qmd
+  include:
+    tool-theme: agents
+  template: ../_templates/path.ejs
+  sort: title
+  fields:
+  - title
+  - subtitle
+  - image
 ---
 
 ::: {.topic-hero}
@@ -49,6 +59,9 @@ What agents are and how to build them: tools, skills, memory, and a human who st
 :::
 ::: {.t-agents}
 [**Stay in control** []{.tc-stat data-stat="summary" data-topic="agents" data-section="control"}](#track-control)
+:::
+::: {.t-agents}
+[**Tools in practice** []{.tc-stat data-stat="summary" data-topic="agents" data-section="tools-in-practice"}](#track-tools)
 :::
 :::
 
@@ -77,4 +90,13 @@ Watch an agent work, pause it for approval, edit its plan and rewind it. Suggest
 :::
 
 ::: {#control}
+:::
+
+## Tools in practice {#track-tools .group-title data-folder="tools-in-practice" data-dir="toolbox/tools" data-theme="agents"}
+
+::: {.group-meta}
+The products and frameworks that put these ideas to work, one card each.
+:::
+
+::: {#tools-in-practice}
 :::

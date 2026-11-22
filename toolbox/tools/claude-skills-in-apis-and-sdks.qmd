@@ -5,6 +5,7 @@ image: /assets/visuals/toolbox-card.svg
 date: '2026-11-22'
 categories:
 - Agents
+tool-theme: agents
 ---
 
 ::: {.tool-facts}

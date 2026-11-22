@@ -65,12 +65,6 @@ listing:
       <span class="lp-text"><span class="lp-name">Ship with Guardrails</span><span class="lp-desc">Build the right safeguards</span></span>
       <span class="lp-stat" data-stat="summary" data-topic="guardrails"></span>
     </a>
-    <div class="lp-link" aria-hidden="true"></div>
-    <a class="lp-step extra t-tools" href="toolbox/index.html">
-      <span class="lp-n">+</span>
-      <span class="lp-text"><span class="lp-name">Toolbox</span><span class="lp-desc">One card per framework, same format</span></span>
-      <span class="lp-stat" data-stat="summary" data-topic="toolbox"></span>
-    </a>
   </div>
 </section>
 

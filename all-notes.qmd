@@ -2,6 +2,8 @@
 title: All notes
 subtitle: Every note on the site, the most recent first.
 body-classes: all-notes
+aliases:
+  - /toolbox/index.html
 sidebar: false
 toc: false
 page-layout: full

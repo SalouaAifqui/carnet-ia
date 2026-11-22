@@ -14,7 +14,7 @@ A learning notebook on applied AI, published at **https://salouaaifqui.github.io
 | `agents/` | **Agents**: foundations, memory, control |
 | `evaluation/` | **Measure What Matters**: evaluation frameworks, evaluating LLMs, evaluating agents |
 | `guardrails/` | **Ship with Guardrails**: the section page. Its notes live in `evaluation/guardrails/`, so their URLs never changed |
-| `toolbox/` | **Toolbox**: one card per tool or framework, tagged with the topics it touches |
+| `toolbox/tools/` | One card per tool or framework, shown in its theme (`tool-theme:`) under "Tools in practice" |
 | `agent/` | **The Carnet IA agent**: turns web pages into notes, with your approval ([guide](agent/README.md)) |
 | `assets/` | Site design (colors, fonts, logo) and the synthesis visual of each note |
 | `_scripts/`, `_filters/`, `_includes/`, `_templates/` | Reading layout: reading times, meta line, code steps, progress bar, numbered paths |

@@ -159,7 +159,8 @@ class ToolInfo(BaseModel):
     licence: str = Field(default="", description="Licence name if the source states it, else ''.")
     website: str = Field(default="", description="Official documentation or site URL, ONLY if it appears in the source.")
     topics: list[Literal["llms", "agents", "evaluation", "guardrails"]] = Field(
-        description="The site topics this tool touches (one or several).")
+        description="The site topics this tool touches, the MAIN one first: its card is shown in that theme. "
+                    "At least one.")
     implements: list[str] = Field(description="The concepts it implements, a few words each "
                                               "(e.g. 'tracing', 'LLM judges', 'input guardrails').")
     related_pages: list[str] = Field(default_factory=list, description=(

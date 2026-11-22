@@ -148,21 +148,25 @@ flowchart LR
 
 ---
 
-## 6. Concept ou outil : la Toolbox
+## 6. Concept ou outil : les outils rangés par thème
 
 Le bibliothécaire **classe chaque source** (`ArticlePlan.source_kind`) :
 
 | Type | Exemple | Ce que l'agent produit |
 |---|---|---|
 | **concept** | un guide sur le LLM-as-a-judge | une page dans le thème concerné |
-| **tool** | la documentation de NVIDIA NeMo Agent Toolkit | une **fiche outil** dans la Toolbox, jamais dans une section concept |
+| **tool** | la documentation de NVIDIA NeMo Agent Toolkit | une **fiche outil**, affichée dans le thème de l'outil sous « Tools in practice », jamais dans un parcours de concepts |
 | **mixed** | un cours qui enseigne la fiabilité avec le toolkit de NVIDIA | une page concept **neutre** + une **fiche outil** (deuxième appel du bibliothécaire, dans la même exécution, la même validation et la même Pull Request) |
 
 **Une fiche outil a toujours le même format** : un tableau d'identité écrit par le code (éditeur, open source et licence, thèmes, concepts mis en œuvre, documentation), puis 4 parties fixes : *What it is*, *What it does*, *How to use it*, *When to use it*. Elle est étiquetée avec les thèmes qu'elle touche, ce qui permet de filtrer le catalogue par thème.
 
 **Les pages concepts restent neutres** (règle du guide de style). Le code ajoute sur chaque page concept qu'un outil met en œuvre un encadré **« In practice: tools »** avec un lien vers sa fiche (`site.py` → `add_in_practice`). Seules les pages qui existent vraiment sont retenues.
 
-Pour un **cours** construit autour d'un produit, le plan de cours prévoit une page pour ce produit dans la Toolbox, et garde les autres pages sur les concepts.
+Pour un **cours** construit autour d'un produit, le plan de cours prévoit une fiche pour ce produit, et garde les autres pages sur les concepts.
+
+**Où s'affiche une fiche outil** : il n'y a pas d'onglet Toolbox. Le fichier reste dans `toolbox/tools/`, et son champ `tool-theme` (le premier thème de l'outil, choisi par le bibliothécaire et montré dans le plan) décide de la section. Le code (`attach_tool`) crée le parcours « Tools in practice » à la première fiche d'un thème.
+
+---
 
 ## 7. La carte du site et le rangement
 

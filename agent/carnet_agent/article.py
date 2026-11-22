@@ -38,7 +38,7 @@ from .chunks import chunk_text, fingerprint, numbered, remap
 from .config import MAX_QUERIES, RESEARCH, TOPICS
 from .core import Services, ask, clean_markdown, feedback_block, text_of, validate_route
 from .illustrator import illustrate
-from .site import (add_in_practice, check_page, describe_site, ensure_listed, find_block, is_self,
+from .site import (add_in_practice, attach_tool, check_page, describe_site, ensure_listed, find_block, is_self,
                    join_front_matter, list_pages, render_tool_facts,
                    merge_sources, remember_block, render_sources, render_synthesis_blocks, section_dir, slugify,
                    split_front_matter, split_parts, split_sources)
@@ -450,6 +450,12 @@ class ArticleAgent:
         update["linked"] = linked
         return update
 
+    @staticmethod
+    def tool_theme(plan: ArticlePlan, page: str) -> str:
+        """[code] The theme a card is shown in: the one it already has, else the tool's main topic."""
+        current = split_front_matter(page)[0].get("tool-theme")
+        return current or (plan.tool.topics[0] if plan.tool and plan.tool.topics else "agents")
+
     def _finalize_one(self, state: ArticleState) -> dict:
         path, page = self.assemble(state)
         path.parent.mkdir(parents=True, exist_ok=True)
@@ -460,7 +466,9 @@ class ArticleAgent:
             visual.write_text(state["visual_svg"])
         approved = [p for p in state.get("proposals") or [] if p.id in (state.get("approved") or [])]
         route = state["plan"].route
-        if route.action == "create":
+        if route.topic == "toolbox":
+            attach_tool(self.s.root, str(path.relative_to(self.s.root)), self.tool_theme(state["plan"], page))
+        elif route.action == "create":
             ensure_listed(self.s.root, route.topic, route.folder, route.folder_title, route.section_description)
         return {"page_path": str(path.relative_to(self.s.root)), "check_errors": check_page(page, approved)}
 
@@ -505,11 +513,13 @@ def describe_plan(state: dict) -> str:
         lines += [f"📝 **Your notes:** {state['human_feedback']}", ""]
     if route.new_section:
         lines += [f"⚠️ **New section proposed:** {route.folder_title}: {route.section_description}", ""]
-    kind = {"concept": "🧠 a concept", "tool": "🧰 a tool (tool card in the Toolbox)",
+    kind = {"concept": "🧠 a concept", "tool": "🧰 a tool (a card under 'Tools in practice', in the theme of the tool)",
             "mixed": "🧠 + 🧰 concepts taught through a product: a vendor-neutral concept page **and** a tool card"}
     lines += [f"**Source type:** {kind[plan.source_kind]}", ""]
     if plan.tool and route.topic == "toolbox":
         t = plan.tool
+        if t.topics:
+            lines += [f"**Shown in:** {TOPICS[t.topics[0]][0]} › Tools in practice"]
         lines += [f"**Tool:** {t.name} by {t.maker} · open source: {t.open_source} · topics: "
                   + ", ".join(TOPICS[x][0] for x in t.topics),
                   f"**Implements:** {', '.join(t.implements)}",

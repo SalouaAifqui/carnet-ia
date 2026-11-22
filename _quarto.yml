@@ -32,8 +32,6 @@ website:
       text: Measure What Matters
     - href: guardrails/index.qmd
       text: Ship with Guardrails
-    - href: toolbox/index.qmd
-      text: Toolbox
     right:
     - icon: github
       href: https://github.com/SalouaAifqui/carnet-ia
@@ -59,6 +57,10 @@ website:
       contents: agents/memory/*.qmd
     - section: Stay in control
       contents: agents/control/*.qmd
+    - section: Tools in practice
+      contents:
+      - toolbox/tools/anthropic-skills-ecosystem.qmd
+      - toolbox/tools/claude-skills-in-apis-and-sdks.qmd
   - id: evaluation
     title: Measure What Matters
     style: docked
@@ -77,14 +79,6 @@ website:
     - guardrails/index.qmd
     - section: Build the right guardrails
       contents: evaluation/guardrails/*.qmd
-  - id: toolbox
-    title: Toolbox
-    style: docked
-    collapse-level: 1
-    contents:
-    - toolbox/index.qmd
-    - section: Tools
-      contents: toolbox/tools/*.qmd
   page-footer:
     left: Carnet IA · notes written while learning
     right: Built with [Quarto](https://quarto.org) · [GitHub](https://github.com/SalouaAifqui/carnet-ia)
