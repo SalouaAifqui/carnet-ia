@@ -1,8 +1,8 @@
 """The Carnet IA agent, one role per step.
 
-    fetch ─▶ librarian ─▶ research ─▶ ⏸ approval ─▶ write_parts ─▶ edit ─▶ finalize ─▶ publish
-    (code)    (LLM 1)     (LLM 6,       (you)       (LLM 2 writes each part,   (LLM 4)   (code)    (code:
-                           proposals                 LLM 3 checks its details,                    PR + preview)
+    fetch ─▶ librarian ─▶ research ─▶ ⏸ approval ─▶ write_parts ─▶ edit ─▶ illustrate ─▶ finalize ─▶ publish
+    (code)    (LLM 1)     (LLM 6,       (you)       (LLM 2 writes each part,   (LLM 4)  (LLM 7 +    (code)    (code:
+                           proposals                 LLM 3 checks its details,          code check)          PR + preview)
                            only)                     in parallel)
 
 1. librarian (plan model): reads the source, cut into numbered chunks, and plans WHERE it goes and
@@ -12,8 +12,12 @@
 2. writer (write model): writes ONE part from ITS chunks only.
 3. checker (check model): compares the part with its chunks; missing details are added in one
    targeted pass (no full rewrite).
-4. editor (edit model): writes the summary, key concepts and "Remember" of the whole page.
-   Parts are inserted into an existing page by CODE, so nothing already there is lost.
+4. editor (edit model): writes "In 30 seconds", the key concepts, "Remember", the Check yourself
+   questions and the caption of the visual. Parts are inserted into an existing page by CODE, so
+   nothing already there is lost.
+7. illustrator (illustrate model): draws the synthesis visual (SVG) from the title, the visual idea,
+   the In-30-seconds bullets and the part titles, never from the source. Code validates it; one
+   retry, else no visual and a warning in the pull request. An update keeps the existing visual.
 5. publish: a pull request, with a preview of the page on the website before merging.
 """
 from __future__ import annotations
@@ -33,15 +37,16 @@ from . import prompts
 from .chunks import chunk_text, fingerprint, numbered, remap
 from .config import MAX_QUERIES, RESEARCH, TOPICS
 from .core import Services, ask, clean_markdown, feedback_block, text_of, validate_route
-from .site import (add_in_practice, check_page, describe_site, ensure_listed, find_block, is_self,
+from .illustrator import illustrate
+from .site import (add_in_practice, check_page, describe_site, drop_quiz, ensure_listed, find_block, is_self,
                    join_front_matter, list_pages, render_tool_facts,
                    merge_sources, remember_block, render_sources, render_synthesis_blocks, slugify,
-                   split_front_matter, split_parts, split_sources, topic_pills)
+                   split_front_matter, split_parts, split_sources)
 from .state import (ArticlePlan, Findings, MissingDetails, Proposal, ResearchPlan, Route, Source,
                     Synthesis, ToolInfo)
 
 STATE_TYPES = [("carnet_agent.state", n) for n in [
-    "Route", "ArticlePlan", "SectionPlan", "Proposal", "ToolInfo", "Source", "Synthesis", "ConceptCard",
+    "Route", "ArticlePlan", "SectionPlan", "Proposal", "ToolInfo", "Source", "Synthesis", "ConceptCard", "QuizItem",
     "Lesson", "LessonNotes", "PlannedPage", "CoursePlan", "Query", "Finding"]]
 
 
@@ -58,12 +63,17 @@ class ArticleState(TypedDict, total=False):
     human_feedback: str
     parts: dict                   # section index -> markdown
     synthesis: Synthesis
+    visual_svg: str               # illustrator: the new synthesis visual, validated ("" = none)
+    visual_errors: list[str]      # why there is no new visual (shown in the pull request)
     extra_pages: list[dict]       # a second page planned from the same sources (the tool card of a "mixed" source)
     linked: list[str]             # concept pages that got an "In practice" link to a tool card
     check_errors: list[str]
     page_path: str
     pr_url: str
     preview_url: str
+
+
+TOOLBOX_IMAGE = "/assets/visuals/toolbox-card.svg"     # tool cards share the card template as thumbnail
 
 
 def page_title(text: str, url: str) -> str:
@@ -296,14 +306,41 @@ class ArticleAgent:
                         + " · ".join(t for t, _ in parts) + ". Its current summary:\n" + head[-1500:])
         return ask(self.s.m("edit"), Synthesis, [
             SystemMessage(prompts.EDITOR.format(existing=existing)),
-            HumanMessage(f"Page: {plan.route.title}: {plan.route.subtitle}\n\nOpenings of the new parts:\n{openings}"),
+            HumanMessage(f"Page: {plan.route.title}: {plan.route.subtitle}\n\n"
+                         f"Synthesis visual (for the caption): {plan.visual_idea or '(the main idea of the page)'}\n\n"
+                         f"Openings of the new parts:\n{openings}"),
         ])
 
+    # ------------------------------------------------------------------ 7. illustrator (LLM + code)
+    def illustrate(self, state: ArticleState):
+        update = self._illustrate_one(state)
+        if state.get("extra_pages"):
+            update["extra_pages"] = [e | self._illustrate_one(self.sub(state, e)) for e in state["extra_pages"]]
+        return update
+
+    def _illustrate_one(self, state: ArticleState) -> dict:
+        plan, route = state["plan"], state["plan"].route
+        if route.topic == "toolbox":                        # tool cards use the shared card template
+            return {"visual_svg": "", "visual_errors": []}
+        if route.action == "update" and plan.visual != "new":
+            front_matter, _ = split_front_matter((self.s.root / route.target_path).read_text())
+            if front_matter.get("image"):                   # keep the page's visual
+                return {"visual_svg": "", "visual_errors": []}
+        model = self.s.m("illustrate")
+        if model is None:
+            return {"visual_svg": "", "visual_errors": ["no illustrator model configured"]}
+        if self.s.check_budget:
+            self.s.check_budget()
+        titles = [s.heading for s in plan.sections]
+        svg, errors = illustrate(model, self.s.root, route.title, route.topic, route.folder, plan.visual_idea,
+                                 state["synthesis"].in_30_seconds, titles)
+        return {"visual_svg": svg or "", "visual_errors": errors}
+
     def assemble(self, state: ArticleState) -> tuple[Path, str]:
-        """[code] Build the page: blocks from the editor, parts inserted at their place, sources."""
+        """[code] Build the page, blocks in this order: synthesis visual, In 30 seconds, concept
+        cards, parts, Remember, Check yourself, Sources. On an update, parts are inserted at their
+        place and an old summary (.tldr) becomes In 30 seconds (.in30)."""
         route, plan = state["plan"].route, state["plan"]
-        tldr, concepts, remember = render_synthesis_blocks(
-            state["synthesis"].tldr, state["synthesis"].concepts, state["synthesis"].remember)
         parts = [state["parts"][str(i)] for i in range(len(plan.sections))]
         approved = [p for p in state.get("proposals") or [] if p.id in (state.get("approved") or [])]
         sources = [Source(title=(state.get("titles") or {}).get(u, u), url=u, role="primary")
@@ -312,26 +349,59 @@ class ArticleAgent:
 
         if route.action == "update":
             path = self.s.root / route.target_path
+        else:
+            path = self.s.root / route.topic / route.folder / f"{slugify(route.title)}.qmd"
+            n = 2
+            while path.exists():
+                path, n = path.with_name(f"{slugify(route.title)}-{n}.qmd"), n + 1
+        visual = f"/assets/visuals/{path.stem}.svg" if state.get("visual_svg") else None
+
+        if route.action == "update":
             front_matter, old = split_front_matter(path.read_text())
             front_matter["date-modified"] = self.s.today
+            if visual:
+                front_matter["image"] = visual
+            blocks = render_synthesis_blocks(state["synthesis"], visual or front_matter.get("image"))
             old, old_sources = split_sources(old)
             head, existing_parts, tail = split_parts(old)
             body_parts = [text for _, text in existing_parts]
             titles = [t for t, _ in existing_parts]
-            blocks = [("::: {.tldr}", tldr), ("::: {.concepts}", concepts)]
-            if plan.tool:
-                blocks.insert(0, ("::: {.tool-facts}", render_tool_facts(plan.tool)))
-            for opener, block in blocks:
-                span = find_block(head, opener)               # usually at the top, sometimes in a part
+
+            def place(opener: str, block: str, after: list[str]) -> None:
+                """Replace the block where it is (top of the page or inside a part), else insert it
+                after the first of `after` found at the top, else at the start of the page."""
+                nonlocal head
+                span = find_block(head, opener)
                 if span:
                     head = head[:span[0]] + block + head[span[1]:]
-                    continue
+                    return
                 k = next((i for i, text in enumerate(body_parts) if find_block(text, opener)), None)
-                if k is None:
-                    head = head + "\n\n" + block
+                if k is not None:
+                    s_, e_ = find_block(body_parts[k], opener)
+                    body_parts[k] = body_parts[k][:s_] + block + body_parts[k][e_:]
+                    return
+                for anchor in after:
+                    span = find_block(head, anchor)
+                    if span:
+                        head = head[:span[1]] + "\n\n" + block + head[span[1]:]
+                        return
+                head = (block + "\n\n" + head.lstrip()).strip()
+
+            if plan.tool:
+                place("::: {.tool-facts}", render_tool_facts(plan.tool), [])
+            tldr = find_block(head, "::: {.tldr}")              # the old summary becomes In 30 seconds
+            if tldr:
+                head = head[:tldr[0]] + blocks["in30"] + head[tldr[1]:]
+            else:
+                place("::: {.in30}", blocks["in30"], ["::: {.synthesis}", "::: {.tool-facts}", "::: {.lesson-meta}"])
+            if "synthesis" in blocks and (visual or not find_block(head, "::: {.synthesis}")):
+                span = find_block(head, "::: {.synthesis}")
+                if span:
+                    head = head[:span[0]] + blocks["synthesis"] + head[span[1]:]
                 else:
-                    s, e = find_block(body_parts[k], opener)
-                    body_parts[k] = body_parts[k][:s] + block + body_parts[k][e:]
+                    s_ = find_block(head, "::: {.in30}")[0]
+                    head = head[:s_] + blocks["synthesis"] + "\n\n" + head[s_:]
+            place("::: {.concepts}", blocks["concepts"], ["::: {.in30}"])
             for section, text in zip(plan.sections, parts):
                 if section.kind == "extend" and section.existing_heading in titles:
                     body_parts[titles.index(section.existing_heading)] = text
@@ -342,22 +412,25 @@ class ArticleAgent:
                 else:
                     body_parts.append(text)
                     titles.append(section.heading)
+            tail = drop_quiz(tail)
             span = remember_block(tail)
-            tail = tail[:span[0]] + remember + tail[span[1]:] if span else (tail + "\n\n" + remember).strip()
-            body = "\n\n".join([head.strip(), *body_parts, tail.strip()])
+            tail = tail[:span[0]] + blocks["remember"] + tail[span[1]:] if span else (tail + "\n\n" + blocks["remember"]).strip()
+            body = "\n\n".join([head.strip(), *body_parts, tail.strip(), blocks["quiz"]])
         else:
-            path = self.s.root / route.topic / route.folder / f"{slugify(route.title)}.qmd"
-            n = 2
-            while path.exists():
-                path, n = path.with_name(f"{slugify(route.title)}-{n}.qmd"), n + 1
             categories = [TOPICS[route.topic][0], route.folder_title]
             if plan.tool:                                   # a tool card is tagged with the topics it touches
                 categories = [TOPICS[t][0] for t in plan.tool.topics] or ["Toolbox"]
-            front_matter = {"title": route.title, "subtitle": route.subtitle, "date": self.s.today,
-                            "categories": categories}
+            front_matter = {"title": route.title, "subtitle": route.subtitle}
+            image = visual or (TOOLBOX_IMAGE if route.topic == "toolbox" else None)
+            if image:
+                front_matter["image"] = image
+            front_matter |= {"date": self.s.today, "categories": categories}
             old_sources = []
+            blocks = render_synthesis_blocks(state["synthesis"], visual)
             facts = [render_tool_facts(plan.tool)] if plan.tool else []
-            body = "\n\n".join([topic_pills(route.topic, route.folder_title), *facts, tldr, concepts, *parts, remember])
+            top = [blocks["synthesis"]] if "synthesis" in blocks else []
+            body = "\n\n".join([*facts, *top, blocks["in30"], blocks["concepts"], *parts,
+                                 blocks["remember"], blocks["quiz"]])
         page = join_front_matter(front_matter, f"{body}\n\n{render_sources(merge_sources(old_sources, sources))}")
         return path, page
 
@@ -382,6 +455,10 @@ class ArticleAgent:
         path, page = self.assemble(state)
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text(page)
+        if state.get("visual_svg"):                         # committed in the same pull request
+            visual = self.s.root / "assets" / "visuals" / f"{path.stem}.svg"
+            visual.parent.mkdir(parents=True, exist_ok=True)
+            visual.write_text(state["visual_svg"])
         approved = [p for p in state.get("proposals") or [] if p.id in (state.get("approved") or [])]
         route = state["plan"].route
         if route.action == "create":
@@ -396,11 +473,12 @@ class ArticleAgent:
     # ------------------------------------------------------------------ the graph
     def build(self, pause_for_approval: bool = True):
         g = StateGraph(ArticleState)
-        for name in ["fetch", "librarian", "research", "human_approval", "write_parts", "edit", "finalize", "publish"]:
+        for name in ["fetch", "librarian", "research", "human_approval", "write_parts", "edit", "illustrate",
+                     "finalize", "publish"]:
             g.add_node(name, getattr(self, name))
         g.add_edge(START, "fetch")
         for a, b in [("fetch", "librarian"), ("librarian", "research"), ("research", "human_approval"),
-                     ("human_approval", "write_parts"), ("write_parts", "edit"), ("edit", "finalize"),
+                     ("human_approval", "write_parts"), ("write_parts", "edit"), ("edit", "illustrate"), ("illustrate", "finalize"),
                      ("finalize", "publish"), ("publish", END)]:
             g.add_edge(a, b)
         if not pause_for_approval:
@@ -437,6 +515,9 @@ def describe_plan(state: dict) -> str:
                   + ", ".join(TOPICS[x][0] for x in t.topics),
                   f"**Implements:** {', '.join(t.implements)}",
                   "**Linked from:** " + (", ".join(f"`{p}`" for p in t.related_pages) or "(no concept page yet)"), ""]
+    if route.topic != "toolbox":
+        keep = route.action == "update" and plan.visual != "new"
+        lines += [f"**Synthesis visual:** {'keep the current one' if keep else plan.visual_idea or '(the illustrator chooses)'}", ""]
     lines += [plan.summary, "", "### Parts"]
     for s in plan.sections:
         where = (f"extends **{s.existing_heading}**" if s.kind == "extend"
@@ -469,6 +550,10 @@ def describe_run(state: dict) -> str:
         r = extra["plan"].route
         lines += ["", f"**Also:** {r.action} `{extra.get('page_path')}` in **{TOPICS[r.topic][0]}** › {r.folder_title}"]
         lines += [f"- ⚠️ {e}" for e in extra.get("check_errors") or []]
+    for page in [state, *(state.get("extra_pages") or [])]:
+        if page.get("visual_errors"):
+            lines += ["", f"⚠️ **No synthesis visual for `{page.get('page_path')}`:** the illustrator's SVG was "
+                      "rejected twice (" + "; ".join(page["visual_errors"][:3]) + "). Add one by hand, or rerun."]
     if state.get("linked"):
         lines += ["", "**\"In practice\" links added to:** " + ", ".join(f"`{p}`" for p in state["linked"])]
     if state.get("check_errors"):

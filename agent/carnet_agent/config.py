@@ -17,6 +17,9 @@ MODELS = {
     "edit": os.getenv("CARNET_MODEL_EDIT", "openai:gpt-5.4-mini"),          # 4. summary, concepts, Remember
     "research": os.getenv("CARNET_MODEL_RESEARCH", "openai:gpt-5.4-nano"),  # 6. propose web facts
 }
+# 7. the illustrator draws the synthesis visual (SVG). Same model as the editor unless set.
+ILLUSTRATOR_MODEL = os.getenv("ILLUSTRATOR_MODEL") or os.getenv("CARNET_MODEL_ILLUSTRATE") or MODELS["edit"]
+MODELS["illustrate"] = ILLUSTRATOR_MODEL
 
 # $ per 1M tokens (input, output), to track the cost of each run.
 PRICES = {

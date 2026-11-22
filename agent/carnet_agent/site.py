@@ -187,6 +187,7 @@ def related_pages(root: Path, topic: str, folder: str, exclude: str = "", limit:
 VISUALS = {
     "diagram": "```{mermaid}", "table": "|---", "concept cards": "{.concepts}",
     "example box": "{.example}", "comparison": "{.compare}", "steps": "{.steps}", "callout": "{.callout-",
+    "margin note": "{.column-margin", "code steps": "{.code-step",
 }
 
 
@@ -253,7 +254,43 @@ def check_page(text: str, findings: list[Finding]) -> list[str]:
                       "kinds (diagram, table, concept cards, example box, comparison, steps, callout).")
     if "{.example}" not in body:
         errors.append("No concrete example: put at least one example in a ::: {.example} box.")
+    if re.search(r"(?m)^#{2,3} Watch out[ \t]*$", _without_callout_titles(body)):
+        errors.append("A 'Watch out' heading on its own: put the warning in a ::: {.column-margin .watch} note "
+                      "(or a callout-warning inside its section).")
+    long_code = _long_code_outside_steps(body)
+    if long_code:
+        errors.append(f"{long_code} code block(s) over 12 lines outside a ::: {{.code-step title=\"…\"}} block.")
     return errors
+
+
+def _without_callout_titles(body: str) -> str:
+    """The body without the '## Title' line that opens a callout (it is the callout's title, not a section)."""
+    return re.sub(r"(?m)^(::: \{\.callout[^}]*\})\n## [^\n]*", r"\1", body)
+
+
+def _long_code_outside_steps(body: str) -> int:
+    count, in_step = 0, False
+    lines, i = body.split("\n"), 0
+    while i < len(lines):
+        line = lines[i]
+        if line.startswith("::: {.code-step"):
+            in_step = True
+        elif in_step and re.match(r"^:::\s*$", line):
+            in_step = False
+        elif line.startswith("```") and not line.startswith("```{mermaid"):
+            j = i + 1
+            while j < len(lines) and not lines[j].startswith("```"):
+                j += 1
+            if j - i - 1 > 12 and not in_step:
+                count += 1
+            i = j
+        elif line.startswith("```"):
+            j = i + 1
+            while j < len(lines) and not lines[j].startswith("```"):
+                j += 1
+            i = j
+        i += 1
+    return count
 
 
 # --- Registering a new folder in the site's menus --------------------------------
@@ -271,11 +308,12 @@ def _add_listing_to_topic_page(index_file: Path, folder: str, folder_title: str,
         listings = [listings]
     if any(lst.get("id") == folder for lst in listings):
         return
-    listing = {"id": folder, "contents": f"{folder}/*.qmd", "type": "grid",
-               "grid-columns": 2, "sort": "date desc", "fields": ["title", "subtitle"]}
+    # a numbered reading path (see _templates/path.ejs), in the `order` of the notes
+    listing = {"id": folder, "contents": f"{folder}/*.qmd", "template": "../_templates/path.ejs",
+               "sort": "order", "fields": ["title", "subtitle", "image"]}
     if index_file.parent.name == "toolbox":            # the catalogue: tags shown and filterable by topic
-        listing |= {"grid-columns": 3, "sort": "title", "fields": ["title", "subtitle", "categories"],
-                    "categories": True}
+        listing = {"id": folder, "contents": f"{folder}/*.qmd", "type": "grid", "grid-columns": 3, "sort": "title",
+                   "fields": ["image", "title", "subtitle", "categories"], "categories": True}
     listings.append(listing)
     fm["listing"] = listings
 
@@ -318,9 +356,10 @@ def _add_folder_to_sidebar(config_file: Path, topic: str, folder: str, folder_ti
 
 # --- Reading and rebuilding a page made of blocks ------------------------------------
 #
-# A page body is: pills, summary (.tldr), concept cards (.concepts), then '##' parts, with the
-# "Remember" callout at the end. The editor rewrites summary, cards and Remember; parts are
-# inserted or replaced by code, so existing content is never silently dropped.
+# A page body is: synthesis visual (.synthesis), In 30 seconds (.in30, formerly .tldr), concept
+# cards (.concepts), then '##' parts, then the "Remember" callout and the Check yourself questions.
+# The editor rewrites In 30 seconds, cards, Remember and questions; parts are inserted or replaced
+# by code, so existing content is never silently dropped.
 
 def find_block(body: str, opener: str) -> tuple[int, int] | None:
     """Character span of the ':::' block whose first line starts with `opener` (nested ::: counted)."""
@@ -378,13 +417,30 @@ def split_parts(body: str) -> tuple[str, list[tuple[str, str]], str]:
     return head, parts, tail
 
 
-def render_synthesis_blocks(tldr: str, concepts: list, remember: list[str]) -> tuple[str, str, str]:
-    """Markdown for the summary, the concept cards and the Remember callout."""
-    tldr_md = f"::: {{.tldr}}\n{tldr.strip()}\n:::"
-    cards = "\n".join(f"::: {{.concept}}\n`{c.name}`\n\n{c.text.strip()}\n:::" for c in concepts)
-    concepts_md = f"::: {{.concepts}}\n{cards}\n:::"
-    remember_md = "::: {.callout-tip}\n## Remember\n" + "\n".join(f"- {r.strip()}" for r in remember) + "\n:::"
-    return tldr_md, concepts_md, remember_md
+def render_synthesis_blocks(synthesis, visual: str | None = None) -> dict[str, str]:
+    """Markdown for the blocks the editor writes, by name, in page order:
+    synthesis (the visual and its caption), in30, concepts, remember, quiz."""
+    blocks = {}
+    if visual:
+        caption = (synthesis.visual_caption or "").strip().replace("\n", " ")
+        blocks["synthesis"] = f"::: {{.synthesis}}\n![{caption}]({visual})\n:::"
+    blocks["in30"] = "::: {.in30}\n" + "\n".join(f"- {b.strip()}" for b in synthesis.in_30_seconds) + "\n:::"
+    cards = "\n".join(f"::: {{.concept}}\n`{c.name}`\n\n{c.text.strip()}\n:::" for c in synthesis.concepts)
+    blocks["concepts"] = f"::: {{.concepts}}\n{cards}\n:::"
+    blocks["remember"] = ("::: {.callout-tip}\n## Remember\n"
+                          + "\n".join(f"- {r.strip()}" for r in synthesis.remember) + "\n:::")
+    blocks["quiz"] = "\n\n".join(
+        f'<details class="quiz">\n<summary>{q.question.strip()}</summary>\n\n{q.answer.strip()}\n\n</details>'
+        for q in synthesis.quiz)
+    return blocks
+
+
+QUIZ_RE = re.compile(r'<details class="quiz">.*?</details>\s*', re.S)
+
+
+def drop_quiz(text: str) -> str:
+    """The text without its Check yourself questions (they are rewritten on every update)."""
+    return re.sub(r"(?m)^## Check yourself[ \t]*\n+", "", QUIZ_RE.sub("", text)).strip()
 
 
 # --- Toolbox: identity card of a tool, and links from concept pages ---------------------

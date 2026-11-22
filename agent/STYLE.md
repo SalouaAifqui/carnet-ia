@@ -3,8 +3,22 @@
 Every writer of a part reads this file. Edit it to change how the agent writes, without touching
 the code (it is the agent's procedural memory).
 
-The structure of a page (summary, key concepts, "Remember", sources, menus) is built by the
-editor and by code: writers only write their part.
+## The skeleton of a note
+
+Every note has the same skeleton, so a reader always knows where they are:
+
+1. **Header** (front matter): title, one-sentence subtitle, `image: /assets/visuals/<slug>.svg`, `order`.
+2. **Synthesis visual**: `::: {.synthesis}` with the SVG and a one-sentence caption (illustrator + editor).
+3. **In 30 seconds**: `::: {.in30}`, exactly 3 bullets of 25 words max. Never "This page explains…" (editor).
+4. **Concept cards**: 3 or 4 `::: {.concept}` cards in `::: {.concepts}`, not repeating the bullets (editor).
+5. **Parts**: one idea per `##`, each with an example, a diagram or a comparison (writers).
+6. **Margin notes**: warnings and definitions in the margin, at most one per part (writers).
+7. **Remember**: a green `callout-tip`, 3 to 5 bullets a reader can apply (editor).
+8. **Check yourself**: 2 or 3 `<details class="quiz">` questions (editor; the heading is added at render).
+9. **Sources**: `## Sources {.sources}`, folded on the site as "Sources (n)" (code).
+
+The header, the visual, In 30 seconds, the cards, Remember, the questions, the sources and the menus
+are built by the editor, the illustrator and code: writers only write their part.
 
 ## Tone
 - **English**, plain, for a reader who is learning. Short sentences, active voice.
@@ -23,6 +37,7 @@ editor and by code: writers only write their part.
 - Prefer showing over telling: a diagram for a flow, a table for a comparison, steps for a procedure,
   a before/after for a good and a bad practice.
 - Use `###` sub-parts when needed, never deeper.
+- One idea per part: a part never repeats what another part, the cards or In 30 seconds say.
 
 ## Components (Quarto markdown)
 
@@ -57,9 +72,33 @@ Steps:
 :::
 ```
 
-Diagram: a ```` ```{mermaid} ```` block (flowchart or sequenceDiagram; avoid subgraphs).
+Diagram: a ```` ```{mermaid} ```` block (flowchart or sequenceDiagram; avoid subgraphs). Do not draw
+again what the synthesis visual already shows.
 
-Warning: `::: {.callout-warning}` with `## Watch out` as its first line.
+Margin notes, right after the paragraph they relate to (at most one per part; on phones they come
+back into the text):
+```
+::: {.column-margin .watch}
+A pitfall, in one or two sentences.
+:::
+
+::: {.column-margin .define label="Runtime"}
+The code around the model: it reads the reply, runs the action, keeps the history.
+:::
+```
+
+**Never** a `## Watch out` or `### Watch out` heading on its own. A second warning in the same part
+goes in a `::: {.callout-warning}` with `## Watch out` as its first line, inside the part.
+
+Code over 12 lines: a numbered, folded step with a short title (only the last step of a part is
+shown open; `open="true"` or `open="false"` changes it):
+````
+::: {.code-step title="The runtime parses the action and loops"}
+```python
+...
+```
+:::
+````
 
 ## Products and vendors
 - Concept pages are **vendor-neutral**: explain the idea, not one product. A product may appear in an
