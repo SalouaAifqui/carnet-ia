@@ -7,10 +7,6 @@ categories:
 - Agents
 ---
 
-::: {.lesson-meta}
-[Toolbox]{.pill .t-tools} [Tools]{.pill .muted}
-:::
-
 ::: {.tool-facts}
 | | |
 |---|---|
@@ -21,8 +17,10 @@ categories:
 | **Documentation** | <https://learn.deeplearning.ai/courses/agent-skills-with-anthropic/lesson/3sq9za/skills-with-the-claude-api> |
 :::
 
-::: {.tldr}
-This page explains how Claude skills work outside the Claude app and Claude Desktop, specifically in the Messages API and the Claude Agent SDK. The key idea is that skills are not automatically shared across environments, so API and SDK workflows must explicitly provide the right tools: code execution, file handling, and the proper beta headers. Once wired up, skills let Claude load skill files, read and combine them, run code, create and transform files, and even hand work off to subagents. The page also shows the basic API pattern for uploading a skill directory, listing available skills, uploading input files, and passing the required headers, then uses this to frame when skills are a good fit: repeatable, file-based workflows such as document generation and research tasks.
+::: {.in30}
+- Skills made in Claude AI or Claude Desktop are not shared with the Claude API or Claude Code: each environment is set up separately.
+- In the Messages API, skills need the code execution tool, the Files API and beta headers, in a sandbox with no internet access.
+- In the Agent SDK, a skill-guided main agent can dispatch subagents, with every tool they need listed in `allowed_tools`.
 :::
 
 ::: {.concepts}
@@ -45,16 +43,6 @@ Skills in the API need a sandboxed code-execution environment. This is what lets
 `Files API flow`
 
 Files move into and out of the workflow through the Files API. This is what makes file-based tasks like document generation and transformation possible.
-:::
-::: {.concept}
-`Skill composition`
-
-Claude can load both custom and built-in skills, and combine them in one workflow. The example shows using a custom skill first and later pairing it with a built-in skill like `docx`.
-:::
-::: {.concept}
-`Agent SDK use cases`
-
-The Agent SDK supports the same skill-based patterns, including loading instructions, running code, and delegating work to subagents. It is best for multi-step, repeatable tasks that involve files.
 :::
 :::
 
@@ -95,6 +83,10 @@ flowchart LR
 ## What it does
 
 Skills let the API and SDK agent do more than answer text. They let it load skill files, read them in steps, run code, make files, and hand work to subagents.
+
+::: {.column-margin .define label="Skill composition"}
+Claude can load both custom and built-in skills, and combine them in one workflow. The example shows using a custom skill first and later pairing it with a built-in skill like `docx`.
+:::
 
 ### Practical capabilities
 
@@ -143,7 +135,7 @@ Skills let the API and SDK agent do more than answer text. They let it load skil
   - You can also delete skills programmatically.
   - The deletion flow is to remove all versions first, then delete the underlying skill itself.
 
-### Practical capabilities
+### The workflow, step by step
 
 1. **Upload the skill and the input file**: send the skill directory and the source file, such as a LaTeX lecture file or a retail sales CSV.
 2. **Verify custom skills**: after uploading, use a `.list` call with a source filter like `source='custom'` to confirm the expected custom skills were created.
@@ -202,6 +194,10 @@ In the source flow, the model first reads `SKILL.md`, then reads the input notes
 ### SDK pattern
 
 For the Agent SDK, the setup is similar, but skills are wired through tools and agent settings:
+
+::: {.column-margin .define label="Agent SDK"}
+The Agent SDK supports the same skill-based patterns, including loading instructions, running code, and delegating work to subagents. It is best for multi-step, repeatable tasks that involve files.
+:::
 
 1. **Add allowed tools** for every capability your main agent and subagents need. Read-only tools like `read`, `Grep`, and `Glob` are allowed by default. For writing, web access, and shell work, you must add tools like `Write`, `Bash`, `WebSearch`, and `WebFetch`.
 2. **Define MCP servers** with `mcp_servers` if you need external tools such as Notion.
@@ -288,11 +284,31 @@ In the Messages API, skills need the Code Execution tool and the Files API. The 
 ## Remember
 - Skills do not automatically transfer between Claude app/desktop and the API or SDK.
 - API skills need code execution and file access, not just text generation.
-- Upload the skill directory first, then list the available skills.
-- Pass the required beta headers for skills, code execution, and files.
+- Upload the skill directory first, list the available skills, and pass the beta headers for skills, code execution, and files.
 - Skills are best for repeatable file-based workflows like document generation and research.
 - Built-in skills and custom skills can be combined in one task.
 :::
+
+<details class="quiz">
+<summary>Your skill works in Claude Desktop. Why does it fail through the Messages API?</summary>
+
+Skills are not shared across environments, and the API needs its own setup: upload the skill, add the code execution tool, the Files API and the beta headers.
+
+</details>
+
+<details class="quiz">
+<summary>How do you get the file the agent generated in the API container?</summary>
+
+Take the returned `file_id` and download the file with the Files API.
+
+</details>
+
+<details class="quiz">
+<summary>A subagent cannot use WebFetch. What did you forget?</summary>
+
+To list the tool in the main agent's `allowed_tools`: the main agent must allow every tool that it and its subagents need.
+
+</details>
 
 ## Sources {.sources}
 

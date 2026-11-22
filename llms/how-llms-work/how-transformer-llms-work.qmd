@@ -10,31 +10,15 @@ aliases:
 - /llms/foundations/how-transformer-llms-work.html
 ---
 
-::: {.lesson-meta}
-[LLMs]{.pill .t-llms} [How LLMs work]{.pill .muted}
+::: {.synthesis}
+![A sentence's path from left to right, and the loop that generates one token after another.](/assets/visuals/how-transformer-llms-work.svg){fig-alt="How a transformer LLM works: tokens, embeddings with position, N transformer blocks, next-token probabilities, repeated"}
 :::
 
-::: {.tldr}
-A transformer LLM first turns text into tokens, maps those tokens to embeddings, adds positional information, and then passes the sequence through stacked transformer blocks to predict the next token. In the common decoder-only setup used by most modern LLMs, self-attention lets each token use context from earlier tokens. At inference time, generation can be sped up with a KV cache and attention variants such as multi-query attention, grouped query attention, and sparse attention.
+::: {.in30}
+- A transformer LLM turns text into tokens, then embeddings with positional information, and runs them through stacked blocks to predict the next token.
+- Self-attention lets each token weigh the others; most modern LLMs keep only the decoder, built for next-token prediction.
+- Generation is sped up by a KV cache and attention variants: multi-query, grouped query and sparse attention.
 :::
-
-```{mermaid}
-flowchart LR
-  A[Text input] --> B[Tokenization]
-  B --> C[Token IDs]
-  C --> D[Embeddings]
-  D --> E[Add positional information]
-  E --> F[Stacked transformer blocks]
-  F --> G[Language model head]
-  G --> H[Softmax]
-  H --> I[Next-token probabilities]
-
-  F --> J[Self-attention]
-  F --> K[Feed-forward network]
-  J --> L[Context mixing]
-  K --> M[Feature transformation]
-```
-
 
 ::: {.concepts}
 ::: {.concept}
@@ -61,11 +45,6 @@ Self-attention measures how relevant each token is to the others in the current 
 A transformer block is the repeated building unit of the model. It combines multi-head self-attention with a position-wise feed-forward network, and residual connections plus layer normalization are standard parts around those sublayers.
 :::
 
-::: {.concept}
-`KV cache`
-
-A KV cache stores key and value tensors from earlier tokens during generation. Reusing them avoids recomputing the same attention work at every new step.
-:::
 :::
 
 ## From text to vectors
@@ -140,6 +119,10 @@ Modern LLMs usually keep only the decoder stack. This is enough for next-token p
 
 Generating text token by token can be expensive. Several techniques reduce that cost.
 
+::: {.column-margin .define label="KV cache"}
+A KV cache stores key and value tensors from earlier tokens during generation. Reusing them avoids recomputing the same attention work at every new step.
+:::
+
 **KV cache**  
 During generation, the model does not need to recompute keys and values for earlier tokens. It stores them in a cache and reuses them for the next step.
 
@@ -156,6 +139,7 @@ Sparse attention attends only to selected tokens instead of all tokens. That low
 
 A practical way to explore transformers is with the Hugging Face Transformers library. For inference, the basic pattern is: load a tokenizer, load a causal language model, tokenize the prompt, generate tokens, then decode the output.
 
+::: {.code-step title="Generate text with GPT-2"}
 ```python
 from transformers import AutoTokenizer, AutoModelForCausalLM
 
@@ -172,6 +156,7 @@ text = tokenizer.decode(outputs[0], skip_special_tokens=True)
 
 print(text)
 ```
+:::
 
 This example shows the main inference loop:
 
@@ -182,6 +167,7 @@ This example shows the main inference loop:
 
 If you want to use a GPU or other accelerated device, a current loading pattern is to let the library place the model automatically:
 
+::: {.code-step title="Let the library place the model on a GPU"}
 ```python
 from transformers import AutoTokenizer, AutoModelForCausalLM
 
@@ -198,6 +184,7 @@ text = tokenizer.decode(outputs[0], skip_special_tokens=True)
 
 print(text)
 ```
+:::
 
 ::: {.callout-tip}
 ## Remember
@@ -207,6 +194,27 @@ print(text)
 - The transformer block repeats the same core pattern many times.
 - KV cache and attention variants reduce inference cost, especially for long generations.
 :::
+
+<details class="quiz">
+<summary>Why does a transformer need positional information?</summary>
+
+Attention alone does not know the order of tokens: positional information tells the model where each token appears in the sequence.
+
+</details>
+
+<details class="quiz">
+<summary>In self-attention, what are the query, the key and the value?</summary>
+
+The query is what a token is looking for, the key what it offers to others, the value the information passed along if it is relevant. Queries are compared with keys to blend the values.
+
+</details>
+
+<details class="quiz">
+<summary>What does a KV cache avoid recomputing?</summary>
+
+The keys and values of earlier tokens: they are stored during generation and reused at each new step.
+
+</details>
 
 ## Sources {.sources}
 
