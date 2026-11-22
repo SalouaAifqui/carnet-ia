@@ -278,7 +278,7 @@ def control():
     # rewind arc
     s.path("M344 140 C 320 176, 176 176, 154 142", MUTED, dash="5 4")
     s.text(250, 184, "time travel: replay from step 2", 11, 500, MUTED)
-    btn = [("▶", "Watch", "streaming"), ("❚❚", "Pause", "human in the loop"), ("✎", "Edit", "change the state"), ("◀◀", "Rewind", "time travel")]
+    btn = [("▶", "Watch", "streaming"), ("❚❚", "Pause", "ask a human"), ("✎", "Edit", "change state"), ("◀◀", "Rewind", "time travel")]
     for i, (ic, a, b) in enumerate(btn):
         x = 24 + i * 120
         s.rect(x, 204, 112, 66, PAPER, LINE, rx=12)
@@ -296,7 +296,7 @@ def evaluating_agents():
     s = S("v-evag", "eval")
     s.rect(24, 24, 190, 208, PAPER, LINE, rx=14)
     s.text(40, 46, "AGENT", 10, 700, MUTED, "start", ls="0.08em")
-    for i, (a) in enumerate(["Router", "Skills", "Tools"]):
+    for i, (a) in enumerate(["Router", "Skills", "Memory"]):
         s.node(40, 58 + i * 56, 158, 38, a, None, "soft" if i else "white", 12)
         if i < 2:
             s.arrow(119, 96 + i * 56, 119, 112 + i * 56, MUTED)
@@ -305,7 +305,7 @@ def evaluating_agents():
     for x, w, c in [(70, 140, s.soft), (70, 60, s.c), (134, 46, "#f3a6c2"), (184, 26, s.c)]:
         s.rect(x, 244, w, 12, c, c, rx=4)
     s.rect(24, 266, 190, 8, LINE, LINE, rx=4)
-    steps = [("1", "Evaluate each part", "router, skills, tools"),
+    steps = [("1", "Evaluate each part", "router, skills, memory"),
              ("2", "Evaluate the trajectory", "the path, not only the answer"),
              ("3", "Collect failures", "into a reusable test set"),
              ("4", "Experiment & monitor", "CI, staged evals, red teaming")]
@@ -347,26 +347,26 @@ def traces():
     s = S("v-trace", "eval")
     s.text(24, 30, "one trace = one run", 12, 600, INK, "start")
     s.text(496, 30, "time →", 11, 500, MUTED, "end")
-    rows = [(0, "agent.run", 0, 1.0, "root"),
-            (1, "llm · plan", 0.02, 0.22, "llm"),
-            (1, "tool · search_products", 0.25, 0.30, "bad"),
-            (1, "llm · answer", 0.57, 0.28, "llm"),
-            (2, "tool · get_stock", 0.88, 0.1, "tool")]
+    rows = [(0, "refund request", 0, 1.0, "root"),
+            (1, "llm · model call", 0.02, 0.22, "llm"),
+            (1, "tool · order_lookup", 0.25, 0.20, "bad"),
+            (1, "tool · process_refund", 0.47, 0.24, "tool"),
+            (1, "llm · answer", 0.73, 0.25, "llm")]
     x0, x1 = 214, 496
     for i, (lvl, name, st, ln, k) in enumerate(rows):
         y = 48 + i * 36
         s.mono(28 + lvl * 16, y + 15, ("└ " if lvl else "") + name, 10.5, INK, "start")
-        col = {"root": s.soft, "llm": s.c, "tool": "#f3a6c2", "bad": BAD}[k]
+        col = {"root": LINE, "llm": s.c, "tool": "#f3a6c2", "bad": BAD}[k]
         s.rect(x0 + (x1 - x0) * st, y + 4, (x1 - x0) * ln, 16, col, col, rx=5)
     # annotation on the bad span
-    bx = x0 + (x1 - x0) * 0.25
-    s.rect(bx - 4, 150, 150, 26, BAD_SOFT, BAD, rx=8)
-    s.cross(bx + 10, 163, 7)
-    s.text(bx + 24, 167, "label: wrong tool", 11, 600, BAD, "start")
-    s.add(f'<path d="M{bx+40} 148 L{bx+40} 140" stroke="{BAD}" stroke-width="1.4"></path>')
+    bx = x0 + (x1 - x0) * 0.45
+    s.add(f'<path d="M{bx} 132 L{bx+12} 132" stroke="{BAD}" stroke-width="1.4"></path>')
+    s.rect(bx + 12, 119, 140, 26, BAD_SOFT, BAD, rx=8)
+    s.cross(bx + 26, 132, 7)
+    s.text(bx + 40, 136, "label: wrong order", 11, 600, BAD, "start")
     s.text(24, 250, "THEN", 10, 700, MUTED, "start", ls="0.08em")
     x = 66
-    for i, l in enumerate(["annotate the run", "group repeats", "rank: frequency × severity"]):
+    for i, l in enumerate(["annotate", "group repeats", "rank: frequency × severity"]):
         w = s.pill(x, 236, l, s.c, PAPER, 11)
         if i < 2:
             s.arrow(x + w + 4, 247, x + w + 20, 247, MUTED)
@@ -377,9 +377,9 @@ def traces():
 
 def action_eval():
     s = S("v-act", "eval")
-    calls = [("lookup_order", "id=42", "right tool, right args", "ok"),
-             ("issue_refund", "amount=?", "missing info: should ask", "warn"),
-             ("delete_account", "user=42", "forbidden action", "bad")]
+    calls = [("order_lookup", "id=4521", "right tool, right args", "ok"),
+             ("order_lookup", "id=4512", "wrong argument", "warn"),
+             ("process_refund", "outside window", "forbidden action", "bad")]
     for i, (fn, arg, verdict, k) in enumerate(calls):
         x = 24 + i * 166
         s.rect(x, 30, 150, 92, PAPER, LINE, rx=12)
@@ -396,15 +396,15 @@ def action_eval():
     s.add(f'<path d="M24 178 L496 178" stroke="{LINE}" stroke-width="1"></path>')
     s.text(24, 204, "EXPECTED ORDER", 10, 700, MUTED, "start", ls="0.08em")
     x = 136
-    for i, l in enumerate(["lookup", "confirm", "refund"]):
+    for i, l in enumerate(["lookup", "check policy", "refund"]):
         w = s.pill(x, 190, l, "#fff", s.c, 11)
         if i < 2:
             s.arrow(x + w + 4, 201, x + w + 22, 201, s.c)
         x += w + 28
     x = 24
     for q in ["Right tool?", "Right arguments?", "Required / forbidden?", "Right sequence?"]:
-        w = s.pill(x, 240, q, INK, PAPER, 11)
-        x += w + 8
+        w = s.pill(x, 240, q, INK, PAPER, 10)
+        x += w + 4
     return s.svg("Tool-use evaluation: judge each call's tool, arguments, required and forbidden actions, and order")
 
 
@@ -421,7 +421,8 @@ def improvement():
     s.text(24, 290, "start with the smallest layer that fits", 11, 500, MUTED, "start")
     # A/B by category
     s.text(286, 30, "BASELINE VS CANDIDATE", 10, 700, MUTED, "start", ls="0.08em")
-    cats = [("billing", 0.55, 0.78, False), ("returns", 0.6, 0.72, False), ("shipping", 0.7, 0.48, True)]
+    cats = [("unsafe matches stopped", 0.4, 0.8, False), ("good volunteers accepted", 0.85, 0.55, True),
+            ("overall score: looks the same", 0.64, 0.66, False)]
     for i, (c, a, b, reg) in enumerate(cats):
         y = 50 + i * 66
         s.text(286, y + 12, c, 11, 600, INK, "start")
@@ -439,23 +440,23 @@ def improvement():
 
 def production():
     s = S("v-prod", "eval")
-    s.rect(24, 50, 196, 196, PAPER, LINE, rx=14)
-    s.text(122, 76, "Production", 14, 700, INK)
-    s.text(122, 93, "messy, real traffic", 11, 400, MUTED)
+    s.rect(24, 62, 184, 184, PAPER, LINE, rx=14)
+    s.text(116, 84, "Production", 14, 700, INK)
+    s.text(116, 100, "messy, real traffic", 11, 400, MUTED)
     for i, l in enumerate(["monitoring", "manual review", "user feedback", "A/B tests"]):
-        s.pill(122, 108 + i * 32, l, s.c, s.soft, 11, 140, "middle")
-    s.rect(300, 50, 196, 196, PAPER, LINE, rx=14)
-    s.text(398, 76, "Offline benchmark", 14, 700, INK)
-    s.text(398, 93, "stable, comparable", 11, 400, MUTED)
+        s.pill(116, 112 + i * 32, l, s.c, s.soft, 11, 140, "middle")
+    s.rect(312, 62, 184, 184, PAPER, LINE, rx=14)
+    s.text(404, 84, "Offline benchmark", 14, 700, INK)
+    s.text(404, 100, "stable, comparable", 11, 400, MUTED)
     for i in range(4):
-        y = 112 + i * 28
+        y = 116 + i * 28
         new = i == 3
-        s.rect(330, y, 136, 20, s.c if new else s.soft, s.c if new else s.soft, rx=6)
-        s.text(398, y + 14, "new regression test" if new else f"case {i+1}", 10.5, 600, "#fff" if new else s.c)
-    s.path("M220 112 C 250 80, 270 80, 298 112", BAD, sw=1.8)
+        s.rect(336, y, 136, 20, s.c if new else s.soft, s.c if new else s.soft, rx=6)
+        s.text(404, y + 14, "new regression test" if new else f"case {i+1}", 10.5, 600, "#fff" if new else s.c)
+    s.path("M208 124 C 246 88, 274 88, 310 124", BAD, sw=1.8)
     s.text(260, 40, "failure found", 11, 700, BAD)
     s.text(260, 54, "→ becomes a test", 11, 500, MUTED)
-    s.path("M298 196 C 270 228, 250 228, 222 196", s.c, sw=1.8)
+    s.path("M312 192 C 274 228, 246 228, 210 192", s.c, sw=1.8)
     s.text(260, 254, "every new version", 11, 700, s.c)
     s.text(260, 268, "checked before release", 11, 500, MUTED)
     s.text(260, 292, "old bugs never come back", 11, 600, INK)
@@ -611,15 +612,18 @@ def guardrails_apps():
     for x in (162, 364):
         s.add(f'<path d="M{x} 166 L{x} 188" stroke="{LINE}" stroke-width="1.4"></path>')
     for x in (162, 364):
-        for j, (l, fg, bg) in enumerate([("block", BAD, BAD_SOFT), ("fix", s.c, PAPER), ("re-ask", WARN, WARN_SOFT)]):
-            s.pill(x, 192 + j * 26, l, fg, bg, 10.5, 64, "middle")
+        for j, (l, fg, bg) in enumerate([("block", BAD, BAD_SOFT), ("raise error", INK, PAPER), ("re-check", WARN, WARN_SOFT)]):
+            s.pill(x, 192 + j * 26, l, fg, bg, 10.5, 80, "middle")
     s.text(260, 290, "rules, regex or small ML models · checked at inference time", 11, 500, MUTED)
-    return s.svg("Guardrails: validators check the input before the LLM and the output after it, and can block, fix or re-ask")
+    return s.svg("Guardrails: validators check the input before the LLM and the output after it, and can block, raise an error or re-check")
 
 
 def custom_guardrails():
     s = S("v-gcust", "guard")
-    s.node(24, 118, 80, 60, "App", "OpenAI-style client", "white", 12)
+    s.rect(16, 114, 90, 68, PAPER, LINE)
+    s.text(61, 140, "App", 12, 600, INK)
+    s.text(61, 157, "OpenAI-style", 10.5, 400, MUTED)
+    s.text(61, 170, "client", 10.5, 400, MUTED)
     s.rect(128, 30, 264, 240, PAPER, s.c, rx=16, sw=1.6)
     s.text(146, 54, "Guardrails Server", 13, 700, s.c, "start")
     s.text(146, 70, "sits in front of the LLM API", 10.5, 400, MUTED, "start")
@@ -632,7 +636,7 @@ def custom_guardrails():
         s.text(176, y + 19, a, 12, 600, INK, "start")
         s.text(176, y + 34, b, 10.5, 400, MUTED, "start")
     s.node(416, 118, 80, 60, "LLM API")
-    s.arrow(106, 148, 124, 148, s.c)
+    s.arrow(108, 148, 124, 148, s.c)
     s.arrow(394, 148, 412, 148, s.c)
     s.text(260, 292, "write the check → wrap it in a guard → route calls through the server", 11, 500, MUTED)
     return s.svg("Custom guardrails: validators inside a guard, inside a Guardrails Server between the app and the LLM API")
@@ -684,9 +688,9 @@ def hallucination():
         bg = BAD_SOFT if k == "bad" else s.soft
         s.rect(342, y, 138, 44, bg, bg, rx=6)
         s.lines(352, y + 10, 100, 3, 9, BAD if k == "bad" else "#9fd3bb")
-        s.arrow(324, y + 22, 198, y + 22 + (0 if i < 2 else -58), s.c if k == "ok" else BAD, dash=None if k == "ok" else "4 4", sw=1.4)
-        (s.check if k == "ok" else s.cross)(260, y + 22 + (0 if i < 2 else -29), 9)
-        s.text(260, y + 44 + (0 if i < 2 else -29), l, 10.5, 600, OK if k == "ok" else BAD)
+        s.arrow(324, y + 22, 198, y + 22, s.c if k == "ok" else BAD, dash=None if k == "ok" else "4 4", sw=1.4)
+        (s.check if k == "ok" else s.cross)(260, y + 22, 9)
+        s.text(260, y + 44, l, 10.5, 600, OK if k == "ok" else BAD)
     s.pill(260, 270, "NLI: does the source support each claim?", s.c, PAPER, 11, 260, "middle")
     return s.svg("Hallucination guardrail: each claim of the answer is checked by NLI against the sources; unsupported claims are blocked")
 
@@ -695,20 +699,20 @@ def pii():
     s = S("v-pii", "guard")
     s.text(24, 30, "INPUT", 10, 700, MUTED, "start", ls="0.08em")
     s.rect(24, 40, 472, 48, PAPER, LINE, rx=10)
-    s.text(40, 69, "Hi, I'm", 12.5, 500, INK, "start")
-    s.rect(88, 53, 72, 22, WARN_SOFT, WARN, rx=5)
-    s.text(124, 69, "Jane Doe", 12, 600, WARN)
-    s.text(166, 69, ", call me on", 12.5, 500, INK, "start")
-    s.rect(244, 53, 110, 22, WARN_SOFT, WARN, rx=5)
-    s.text(299, 69, "06 12 34 56 78", 11.5, 600, WARN)
+    s.text(40, 69, "My name is", 12, 500, INK, "start")
+    s.rect(112, 53, 72, 22, WARN_SOFT, WARN, rx=5)
+    s.text(148, 69, "Hank Tate", 12, 600, WARN)
+    s.text(192, 69, "and my phone number is", 12, 500, INK, "start")
+    s.rect(344, 53, 100, 22, WARN_SOFT, WARN, rx=5)
+    s.text(394, 69, "•••-••••", 12, 600, WARN)
     s.arrow(260, 92, 260, 112, s.c)
     s.node(170, 116, 180, 48, "Detect & redact", "Presidio + your own rules", "solid", 12)
     s.arrow(260, 166, 260, 186, s.c)
     s.rect(24, 190, 472, 48, s.soft, s.c, rx=10)
-    s.text(40, 219, "Hi, I'm", 12.5, 500, INK, "start")
-    s.mono(90, 219, "<PERSON>", 11.5, s.c, "start", 700)
-    s.text(162, 219, ", call me on", 12.5, 500, INK, "start")
-    s.mono(240, 219, "<PHONE_NUMBER>", 11.5, s.c, "start", 700)
+    s.text(40, 219, "My name is", 12, 500, INK, "start")
+    s.mono(148, 219, "<PERSON>", 11, s.c, "middle", 700)
+    s.text(192, 219, "and my phone number is", 12, 500, INK, "start")
+    s.mono(394, 219, "<PHONE_NUMBER>", 11, s.c, "middle", 700)
     for i, (a, b) in enumerate([("Input guard", "before the LLM sees it"), ("Output guard", "while the reply streams")]):
         x = 24 + i * 244
         s.check(x + 10, 268, 8)
@@ -724,7 +728,7 @@ def topic():
     s.arrow(260, 72, 260, 92, s.c)
     s.pill(260, 96, "zero-shot topic classifier", "#fff", s.c, 11, 190, "middle")
     scores = [("food", 0.672, "allowed"), ("business", 0.179, ""), ("politics", 0.027, "banned")]
-    x0, wmax = 128, 300
+    x0, wmax = 128, 236
     for i, (t, v, tag) in enumerate(scores):
         y = 140 + i * 36
         s.text(116, y + 13, t, 12, 600, INK, "end")
@@ -776,9 +780,9 @@ def transformer():
     s.text(430, 172, "next-token odds", 11, 500, MUTED)
     s.path("M400 196 C 380 240, 90 250, 53 178", s.c, dash="5 4", sw=1.5)
     s.text(232, 244, "pick a token, append it, repeat", 11, 600, s.c)
-    s.pill(24, 262, "faster: KV cache", s.c, PAPER, 11)
-    s.pill(150, 262, "multi-query / grouped attention", s.c, PAPER, 11)
-    s.pill(360, 262, "sparse attention", s.c, PAPER, 11)
+    x = 26
+    for label in ("faster: KV cache", "multi-query / grouped attention", "sparse attention"):
+        x += s.pill(x, 262, label, s.c, PAPER, 10) + 10
     return s.svg("How a transformer LLM works: tokens, embeddings with position, N transformer blocks, next-token probabilities, repeated")
 
 

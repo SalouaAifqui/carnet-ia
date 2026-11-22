@@ -10,7 +10,7 @@ categories:
 ---
 
 ::: {.synthesis}
-![Three tool calls graded (right, incomplete, forbidden) and the order they were expected in.](/assets/visuals/action-and-tool-use-evaluation.svg){fig-alt="Tool-use evaluation: judge each call&#x27;s tool, arguments, required and forbidden actions, and order"}
+![Three tool calls graded (right, wrong argument, forbidden) and the order they were expected in.](/assets/visuals/action-and-tool-use-evaluation.svg){fig-alt="Tool-use evaluation: judge each call's tool, arguments, required and forbidden actions, and order"}
 :::
 
 ::: {.in30}

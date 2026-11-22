@@ -10,7 +10,7 @@ categories:
 ---
 
 ::: {.synthesis}
-![The basic pipeline: a validator before and after the LLM, and its three possible responses.](/assets/visuals/guardrails-for-llm-apps.svg){fig-alt="Guardrails: validators check the input before the LLM and the output after it, and can block, fix or re-ask"}
+![The basic pipeline: a validator before and after the LLM, which can block, raise an error or re-check.](/assets/visuals/guardrails-for-llm-apps.svg){fig-alt="Guardrails: validators check the input before the LLM and the output after it, and can block, raise an error or re-check"}
 :::
 
 ::: {.in30}

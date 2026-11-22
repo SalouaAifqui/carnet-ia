@@ -10,7 +10,7 @@ categories:
 ---
 
 ::: {.synthesis}
-![Where to intervene, from data up to sampling, and a per-category comparison that reveals a hidden regression.](/assets/visuals/improvement-experiments.svg){fig-alt="Improvement experiments: an intervention hierarchy and a baseline versus candidate comparison by category"}
+![Where to intervene, from data up to sampling, and the shelter example: the same overall score hides a regression.](/assets/visuals/improvement-experiments.svg){fig-alt="Improvement experiments: an intervention hierarchy and a baseline versus candidate comparison by category"}
 :::
 
 ::: {.in30}
