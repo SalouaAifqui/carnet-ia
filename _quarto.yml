@@ -100,7 +100,7 @@ format:
       - assets/theme-dark.scss
     toc: true
     toc-title: On this page
-    toc-location: left
+    toc-location: right
     toc-depth: 2
     grid:
       sidebar-width: 260px

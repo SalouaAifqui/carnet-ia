@@ -649,5 +649,31 @@ body.all-notes #quarto-content > main.content { max-width: 1240px; }
   }
 }
 
+/* ---------- note pages use the whole window: lessons | text | contents and margin notes ----------
+   Quarto's docked grid kept the text at 570px on a 1440px screen, with an empty band on the right.
+   The line names are Quarto's: the sidebar, the text and the margin notes are placed on them.
+   Spare room on very large screens is shared equally on both sides. */
+@mixin note-grid($lessons, $side, $gap, $rail, $text) {
+  body.docked:has(.note-meta) #quarto-content.page-columns,
+  body.docked:has(.note-meta) #quarto-content .page-columns {
+    grid-template-columns:
+      [screen-start] 0 [screen-start-inset page-start page-start-inset body-start-outset] #{$lessons}
+      [body-start] minmax(#{$side}, 1fr)
+      [body-content-start] minmax(0, #{$text}) [body-content-end] #{$gap}
+      [body-end] 0 [body-end-outset] 0 [page-end-inset] #{$rail}
+      [page-end] minmax(#{$side}, 1fr) [screen-end-inset] 0 [screen-end] !important;
+  }
+}
+@media (min-width: 992px) {
+  @include note-grid(212px, 20px, 20px, 180px, 900px);
+  body:has(.note-meta) #quarto-sidebar.sidebar { width: 100%; max-width: none; }
+  body:has(.note-meta) #quarto-margin-sidebar { padding-left: 0; padding-right: 0; }
+  body:has(.note-meta) .column-margin { padding-left: 0; padding-right: 0; }
+}
+@media (min-width: 1200px) { @include note-grid(240px, 28px, 28px, 220px, 900px); }
+@media (min-width: 1400px) { @include note-grid(264px, 36px, 36px, 256px, 920px); }
+/* four cards: 2 x 2, never 3 + 1 */
+@media (min-width: 768px) { body:has(.note-meta) .concepts { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+
 /* ---------- footer ---------- */
 .nav-footer { border-top: 1px solid $line; font-family: $ui; font-size: .875rem; color: $muted; min-height: 64px; }
