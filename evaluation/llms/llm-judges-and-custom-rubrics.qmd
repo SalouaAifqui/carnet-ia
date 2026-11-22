@@ -224,27 +224,6 @@ Now you can sort by score or filter by label to find the responses you want to i
 - Use recorded runs and review the results to compare behavior across cases and models.
 :::
 
-<details class="quiz">
-<summary>Why might the judge use a different model, even a different provider, than the application?</summary>
-
-The judge grades completed runs afterwards, so it can be slower and more capable. A different provider reduces shared biases that would make both models overlook the same problems.
-
-</details>
-
-<details class="quiz">
-<summary>What are the five parts of a custom rubric?</summary>
-
-Role, criteria, inputs, labeled examples, and output instructions.
-
-</details>
-
-<details class="quiz">
-<summary>Why wrap the evaluation code in `suppress_tracing`?</summary>
-
-The judge makes LLM calls too; without it, the grading traces would be recorded alongside the application runs you are evaluating.
-
-</details>
-
 ## Sources {.sources}
 
 - [Lesson: Using an llm judge](https://learn.deeplearning.ai/courses/evaluating-and-improving-agentic-applications/lesson/hl9qj2/using-an-llm-judge)

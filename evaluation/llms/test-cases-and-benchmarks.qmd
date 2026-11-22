@@ -340,27 +340,6 @@ When you save the curated set as a benchmark, you can use it again as the applic
 - Keep benchmark cases and judgments stable so comparisons over time stay fair.
 :::
 
-<details class="quiz">
-<summary>What three things does every test case keep together?</summary>
-
-The user request, the relevant context or records, and the expected outcome.
-
-</details>
-
-<details class="quiz">
-<summary>You already have a case where the volunteer's experience is missing. Is a case where the dog's handling notes are missing redundant?</summary>
-
-No. It checks a different gap: handling missing volunteer information correctly says nothing about missing dog information. A case that only changes the volunteer's name would be redundant.
-
-</details>
-
-<details class="quiz">
-<summary>The agent passes 98 easy cases and fails the only 2 difficult ones. What does the 98% tell you?</summary>
-
-Performance on the benchmark you built, not the production rate, and it hides that every hard case failed: look at difficult cases separately.
-
-</details>
-
 ## Sources {.sources}
 
 - [Lesson: Turn requirements into test cases](https://learn.deeplearning.ai/courses/evaluating-and-improving-agentic-applications/lesson/sh7zq0bk/turn-requirements-into-test-cases)

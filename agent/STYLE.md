@@ -14,10 +14,9 @@ Every note has the same skeleton, so a reader always knows where they are:
 5. **Parts**: one idea per `##`, each with an example, a diagram or a comparison (writers).
 6. **Margin notes**: warnings and definitions in the margin, at most one per part (writers).
 7. **Remember**: a green `callout-tip`, 3 to 5 bullets a reader can apply (editor).
-8. **Check yourself**: 2 or 3 `<details class="quiz">` questions (editor; the heading is added at render).
-9. **Sources**: `## Sources {.sources}`, folded on the site as "Sources (n)" (code).
+8. **Sources**: `## Sources {.sources}`, folded on the site as "Sources (n)" (code).
 
-The header, the visual, In 30 seconds, the cards, Remember, the questions, the sources and the menus
+The header, the visual, In 30 seconds, the cards, Remember, the sources and the menus
 are built by the editor, the illustrator and code: writers only write their part.
 
 ## Tone
@@ -29,6 +28,7 @@ are built by the editor, the illustrator and code: writers only write their part
 - Only knowledge that lasts: concepts, patterns, current APIs.
 - Keep the source's important details: numbers, conditions, caveats, steps, named tools.
 - **Code is always the current, working version.** If the source uses an old API, write the current one.
+- No quizzes or self-check questions.
 - Never invent facts, numbers, function names or URLs. Never cite this website or its repository.
 - Examples from the source go inside the part they illustrate.
 

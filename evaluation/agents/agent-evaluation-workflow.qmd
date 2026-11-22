@@ -270,27 +270,6 @@ Once people use the application, do not stop evaluating. New failures will appea
 - Keep evaluating after changes and after deployment.
 :::
 
-<details class="quiz">
-<summary>The Northwind agent says a merino sweater can be tumble dried. How do you find out it was invented?</summary>
-
-Read the trace and compare the answer with the data the agent received: the product information only mentions a wool wash cycle, nothing about drying.
-
-</details>
-
-<details class="quiz">
-<summary>Do you need to see the agent fail before writing a requirement?</summary>
-
-No. A policy can already say what counts as wrong, like the shelter rule that a volunteer with a do-not-adopt flag must not be matched with any dog.
-
-</details>
-
-<details class="quiz">
-<summary>What three things should a rubric spell out?</summary>
-
-What information you will check, what counts as success, and what counts as failure, separated per requirement when needed.
-
-</details>
-
 ## Sources {.sources}
 
 - [Lesson: A conversation between laurie voss and andrew ng](https://learn.deeplearning.ai/courses/evaluating-and-improving-agentic-applications/lesson/53tpudpi/a-conversation-between-laurie-voss-and-andrew-ng)

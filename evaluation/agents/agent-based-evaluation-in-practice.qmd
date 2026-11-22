@@ -248,27 +248,6 @@ Also, prompt testing and prompt iterations are likely to go away in the next one
 - In multi-agent systems, interaction effects matter as much as individual capability.
 :::
 
-<details class="quiz">
-<summary>What can an agent judge do that a simple LLM judge often misses?</summary>
-
-Look at the whole trajectory (turns, reasoning path, steps), adapt its criteria, decide how deep to go, and trigger fixes.
-
-</details>
-
-<details class="quiz">
-<summary>What is a "slop loop"?</summary>
-
-One weak judgment from an agent judge leading to more weak judgments, until the evals flag problems that may not exist. Human judgment keeps the evals accurate.
-
-</details>
-
-<details class="quiz">
-<summary>You want to know whether giving the agent CLI tooling helped. What do you keep fixed?</summary>
-
-The model and the context: change only the harness, so any difference comes from it.
-
-</details>
-
 ## Sources {.sources}
 
 - [Lesson: A conversation with aparna dhinakaran, co founder of arize ai](https://learn.deeplearning.ai/courses/evaluating-and-improving-agentic-applications/lesson/mo0gyiw/a-conversation-with-aparna-dhinakaran%2C-co-founder-of-arize-ai)

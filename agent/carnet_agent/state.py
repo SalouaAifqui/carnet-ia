@@ -206,11 +206,6 @@ class ConceptCard(BaseModel):
     text: str = Field(description="One or two sentences.")
 
 
-class QuizItem(BaseModel):
-    question: str = Field(description="A short question a reader can answer after reading the page.")
-    answer: str = Field(description="The answer, in one to three sentences, from the page.")
-
-
 def _words(text: str) -> int:
     return len(re.sub(r"[*`_]", "", text).split())
 
@@ -222,7 +217,6 @@ class Synthesis(BaseModel):
         "with 'This page explains'."))
     concepts: list[ConceptCard] = Field(description="3 or 4 key concepts, defined without repeating the bullets.")
     remember: list[str] = Field(description="3 to 5 takeaways that can be applied as they are.")
-    quiz: list[QuizItem] = Field(description="2 or 3 questions to check understanding, with their answers.")
     visual_caption: str = Field(description="One English sentence under the synthesis visual: what it shows.")
 
     # Checked in code: a wrong answer is sent back to the model (core.ask retries on ValueError).
@@ -250,11 +244,4 @@ class Synthesis(BaseModel):
     def _three_to_five(cls, v):
         if not 3 <= len(v) <= 5:
             raise ValueError(f"remember needs 3 to 5 bullets, got {len(v)}")
-        return v
-
-    @field_validator("quiz")
-    @classmethod
-    def _two_or_three(cls, v):
-        if not 2 <= len(v) <= 3:
-            raise ValueError(f"quiz needs 2 or 3 questions, got {len(v)}")
         return v

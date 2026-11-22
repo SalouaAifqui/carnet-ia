@@ -212,27 +212,6 @@ print(text)
 - KV cache and attention variants reduce inference cost, especially for long generations.
 :::
 
-<details class="quiz">
-<summary>Why does a transformer need positional information?</summary>
-
-Attention alone does not know the order of tokens: positional information tells the model where each token appears in the sequence.
-
-</details>
-
-<details class="quiz">
-<summary>In self-attention, what are the query, the key and the value?</summary>
-
-The query is what a token is looking for, the key what it offers to others, the value the information passed along if it is relevant. Queries are compared with keys to blend the values.
-
-</details>
-
-<details class="quiz">
-<summary>What does a KV cache avoid recomputing?</summary>
-
-The keys and values of earlier tokens: they are stored during generation and reused at each new step.
-
-</details>
-
 ## Sources {.sources}
 
 - [How Transformer LLMs Work](https://www.deeplearning.ai/courses/how-transformer-llms-work)

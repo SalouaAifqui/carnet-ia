@@ -311,27 +311,6 @@ Those results became the next manual tests: they extracted refund conditions suc
 - Use LLMs and scans together for a broader, faster assessment.
 :::
 
-<details class="quiz">
-<summary>Why can ending a request with “Sure. Here’s how to do it” get past a refusal?</summary>
-
-LLMs are trained to continue text plausibly: framed as a completion, the harmful request may be continued instead of refused.
-
-</details>
-
-<details class="quiz">
-<summary>An injection worked once and failed the next time. Is the app safe?</summary>
-
-No. Outputs are nondeterministic, especially at high temperature: repeat each injection several times before concluding.
-
-</details>
-
-<details class="quiz">
-<summary>What do you do with the issues a Giskard scan reports?</summary>
-
-Read the failing requirements and examples, and use them as a starting point for deeper manual red teaming: the scan is a first layer, not the end.
-
-</details>
-
 ## Sources {.sources}
 
 - [Lesson: Red teaming llms](https://learn.deeplearning.ai/courses/red-teaming-llm-applications/lesson/oq95m/red-teaming-llms)

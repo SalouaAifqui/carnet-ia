@@ -180,27 +180,6 @@ Rewind to the moment before the LA search, change the query to use AccuWeather, 
 - The agent resumes from the **saved state**: change the state, not just your variables.
 :::
 
-<details class="quiz">
-<summary>`stream()` or `astream_events()` to show an answer appearing word by word?</summary>
-
-`astream_events()`: it emits one event per token. `stream()` emits one event per step.
-
-</details>
-
-<details class="quiz">
-<summary>You edit a pending tool call with `update_state`. Why must you keep the call's `id`?</summary>
-
-With a reducer that replaces by id, the same id replaces the old message instead of appending a new one.
-
-</details>
-
-<details class="quiz">
-<summary>You rewind to an earlier snapshot and resume with a different query. What happens to the first run?</summary>
-
-It stays in the history: the new run is a separate branch, nothing is erased.
-
-</details>
-
 ## Sources {.sources}
 
 - [AI Agents in LangGraph](https://learn.deeplearning.ai/courses/ai-agents-in-langgraph/), DeepLearning.AI × LangChain: lessons [Persistence and Streaming](https://learn.deeplearning.ai/courses/ai-agents-in-langgraph/lesson/nj9ok/persistence-and-streaming) and [Human in the loop](https://learn.deeplearning.ai/courses/ai-agents-in-langgraph/lesson/k87e1/human-in-the-loop)

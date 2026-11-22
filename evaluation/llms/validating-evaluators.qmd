@@ -204,27 +204,6 @@ flowchart LR
 - Change one thing at a time, then revalidate on fresh held-out data.
 :::
 
-<details class="quiz">
-<summary>10 reviewed shelter cases: 9 SAFE, 1 UNSAFE. The judge labels everything SAFE. Is 9 out of 10 good?</summary>
-
-No. It missed the only unsafe case: recall on UNSAFE is zero. It just picked the most common label.
-
-</details>
-
-<details class="quiz">
-<summary>For the safe-matching judge, precision or recall first?</summary>
-
-Recall on UNSAFE: a missed unsafe match can put a volunteer or a dog at risk, while a false alarm only costs extra review.
-
-</details>
-
-<details class="quiz">
-<summary>You fixed the rubric using a disagreement case. Can that case still validate the new version?</summary>
-
-No. It has influenced the evaluator; test the revised rubric on fresh reviewed cases.
-
-</details>
-
 ## Sources {.sources}
 
 - [Lesson: Validating llm judges](https://learn.deeplearning.ai/courses/evaluating-and-improving-agentic-applications/lesson/79ywrq/-validating-llm-judges)

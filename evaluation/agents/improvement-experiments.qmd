@@ -299,27 +299,6 @@ Whatever layer you change, use the same discipline: make a change you have reaso
 - Fix the lowest-level cause that matches the evidence.
 :::
 
-<details class="quiz">
-<summary>You change the prompt and the model in the same experiment. What is the problem?</summary>
-
-You cannot tell which change produced the result. Keep the model, cases, evaluators and the rest of the configuration fixed, and change one thing.
-
-</details>
-
-<details class="quiz">
-<summary>Why keep known-good cases next to the failure cases?</summary>
-
-To catch regressions: a change can fix the target failures and still break behaviour that was already working.
-
-</details>
-
-<details class="quiz">
-<summary>Atlas pulls hard, but the experienced-handler field is blank. Which layer do you fix?</summary>
-
-The data: fill the field from the notes (the data-entry or processing rule), rather than asking the prompt to compensate.
-
-</details>
-
 ## Sources {.sources}
 
 - [Lesson: Planning an improvement test](https://learn.deeplearning.ai/courses/evaluating-and-improving-agentic-applications/lesson/k2csh8/planning-an-improvement-test)

@@ -281,15 +281,6 @@ svg .cluster .nodeLabel, svg .cluster-label .nodeLabel, svg .cluster-label span,
   color: $muted !important; fill: $muted !important; font-weight: 600; font-size: .85em;
 }
 
-/* ---------- Check yourself ---------- */
-details.quiz {
-  border: 1px solid $line; border-radius: 12px; padding: 0 1.1rem; margin: .6rem 0; background: $paper;
-  font-size: 1rem;
-  summary { cursor: pointer; font-weight: 600; min-height: 52px; padding: .85rem 0; line-height: 1.45; }
-  &[open] summary { margin-bottom: .25rem; }
-  p { margin: 0 0 1rem; color: $muted; font-size: .94rem; line-height: 1.6; }
-}
-
 /* ---------- Sources (n), folded ---------- */
 details.sources-fold {
   margin-top: 2.5rem; border-top: 1px solid $line; padding-top: .5rem;

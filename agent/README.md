@@ -40,7 +40,7 @@ flowchart LR
     R --> H{{"⏸ tu valides<br/>plan + faits"}}
     H --> W["🧠 2. rédacteurs<br/>une partie chacun,<br/>en parallèle"]
     W --> C["🧠 3. vérificateur<br/>détails oubliés ?"]
-    C --> E["🧠 4. éditeur<br/>In 30 seconds, notions,<br/>Remember, questions"]
+    C --> E["🧠 4. éditeur<br/>In 30 seconds, notions,<br/>Remember"]
     E --> I["🧠 7. illustrateur<br/>visuel SVG,<br/>validé par le code"]
     I --> M["🔧 assemblage<br/>insère dans la page"]
     M --> P["🔧 5. Pull Request<br/>+ aperçu web"]
@@ -55,9 +55,9 @@ flowchart LR
 | ⏸ | **Ta validation** | toi | le plan affiché sur l'issue | `/approve`, `/approve F1 F3`, `/approve all`, `/replan …`, `/cancel` | — | `hitl.py` |
 | 2 | **Rédacteur** (un par partie) | 🧠 | **seulement les morceaux de sa partie**, le plan de la page, les faits approuvés, le guide de style, et la partie existante s'il la complète | le texte de **sa** partie | gpt-5.4-mini | `article.py` → `write_part` |
 | 3 | **Vérificateur** | 🧠 | la partie écrite + **ses** morceaux | la liste des détails importants oubliés. S'il y en a, le rédacteur les **ajoute** en une seule passe ciblée (pas de réécriture complète). | gpt-5.4-nano | `article.py` → `write_part` |
-| 4 | **Éditeur** | 🧠 | les titres et débuts des parties (pas leur texte complet) | « In 30 seconds » (3 puces de 25 mots max), 3 ou 4 notions, « Remember » (3 à 5 puces), 2 ou 3 questions « Check yourself », la légende du visuel | gpt-5.4-mini | `article.py` → `edit` |
+| 4 | **Éditeur** | 🧠 | les titres et débuts des parties (pas leur texte complet) | « In 30 seconds » (3 puces de 25 mots max), 3 ou 4 notions, « Remember » (3 à 5 puces), la légende du visuel | gpt-5.4-mini | `article.py` → `edit` |
 | 7 | **Illustrateur** | 🧠 + 🔧 | le titre, le thème, l'idée de visuel du plan, les 3 puces, les titres des parties (**jamais la source**) | un SVG `assets/visuals/<slug>.svg`, validé par le code. Un nouvel essai s'il est refusé, sinon pas de visuel et un avertissement dans la PR. En mise à jour, le visuel existant est gardé, sauf si le plan dit `visual: new`. Pas de visuel pour une carte d'outil. | celui de l'éditeur | `article.py` → `illustrate`, `illustrator.py` |
-| — | **Assemblage** | 🔧 code | la page existante + les nouvelles parties | la page finale, dans l'ordre visuel → In 30 seconds → notions → parties → Remember → Check yourself → Sources (un ancien `.tldr` devient `.in30`) : les parties **insérées à leur place**, les autres **gardées à l'identique**, les sources fusionnées | — | `article.py` → `assemble` |
+| — | **Assemblage** | 🔧 code | la page existante + les nouvelles parties | la page finale, dans l'ordre visuel → In 30 seconds → notions → parties → Remember → Sources (un ancien `.tldr` devient `.in30`) : les parties **insérées à leur place**, les autres **gardées à l'identique**, les sources fusionnées | — | `article.py` → `assemble` |
 | 5 | **Publication** | 🔧 code | la page | une branche, une Pull Request, et l'**aperçu** de la page sur le site | — | `publish.py` |
 
 Les rédacteurs des différentes parties travaillent **en parallèle** (un fil d'exécution par partie), d'où une page écrite en quelques dizaines de secondes.
@@ -203,7 +203,7 @@ Un modèle par rôle, modifiable par variable d'environnement, sans toucher au c
 | `CARNET_MODEL_PLAN` | bibliothécaire, plan de cours | `openai:gpt-5.4-mini` |
 | `CARNET_MODEL_WRITE` | rédiger les parties | `openai:gpt-5.4-mini` |
 | `CARNET_MODEL_CHECK` | vérifier les détails | `openai:gpt-5.4-nano` |
-| `CARNET_MODEL_EDIT` | In 30 seconds, notions, Remember, questions | `openai:gpt-5.4-mini` |
+| `CARNET_MODEL_EDIT` | In 30 seconds, notions, Remember | `openai:gpt-5.4-mini` |
 | `ILLUSTRATOR_MODEL` | dessiner le visuel de synthèse | celui de l'éditeur |
 | `CARNET_MODEL_RESEARCH` | proposer des faits web | `openai:gpt-5.4-nano` |
 

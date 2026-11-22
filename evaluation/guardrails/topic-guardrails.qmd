@@ -223,27 +223,6 @@ flowchart LR
 - A threshold-based validator turns topic scores into a practical safety rule.
 :::
 
-<details class="quiz">
-<summary>In zero-shot topic classification, what are the premise and the hypothesis?</summary>
-
-The premise is the input text; the hypothesis is the topic claim, such as “This sentence above contains discussions of the following topics: …”.
-
-</details>
-
-<details class="quiz">
-<summary>GPT-4o-mini classified the same sentence ten times. What happened, and why does it matter for a guard?</summary>
-
-It said **food** nine times and **business** once, with no detailed scores: an LLM classifier is stochastic, which is a problem for strict gating.
-
-</details>
-
-<details class="quiz">
-<summary>The guarded pizzeria bot's answer mentions Ford F-150 trucks. What does the user get?</summary>
-
-A validation error instead of the raw text, which the app can catch and handle more gracefully.
-
-</details>
-
 ## Sources {.sources}
 
 - [Lesson: Keeping a chatbot on topic](https://learn.deeplearning.ai/courses/safe-and-reliable-ai-via-guardrails/lesson/xi8uo/keeping-a-chatbot-on-topic)

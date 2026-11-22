@@ -298,27 +298,6 @@ After you record the assessment, you can then practice the process in a lab and 
 - If you cannot tell, mark the case unresolved.
 :::
 
-<details class="quiz">
-<summary>The trace shows no inventory lookup span. Did the agent skip the inventory check?</summary>
-
-Not necessarily. First check that the lookup was instrumented: a trace only contains what your setup recorded.
-
-</details>
-
-<details class="quiz">
-<summary>A customer waited too long. Where in the trace do you look?</summary>
-
-At the start and end times of the spans, to see whether the delay came from the model call or from a tool such as the order lookup.
-
-</details>
-
-<details class="quiz">
-<summary>Why count passing runs when ranking failure groups by frequency?</summary>
-
-Frequency is measured over all the runs checked for that problem; counting only failures makes it look more or less common than it is.
-
-</details>
-
 ## Sources {.sources}
 
 - [Lesson: Traces](https://learn.deeplearning.ai/courses/evaluating-and-improving-agentic-applications/lesson/gy3a4e/traces)

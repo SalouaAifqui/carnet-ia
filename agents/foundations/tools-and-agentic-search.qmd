@@ -275,27 +275,6 @@ Given `TavilySearch` as a tool and asked *"What's the weather in SF?"*, an agent
 - Agentic search gives agents fresh facts and citable sources, in a format made for models.
 :::
 
-<details class="quiz">
-<summary>The model only ever sees three things about a tool. Which ones?</summary>
-
-Its **name**, its **description** (the docstring) and its **arguments** (from the type hints). That is why a clear name and docstring matter.
-
-</details>
-
-<details class="quiz">
-<summary>Why must the code that runs tools loop over all `tool_calls`?</summary>
-
-Because the model can ask for several independent tools in one turn (parallel calls), for example the weather in SF and in LA.
-
-</details>
-
-<details class="quiz">
-<summary>What does an agentic search tool do before returning anything?</summary>
-
-It decomposes the question, routes each part to the best source, extracts the relevant chunks, then scores and filters the results, and returns structured JSON.
-
-</details>
-
 ## Sources {.sources}
 
 - [AI Agents in LangGraph](https://learn.deeplearning.ai/courses/ai-agents-in-langgraph/)

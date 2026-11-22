@@ -188,27 +188,6 @@ Skills are useful when you want a workflow to stay the same each time. If a task
 - Skills guide how to use tools, MCP, and sub-agents.
 :::
 
-<details class="quiz">
-<summary>What must a `SKILL.md` file contain?</summary>
-
-The skill's **name** and **description** (required, usually in YAML at the top) and the main instructions, which can point to other files in the same folder.
-
-</details>
-
-<details class="quiz">
-<summary>When is `budget_reallocation_rules.md` loaded in the campaign-analysis skill?</summary>
-
-Only when the user asks about budget reallocation: that is progressive disclosure. The rest of the time, only the skill's name and description are in context.
-
-</details>
-
-<details class="quiz">
-<summary>Tools, MCP, sub-agents, skills: which one gives the repeatable workflow?</summary>
-
-Skills. Tools give capabilities, MCP brings external data and systems, sub-agents handle isolated or parallel work.
-
-</details>
-
 ## Sources {.sources}
 
 - [Lesson: Introduction](https://learn.deeplearning.ai/courses/agent-skills-with-anthropic/lesson/ldn5c3/introduction)

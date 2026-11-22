@@ -220,27 +220,6 @@ The optimizer reads each `when_to_update` to decide **which** prompts the feedba
 - Behaviour changes by **adding data**, not by changing code.
 :::
 
-<details class="quiz">
-<summary>Why put the user id in the namespace?</summary>
-
-So users never see each other's memories: the namespace works like a folder path, one per user.
-
-</details>
-
-<details class="quiz">
-<summary>Tom's email is stored once with the label *ignore*. What happens to a similar email from another user?</summary>
-
-It is still answered (**respond**): episodic examples are stored per user, so they only change that user's triage.
-
-</details>
-
-<details class="quiz">
-<summary>What does the prompt optimizer read to decide which prompts a piece of feedback concerns?</summary>
-
-Each prompt's `when_to_update`. It then applies `update_instructions` to rewrite only those prompts.
-
-</details>
-
 ## Sources {.sources}
 
 - [Long-Term Agentic Memory with LangGraph](https://www.deeplearning.ai/courses/long-term-agentic-memory-with-langgraph), DeepLearning.AI × LangChain: lessons [Semantic Memory](https://learn.deeplearning.ai/courses/long-term-agentic-memory-with-langgraph/lesson/oeqme/email-assistant-with-semantic-memory), [Semantic + Episodic Memory](https://learn.deeplearning.ai/courses/long-term-agentic-memory-with-langgraph/lesson/ucvjj/email-assistant-with-semantic-%2B-episodic-memory) and [Semantic + Episodic + Procedural Memory](https://learn.deeplearning.ai/courses/long-term-agentic-memory-with-langgraph/lesson/uubkz/email-assistant-with-semantic-%2B-episodic-%2B-procedural-memory)

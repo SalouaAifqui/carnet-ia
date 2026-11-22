@@ -97,27 +97,6 @@ All three live in the store. They differ in **what** is saved and **where it is 
 - These patterns apply to any agent, not just email.
 :::
 
-<details class="quiz">
-<summary>An agent should remember a week later that *"Jim is my friend"*. Checkpointer or store?</summary>
-
-The **store**: it holds long-term memories across threads. The checkpointer only keeps one conversation, per `thread_id`.
-
-</details>
-
-<details class="quiz">
-<summary>Facts, examples, instructions: where does each kind of memory end up being used?</summary>
-
-Facts (semantic) are searched by a tool, examples (episodic) are inserted into a prompt as few-shot examples, and instructions (procedural) *become* the prompt.
-
-</details>
-
-<details class="quiz">
-<summary>What does writing memories in the background cost, compared with the hot path?</summary>
-
-Two components to run, and memories arrive later. In exchange, replies are faster and concerns are separated.
-
-</details>
-
 ## Sources {.sources}
 
 - [Long-Term Agentic Memory with LangGraph](https://www.deeplearning.ai/courses/long-term-agentic-memory-with-langgraph), DeepLearning.AI × LangChain, taught by Harrison Chase: lesson [Introduction to Agent Memory](https://learn.deeplearning.ai/courses/long-term-agentic-memory-with-langgraph/lesson/mp33x/introduction-to-agent-memory)

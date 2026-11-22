@@ -210,27 +210,6 @@ At the end of the course, you can also share feedback by clicking **Course Feedb
 - Your PII policy should be based on what is sensitive for your app, not a one-size-fits-all list.
 :::
 
-<details class="quiz">
-<summary>Name the two directions in which an LLM app can leak PII.</summary>
-
-Input leakage (user data sent to a third-party model or stored in logs) and output leakage (the model's response shows personal data to a user).
-
-</details>
-
-<details class="quiz">
-<summary>The user typed nothing sensitive. Can the output still contain PII?</summary>
-
-Yes: the model can generate PII-looking text such as phone numbers. Validate the output stream before rendering it.
-
-</details>
-
-<details class="quiz">
-<summary>What do Presidio's analyzer and anonymizer each do?</summary>
-
-The analyzer detects entities (person, phone number, date time…); the anonymizer replaces them with safe text while keeping the sentence usable.
-
-</details>
-
 ## Sources {.sources}
 
 - [Lesson: Ensuring no personal identifiable information (pii](https://learn.deeplearning.ai/courses/safe-and-reliable-ai-via-guardrails/lesson/wjgpn/ensuring-no-personal-identifiable-information-(pii)

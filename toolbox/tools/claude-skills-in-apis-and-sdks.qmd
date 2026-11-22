@@ -289,27 +289,6 @@ In the Messages API, skills need the Code Execution tool and the Files API. The 
 - Built-in skills and custom skills can be combined in one task.
 :::
 
-<details class="quiz">
-<summary>Your skill works in Claude Desktop. Why does it fail through the Messages API?</summary>
-
-Skills are not shared across environments, and the API needs its own setup: upload the skill, add the code execution tool, the Files API and the beta headers.
-
-</details>
-
-<details class="quiz">
-<summary>How do you get the file the agent generated in the API container?</summary>
-
-Take the returned `file_id` and download the file with the Files API.
-
-</details>
-
-<details class="quiz">
-<summary>A subagent cannot use WebFetch. What did you forget?</summary>
-
-To list the tool in the main agent's `allowed_tools`: the main agent must allow every tool that it and its subagents need.
-
-</details>
-
 ## Sources {.sources}
 
 - [Lesson: Skills with the claude api](https://learn.deeplearning.ai/courses/agent-skills-with-anthropic/lesson/3sq9za/skills-with-the-claude-api)

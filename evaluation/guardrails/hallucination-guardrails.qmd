@@ -158,27 +158,6 @@ A useful detail: a sentence can be **true** and still fail the guard if it is **
 - Use a validator for testing, and a guard for production enforcement.
 :::
 
-<details class="quiz">
-<summary>"The sun is a star" is true. Why does the guard reject it?</summary>
-
-Because it is not grounded: the trusted sources only support statements like “the sun rises in the east” or “the sun is hot”. Groundedness means supported by the sources, not true in general.
-
-</details>
-
-<details class="quiz">
-<summary>What are the three steps of the NLI validator pipeline?</summary>
-
-Split the output into sentences, retrieve the most relevant source chunks with embeddings and cosine similarity, then run NLI on each claim against that evidence.
-
-</details>
-
-<details class="quiz">
-<summary>When do you use the validator directly, and when a guard?</summary>
-
-The validator for testing and debugging; a guard in production, where it can combine checks, validate streams, and handle logging and errors.
-
-</details>
-
 ## Sources {.sources}
 
 - [Lesson: Checking for hallucinations with natural language inference](https://learn.deeplearning.ai/courses/safe-and-reliable-ai-via-guardrails/lesson/p1nyu/checking-for-hallucinations-with-natural-language-inference-)

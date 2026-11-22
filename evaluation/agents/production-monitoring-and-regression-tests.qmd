@@ -207,27 +207,6 @@ This creates a continuous loop: production reveals something your tests missed, 
 - Your eval set should grow with real traffic.
 :::
 
-<details class="quiz">
-<summary>An evaluator flags 37 shelter conversations. What does that number tell you, and what does it not?</summary>
-
-That there is a problem and where to look. Not the pattern: you open a few traces to see whether the agent skipped a check, used a wrong argument, ignored a result, or reasoned wrongly.
-
-</details>
-
-<details class="quiz">
-<summary>Why keep the user's exact wording when you turn a production failure into a test?</summary>
-
-Because the wording is often the cause: "Can I get my money back?" was missed because it never says "refund".
-
-</details>
-
-<details class="quiz">
-<summary>You fixed the new case. Why run the whole benchmark again?</summary>
-
-To protect the older cases: explicit refund requests must still work, and ordinary product questions must not start looking like refunds.
-
-</details>
-
 ## Sources {.sources}
 
 - [Lesson: Improving agents after deployment](https://learn.deeplearning.ai/courses/evaluating-and-improving-agentic-applications/lesson/zqwvtn/improving-agents-after-deployment)

@@ -6,7 +6,6 @@ Carnet IA reading layout, applied to every page at render time. The .qmd sources
 - `::: {.code-step title="…"}` around a code block → a numbered, folded <details>
   (title + language). Numbering restarts at each H2; only the last step of a section is open,
   unless a step says open="true" or open="false".
-- A "Check yourself" H2 before the first <details class="quiz">, unless one is already there.
 - `## Sources {.sources}` + its list → a folded "Sources (n)" block.
 - `.lesson-meta` divs (kept in the sources for the agent) are dropped: the meta line replaces them.
 ]]
@@ -121,23 +120,7 @@ local function transform_code_steps(blocks)
   return out
 end
 
--- ---------- check yourself, sources ----------
-
-local function is_quiz(block)
-  return block.t == "RawBlock" and block.format:match("html") and block.text:match('^%s*<details[^>]*class="quiz"')
-end
-
-local function add_check_yourself(blocks)
-  for i, block in ipairs(blocks) do
-    if is_quiz(block) then
-      local prev = blocks[i - 1]
-      if prev and prev.t == "Header" then return blocks end
-      table.insert(blocks, i, pandoc.Header(2, "Check yourself", pandoc.Attr("check-yourself", { "check-yourself" })))
-      return blocks
-    end
-  end
-  return blocks
-end
+-- ---------- sources ----------
 
 local function fold_sources(blocks)
   for i, block in ipairs(blocks) do
@@ -164,7 +147,6 @@ function Pandoc(doc)
     end
   end
   blocks = transform_code_steps(blocks)
-  blocks = add_check_yourself(blocks)
   blocks = fold_sources(blocks)
 
   local key = current_key()

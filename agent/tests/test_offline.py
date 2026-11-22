@@ -24,7 +24,7 @@ from carnet_agent.site import (check_page, find_block, split_front_matter, split
                                split_sources)
 from carnet_agent.state import (ArticlePlan, ConceptCard, CoursePlan, Finding, Findings,  # noqa: E402
                                 LessonNotes, MissingDetails, PlannedPage, Query, ResearchPlan, Route,
-                                QuizItem, SectionPlan, Synthesis)
+                                SectionPlan, Synthesis)
 
 REPO = Path(__file__).resolve().parents[2]
 SOURCE = "https://source.example.com/article"
@@ -96,8 +96,6 @@ SYNTHESIS = Synthesis(
     concepts=[ConceptCard(name="Guardrail", text="A check."), ConceptCard(name="Validator", text="A rule."),
               ConceptCard(name="Guard", text="A wrapper.")],
     remember=["Check inputs.", "Check outputs.", "Log what you block."],
-    quiz=[QuizItem(question="Where do checks run?", answer="Before and after the model."),
-          QuizItem(question="What does a guard wrap?", answer="Validators.")],
     visual_caption="Checks before and after the model.")
 
 # A small visual in the grammar of reference/vis.py, and two broken ones.
@@ -275,8 +273,9 @@ def test_article_create_with_pause_and_research():
     assert [u for _, u in split_sources(body)[1]] == [SOURCE, "https://docs.example.com/guard"]
     assert final["check_errors"] == [], final["check_errors"]
     order = [body.index(m) for m in ["::: {.synthesis}", "::: {.in30}", "::: {.concepts}", "## Why validate",
-                                     "## Inputs", "## Remember", '<details class="quiz">', "## Sources"]]
-    assert order == sorted(order), "visual, In 30 seconds, cards, parts, Remember, Check yourself, Sources"
+                                     "## Inputs", "## Remember", "## Sources"]]
+    assert order == sorted(order), "visual, In 30 seconds, cards, parts, Remember, Sources"
+    assert "<details" not in body, "no Check yourself questions"
     assert "{.tldr}" not in body and "lesson-meta" not in body
     assert fm["image"] == "/assets/visuals/validating-inputs.svg" and "(/assets/visuals/validating-inputs.svg)" in body
     assert (root / "assets/visuals/validating-inputs.svg").read_text().startswith("<svg xmlns=")
@@ -331,8 +330,7 @@ def test_article_update_keeps_existing_content():
     assert drawer.calls == [] and fm["image"] == old_fm["image"], "an update keeps the page's visual"
     assert body.count("::: {.synthesis}") == 1 and "Checks before and after the model." not in body, \
         "the kept visual keeps its caption"
-    assert body.count('<details class="quiz">') == 2 and "Where do checks run?" in body, "questions replaced, not added"
-    assert body.index("## Remember") < body.index('<details class="quiz">') < body.index("## Sources")
+    assert "<details" not in body and body.index("## Remember") < body.index("## Sources"), "no questions"
     print("✓ update: existing parts kept byte for byte, one part extended, one inserted at its place")
 
 

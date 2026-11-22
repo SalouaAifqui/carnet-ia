@@ -155,20 +155,6 @@ Parsing text with a regex is fragile. Modern models solve this with **native too
 - Always cap the loop and validate the action before running it.
 :::
 
-<details class="quiz">
-<summary>Who actually runs the tool: the LLM or your code?</summary>
-
-Your code. The model only returns which action to take and its input; the runtime checks it exists, runs it and sends back the observation.
-
-</details>
-
-<details class="quiz">
-<summary>Why cap the loop with `max_turns`?</summary>
-
-So a confused model can never loop forever, burning tokens and time.
-
-</details>
-
 ## Sources {.sources}
 
 - [AI Agents in LangGraph](https://learn.deeplearning.ai/courses/ai-agents-in-langgraph/)

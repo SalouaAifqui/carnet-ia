@@ -303,27 +303,6 @@ You can score the skill, inspect its outputs, check file formats and order, and 
 - Test the skill before shipping it.
 :::
 
-<details class="quiz">
-<summary>Why do the name and description matter so much?</summary>
-
-The agent uses them to decide what the skill does and when to use it: they trigger the skill. Include the keywords that should trigger it, and stay within the character limits.
-
-</details>
-
-<details class="quiz">
-<summary>Your skill's interpretation guide is long. Where does it go?</summary>
-
-In `references/` (for example `interpretation.md`), linked from `SKILL.md`, so it is loaded only when needed. Templates go in `assets/`, repeatable logic in `scripts/`.
-
-</details>
-
-<details class="quiz">
-<summary>Name three things a review of a skill should check.</summary>
-
-The **order** of the steps, the **outputs** and file locations, and the **conventions** (naming, formatting, flags), then behaviour across models.
-
-</details>
-
 ## Sources {.sources}
 
 - [Lesson: Creating custom skills](https://learn.deeplearning.ai/courses/agent-skills-with-anthropic/lesson/txwyf5/creating-custom-skills)

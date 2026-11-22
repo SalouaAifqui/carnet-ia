@@ -205,27 +205,6 @@ flowchart TD
 - Different validators suit different kinds of checks.
 :::
 
-<details class="quiz">
-<summary>The Alfredo's Pizza Cafe bot has a system prompt and RAG. Why does it still need guardrails?</summary>
-
-It still invents a Veggie Supreme recipe that is not in its documents, and drifts into off-topic answers. Prompting and retrieval reduce such failures but cannot rule them out.
-
-</details>
-
-<details class="quiz">
-<summary>A phone number in the user's message: input check or output check?</summary>
-
-Both are possible for PII: check the input before it reaches the LLM (and the backend), and the output so the model never leaks private data.
-
-</details>
-
-<details class="quiz">
-<summary>What three benefits do guardrails bring?</summary>
-
-They enforce constraints that must never be broken, measure undesirable behaviour, and contain cascading errors.
-
-</details>
-
 ## Sources {.sources}
 
 - [Lesson: Introduction](https://learn.deeplearning.ai/courses/safe-and-reliable-ai-via-guardrails/lesson/rz5a6/introduction)

@@ -12,8 +12,8 @@
 2. writer (write model): writes ONE part from ITS chunks only.
 3. checker (check model): compares the part with its chunks; missing details are added in one
    targeted pass (no full rewrite).
-4. editor (edit model): writes "In 30 seconds", the key concepts, "Remember", the Check yourself
-   questions and the caption of the visual. Parts are inserted into an existing page by CODE, so
+4. editor (edit model): writes "In 30 seconds", the key concepts, "Remember"
+   and the caption of the visual. Parts are inserted into an existing page by CODE, so
    nothing already there is lost.
 7. illustrator (illustrate model): draws the synthesis visual (SVG) from the title, the visual idea,
    the In-30-seconds bullets and the part titles, never from the source. Code validates it; one
@@ -38,7 +38,7 @@ from .chunks import chunk_text, fingerprint, numbered, remap
 from .config import MAX_QUERIES, RESEARCH, TOPICS
 from .core import Services, ask, clean_markdown, feedback_block, text_of, validate_route
 from .illustrator import illustrate
-from .site import (add_in_practice, check_page, describe_site, drop_quiz, ensure_listed, find_block, is_self,
+from .site import (add_in_practice, check_page, describe_site, ensure_listed, find_block, is_self,
                    join_front_matter, list_pages, render_tool_facts,
                    merge_sources, remember_block, render_sources, render_synthesis_blocks, slugify,
                    split_front_matter, split_parts, split_sources)
@@ -46,7 +46,7 @@ from .state import (ArticlePlan, Findings, MissingDetails, Proposal, ResearchPla
                     Synthesis, ToolInfo)
 
 STATE_TYPES = [("carnet_agent.state", n) for n in [
-    "Route", "ArticlePlan", "SectionPlan", "Proposal", "ToolInfo", "Source", "Synthesis", "ConceptCard", "QuizItem",
+    "Route", "ArticlePlan", "SectionPlan", "Proposal", "ToolInfo", "Source", "Synthesis", "ConceptCard",
     "Lesson", "LessonNotes", "PlannedPage", "CoursePlan", "Query", "Finding"]]
 
 
@@ -338,7 +338,7 @@ class ArticleAgent:
 
     def assemble(self, state: ArticleState) -> tuple[Path, str]:
         """[code] Build the page, blocks in this order: synthesis visual, In 30 seconds, concept
-        cards, parts, Remember, Check yourself, Sources. On an update, parts are inserted at their
+        cards, parts, Remember, Sources. On an update, parts are inserted at their
         place and an old summary (.tldr) becomes In 30 seconds (.in30)."""
         route, plan = state["plan"].route, state["plan"]
         parts = [state["parts"][str(i)] for i in range(len(plan.sections))]
@@ -412,10 +412,9 @@ class ArticleAgent:
                 else:
                     body_parts.append(text)
                     titles.append(section.heading)
-            tail = drop_quiz(tail)
             span = remember_block(tail)
             tail = tail[:span[0]] + blocks["remember"] + tail[span[1]:] if span else (tail + "\n\n" + blocks["remember"]).strip()
-            body = "\n\n".join([head.strip(), *body_parts, tail.strip(), blocks["quiz"]])
+            body = "\n\n".join([head.strip(), *body_parts, tail.strip()])
         else:
             categories = [TOPICS[route.topic][0], route.folder_title]
             if plan.tool:                                   # a tool card is tagged with the topics it touches
@@ -430,7 +429,7 @@ class ArticleAgent:
             facts = [render_tool_facts(plan.tool)] if plan.tool else []
             top = [blocks["synthesis"]] if "synthesis" in blocks else []
             body = "\n\n".join([*facts, *top, blocks["in30"], blocks["concepts"], *parts,
-                                 blocks["remember"], blocks["quiz"]])
+                                 blocks["remember"]])
         page = join_front_matter(front_matter, f"{body}\n\n{render_sources(merge_sources(old_sources, sources))}")
         return path, page
 

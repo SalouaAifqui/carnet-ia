@@ -380,27 +380,6 @@ Each part is small and simple on its own. The system becomes powerful because th
 - Every loop needs a stopping rule.
 :::
 
-<details class="quiz">
-<summary>What happens to the message history if the `messages` field has no reducer?</summary>
-
-Each update replaces it: the history becomes the single new message, and the model loses the question as soon as a tool answers. With `operator.add`, new messages are appended.
-
-</details>
-
-<details class="quiz">
-<summary>Why does the Level 2 router use structured output?</summary>
-
-So the classification comes back as **data** (`ignore`, `notify`, `respond`) the graph can route on, not as free text. Asking for the reasoning first tends to give better decisions.
-
-</details>
-
-<details class="quiz">
-<summary>What keeps the Level 3 essay writer from revising forever?</summary>
-
-A stopping rule: `should_continue` ends the graph once `revision_number` goes past `max_revisions`.
-
-</details>
-
 ## Sources {.sources}
 
 - [AI Agents in LangGraph](https://learn.deeplearning.ai/courses/ai-agents-in-langgraph/)

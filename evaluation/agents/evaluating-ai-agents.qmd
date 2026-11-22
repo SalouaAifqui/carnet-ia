@@ -341,27 +341,6 @@ To evaluate an LLM judge, a team freezes expected verdicts for a set of attack t
 - Reuse recurring failures as a test set, rerun it after every change, and keep monitoring and red-teaming after launch.
 :::
 
-<details class="quiz">
-<summary>A booking agent answers "Your reservation is confirmed" but never created the booking. Which kind of evaluation catches it?</summary>
-
-Trajectory evaluation that checks the downstream outcome: whether the task was actually completed in the system, not just whether the final text looks right.
-
-</details>
-
-<details class="quiz">
-<summary>The text-to-SQL agent chose the right table but wrote the wrong SQL. Router or skill problem?</summary>
-
-A skill problem: the route was right, the action was done badly. A wrong table would have been a routing or planning issue.
-
-</details>
-
-<details class="quiz">
-<summary>Before using an LLM judge as a CI gate, what should you measure?</summary>
-
-Its agreement with trusted labels: precision, recall and Cohen's kappa.
-
-</details>
-
 ## Sources {.sources}
 
 - [Evaluating AI Agents](https://www.deeplearning.ai/courses/evaluating-ai-agents)

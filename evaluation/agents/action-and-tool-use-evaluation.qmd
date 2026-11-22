@@ -230,27 +230,6 @@ Another sequence problem is valid calls in the wrong order. That gives you a new
 - Verify arguments, not just tool names.
 :::
 
-<details class="quiz">
-<summary>A customer asks about order 4521 and the agent calls `order_lookup(order_id="4512")`. Selection or invocation failure?</summary>
-
-Invocation: the right kind of tool, the wrong argument. The call can even succeed and return a real order, just the wrong one.
-
-</details>
-
-<details class="quiz">
-<summary>The order is outside the refund window. What does the evaluator check in the trace?</summary>
-
-The **absence** of `process_refund`: the correct behaviour is not to call it at all.
-
-</details>
-
-<details class="quiz">
-<summary>Every tool call is right, yet the run fails. How?</summary>
-
-As a sequence: for example the inventory tool says out of stock and the agent still answers "Yes, it's available", or valid calls happen in the wrong order.
-
-</details>
-
 ## Sources {.sources}
 
 - [Lesson: Evaluating actions and tool calls](https://learn.deeplearning.ai/courses/evaluating-and-improving-agentic-applications/lesson/60q53a/evaluating-actions-and-tool-calls)

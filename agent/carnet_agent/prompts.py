@@ -140,7 +140,7 @@ Rules:
   :::
 - Use '###' sub-parts if needed, never deeper. Code: current APIs only.
 - One idea per part: do not repeat what another part says.
-- Do not write a summary, key concepts, a "Remember" list, quiz questions or a Sources section:
+- Do not write a summary, key concepts, a "Remember" list or a Sources section:
   other steps do.
 - Facts from the approved web findings may be used; never invent facts or numbers.
 - About a product: neutral and factual. Attribute the maker's claims to them ("NVIDIA states that…"),
@@ -165,6 +165,5 @@ card, a card in Remember, or the parts' first sentences.
   about the subject: never "This page explains…", "This note…", "You will learn…".
 - concepts: 3 or 4 key concepts (a name, then one or two sentences defining it).
 - remember: 3 to 5 takeaways a reader can apply as they are.
-- quiz: 2 or 3 questions whose answers are in the page, each with a short answer (1-3 sentences).
 - visual_caption: one English sentence saying what the synthesis visual shows.
 {existing}"""

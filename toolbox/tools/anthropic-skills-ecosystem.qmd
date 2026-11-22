@@ -198,20 +198,6 @@ Use this when the task needs external data, such as BigQuery, plus one or more s
 - Connect an MCP server if the skill needs external tools or data.
 :::
 
-<details class="quiz">
-<summary>Which skills are built in, and which are optional?</summary>
-
-The document skills (Word, Excel, PowerPoint, PDF) are built in and always used; the other example skills from the public repository can be toggled on and off.
-
-</details>
-
-<details class="quiz">
-<summary>Your marketing skill reads CSV files and you want it to read BigQuery. What do you add?</summary>
-
-An MCP server for BigQuery (Settings > Developer in Claude Desktop), and an updated skill, for example through skill-creator, keeping the rules you want unchanged.
-
-</details>
-
 ## Sources {.sources}
 
 - [Lesson: Exploring pre built skills](https://learn.deeplearning.ai/courses/agent-skills-with-anthropic/lesson/cniu9q/exploring-pre-built-skills)

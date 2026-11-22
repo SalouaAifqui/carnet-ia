@@ -207,27 +207,6 @@ When the same prompt is sent through this guarded client, the validator checks t
 - This pattern applies to competitor names and any other disallowed entities.
 :::
 
-<details class="quiz">
-<summary>Why not just check for the competitor's exact name?</summary>
-
-Companies have several names and variants (JPMorgan, JPMC…) and listing them all is hard. Exact matching is the cheap first stage; NER and similarity catch the rest.
-
-</details>
-
-<details class="quiz">
-<summary>The text says “JPMC”. Which stage of the cascade catches it?</summary>
-
-Not exact matching: NER extracts “JPMC”, and its embedding is close enough to “JPMorgan” to pass the threshold, so the validator fails.
-
-</details>
-
-<details class="quiz">
-<summary>What does the validator return when it finds a competitor?</summary>
-
-A fail result with the list of entities detected; it returns pass only when no competitor is found.
-
-</details>
-
 ## Sources {.sources}
 
 - [Lesson: Preventing competitor mentions](https://learn.deeplearning.ai/courses/safe-and-reliable-ai-via-guardrails/lesson/bc597/preventing-competitor-mentions)

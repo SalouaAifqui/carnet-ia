@@ -155,27 +155,6 @@ flowchart LR
 - You can keep an OpenAI-style client and point it to Guardrails Server instead.
 :::
 
-<details class="quiz">
-<summary>What does a validator return?</summary>
-
-A result (pass or fail), an error message when it fails, and optionally a `fixed_value` to replace the text.
-
-</details>
-
-<details class="quiz">
-<summary>The Colosseum validator detects the forbidden topic. Who decides to raise an exception?</summary>
-
-The guard: it sets the on-fail action (exception or fix). The validator only does the check.
-
-</details>
-
-<details class="quiz">
-<summary>What changes in the chatbot code to enforce the guard?</summary>
-
-Only the client: an OpenAI-style guarded client pointed at the local Guardrails Server. The request itself stays the same.
-
-</details>
-
 ## Sources {.sources}
 
 - [Lesson: Building your first guardrail](https://learn.deeplearning.ai/courses/safe-and-reliable-ai-via-guardrails/lesson/ph1aa/building-your-first-guardrail)

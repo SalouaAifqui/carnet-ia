@@ -112,20 +112,6 @@ These snapshots are what make it possible to pause, inspect, edit and rewind an 
 - For memory that must outlive a conversation, use the **store**: [Long-term memory](long-term-memory.qmd).
 :::
 
-<details class="quiz">
-<summary>Your graph has `operator.add` on `messages` but no checkpointer. Does the second `invoke` remember the first?</summary>
-
-No. The reducer only merges updates within one run; without a checkpointer each `invoke` starts from an empty state.
-
-</details>
-
-<details class="quiz">
-<summary>Which checkpointer for a production app with several users?</summary>
-
-A database checkpointer such as Postgres (`langgraph-checkpoint-postgres`). `MemorySaver` loses everything when the process stops.
-
-</details>
-
 ## Sources {.sources}
 
 - [AI Agents in LangGraph](https://learn.deeplearning.ai/courses/ai-agents-in-langgraph/), DeepLearning.AI × LangChain: lesson [Persistence and Streaming](https://learn.deeplearning.ai/courses/ai-agents-in-langgraph/lesson/nj9ok/persistence-and-streaming)

@@ -357,8 +357,8 @@ def _add_folder_to_sidebar(config_file: Path, topic: str, folder: str, folder_ti
 # --- Reading and rebuilding a page made of blocks ------------------------------------
 #
 # A page body is: synthesis visual (.synthesis), In 30 seconds (.in30, formerly .tldr), concept
-# cards (.concepts), then '##' parts, then the "Remember" callout and the Check yourself questions.
-# The editor rewrites In 30 seconds, cards, Remember and questions; parts are inserted or replaced
+# cards (.concepts), then '##' parts, then the "Remember" callout.
+# The editor rewrites In 30 seconds, cards and Remember; parts are inserted or replaced
 # by code, so existing content is never silently dropped.
 
 def find_block(body: str, opener: str) -> tuple[int, int] | None:
@@ -419,7 +419,7 @@ def split_parts(body: str) -> tuple[str, list[tuple[str, str]], str]:
 
 def render_synthesis_blocks(synthesis, visual: str | None = None) -> dict[str, str]:
     """Markdown for the blocks the editor writes, by name, in page order:
-    synthesis (the visual and its caption), in30, concepts, remember, quiz."""
+    synthesis (the visual and its caption), in30, concepts, remember."""
     blocks = {}
     if visual:
         caption = (synthesis.visual_caption or "").strip().replace("\n", " ")
@@ -429,18 +429,7 @@ def render_synthesis_blocks(synthesis, visual: str | None = None) -> dict[str, s
     blocks["concepts"] = f"::: {{.concepts}}\n{cards}\n:::"
     blocks["remember"] = ("::: {.callout-tip}\n## Remember\n"
                           + "\n".join(f"- {r.strip()}" for r in synthesis.remember) + "\n:::")
-    blocks["quiz"] = "\n\n".join(
-        f'<details class="quiz">\n<summary>{q.question.strip()}</summary>\n\n{q.answer.strip()}\n\n</details>'
-        for q in synthesis.quiz)
     return blocks
-
-
-QUIZ_RE = re.compile(r'<details class="quiz">.*?</details>\s*', re.S)
-
-
-def drop_quiz(text: str) -> str:
-    """The text without its Check yourself questions (they are rewritten on every update)."""
-    return re.sub(r"(?m)^## Check yourself[ \t]*\n+", "", QUIZ_RE.sub("", text)).strip()
 
 
 # --- Toolbox: identity card of a tool, and links from concept pages ---------------------
