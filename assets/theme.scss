@@ -248,6 +248,11 @@ table thead th {
   border-bottom: 1px solid $line !important;
 }
 table td { border-color: $line !important; vertical-align: top; }
+/* on narrow screens, wide tables scroll inside their own box instead of the page */
+@media (max-width: 760px) {
+  main.content table { display: block; max-width: 100%; overflow-x: auto; }
+  main.content table th, main.content table td { min-width: 7.5rem; }
+}
 
 /* ---------- callouts: Remember (green), Watch out (amber) ---------- */
 .callout {

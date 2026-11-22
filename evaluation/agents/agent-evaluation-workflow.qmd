@@ -9,20 +9,17 @@ categories:
 - Evaluating agents
 ---
 
-::: {.lesson-meta}
-[Evaluation & Guardrails]{.pill .t-eval} [Evaluating agents]{.pill .muted}
+::: {.synthesis}
+![A cycle that never stops: from traces to requirements, tests, measurement and improvement, then back.](/assets/visuals/agent-evaluation-workflow.svg){fig-alt="Agent evaluation workflow: traces, requirements, tests and rubric, automate, improve, and back to traces"}
 :::
 
-::: {.tldr}
-The page explains how to build a practical evaluation workflow for AI agents, starting from real traces and clear requirements instead of assuming traditional software testing will work. Because agents are probabilistic, the goal is to inspect their actual behavior, turn observed failures and rules into reusable tests and rubrics, automate judgment where possible, and then keep iterating through measurement, improvement, and monitoring. Evaluation is presented not as a one-time gate but as a continuous loop that helps teams catch subtle failures, align the agent with real-world requirements, and steadily improve reliability.
+::: {.in30}
+- Agents are probabilistic: the same input can give different results, and a run can look successful while being wrong.
+- Start from real traces, write what the agent must and must not do, then turn failures into test cases and a rubric.
+- Automate the judging with code or an LLM-as-a-judge, retest after every change, and keep feeding new failures back.
 :::
 
 ::: {.concepts}
-::: {.concept}
-`Probabilistic behavior`
-
-Unlike regular code, agents can produce different outputs for the same input. That means a pass on one run does not guarantee correct behavior on the next, so evaluation has to account for variability.
-:::
 ::: {.concept}
 `Traces as evidence`
 
@@ -43,16 +40,15 @@ Evaluation begins with analyzing failures and then turning them into reusable te
 
 Once tests and scoring criteria exist, evaluation can be partially automated with code or an LLM-as-a-judge. This speeds up measurement while keeping the review tied to the defined requirements.
 :::
-::: {.concept}
-`Continuous improvement loop`
-
-Evaluation is ongoing: measure, improve, retest, and monitor after deployment. The workflow is a cycle, not a one-time checkpoint.
-:::
 :::
 
 ## Why evals matter
 
 AI agents do not behave like regular code. Regular code is deterministic: the same input under the same conditions gives the same result. Agents are probabilistic: they can give a different answer on the next run, even when the input is the same.
+
+::: {.column-margin .define label="Probabilistic behavior"}
+Unlike regular code, agents can produce different outputs for the same input. That means a pass on one run does not guarantee correct behavior on the next, so evaluation has to account for variability.
+:::
 
 That makes simple testing less reliable. An agent can look successful while still doing the wrong thing. It may finish the task, update the cart, or answer politely, but still ignore the user’s real need or invent a false explanation.
 
@@ -134,7 +130,7 @@ Use the trace to write down the mistake in a clear way. For this example, you co
 
 That note becomes the first version of a problem to investigate. Later, you can turn that kind of observation into a requirement such as: “Only make claims about products that are supported by Northwind data.” That broader problem can cover unsupported claims about sizing, color, availability, care instructions, or return policies too. And to catch invented details about other products as well, you can ask: “Does the Northwind data support what the application told the customer?”
 
-::: {mermaid}
+```{mermaid}
 flowchart TD
     A[Read a saved trace] --> B[Check the data the agent received]
     B --> C[Compare the answer with the data]
@@ -142,7 +138,7 @@ flowchart TD
     D --> E[Write the failure in plain language]
     E --> F[Group similar failures across traces]
     F --> G[Turn the pattern into a concrete problem to investigate]
-:::
+```
 
 ## Define requirements and tests
 
@@ -231,6 +227,10 @@ When you look at failures, separate two kinds of problems: ones caused by prompt
 
 Evaluation is not a one-time check. It is a loop: improve, test, measure, and monitor. Broadly, this evaluation process has 4 parts: analyzing behavior and doing error analysis, building and refining reusable test cases, using evaluators to measure performance, and then making changes and retesting. These four parts form an ongoing cycle that you keep using throughout development and after deployment.
 
+::: {.column-margin .define label="Continuous improvement loop"}
+Evaluation is ongoing: measure, improve, retest, and monitor after deployment. The workflow is a cycle, not a one-time checkpoint.
+:::
+
 ### Automate the evaluation
 
 After you define your tests and rubric, you can automate the judging step with code or with an **LLM-as-a-judge**. An LLM-as-a-judge is a language model that scores or labels results against your criteria.
@@ -261,15 +261,6 @@ This matters because a change that fixes one example may still break other cases
 
 Once people use the application, do not stop evaluating. New failures will appear after deployment. Feed those real-world problems back into your tests so the evaluation set stays useful. Use what you learn from real users to improve both the agent and the evaluations, so the cycle keeps getting better as the application changes.
 
-```{mermaid}
-flowchart LR
-    A[Improve the agent] --> B[Test on eval set]
-    B --> C[Measure results]
-    C --> D[Review failures and reliability]
-    D --> E[Update evals with new cases]
-    E --> A
-```
-
 ::: {.callout-tip}
 ## Remember
 - Start with traces, not assumptions.
@@ -278,6 +269,27 @@ flowchart LR
 - Automate judging once your rubric is clear.
 - Keep evaluating after changes and after deployment.
 :::
+
+<details class="quiz">
+<summary>The Northwind agent says a merino sweater can be tumble dried. How do you find out it was invented?</summary>
+
+Read the trace and compare the answer with the data the agent received: the product information only mentions a wool wash cycle, nothing about drying.
+
+</details>
+
+<details class="quiz">
+<summary>Do you need to see the agent fail before writing a requirement?</summary>
+
+No. A policy can already say what counts as wrong, like the shelter rule that a volunteer with a do-not-adopt flag must not be matched with any dog.
+
+</details>
+
+<details class="quiz">
+<summary>What three things should a rubric spell out?</summary>
+
+What information you will check, what counts as success, and what counts as failure, separated per requirement when needed.
+
+</details>
 
 ## Sources {.sources}
 

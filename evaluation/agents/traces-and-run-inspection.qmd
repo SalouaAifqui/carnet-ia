@@ -9,12 +9,14 @@ categories:
 - Evaluating agents
 ---
 
-::: {.lesson-meta}
-[Evaluation & Guardrails]{.pill .t-eval} [Evaluating agents]{.pill .muted}
+::: {.synthesis}
+![A trace laid out over time: the tree of spans, with one span labelled as the failure.](/assets/visuals/traces-and-run-inspection.svg){fig-alt="A trace as a tree of spans on a timeline, with one span labelled as a failure"}
 :::
 
-::: {.tldr}
-This page explains how to inspect agent runs using traces, and why traces matter for evaluation. A trace is the recorded history of one full run, made up of spans that form a tree of recorded operations such as model calls and tool calls. To make traces useful, your application must be instrumented so the right work is captured and sent to Phoenix, where you can open a run, follow the span tree, and inspect individual spans. The page also shows how traces serve as evidence when labeling runs: compare what the agent actually did against the requirement, avoid guessing when evidence is incomplete, and mark cases unresolved when you still cannot determine pass or fail.
+::: {.in30}
+- A **trace** records one agent run as a tree of **spans**: model calls, tool calls, their inputs, outputs and timing.
+- Your app must be **instrumented** so the right work is captured; Phoenix then lets you open a run and inspect each span.
+- Use the trace as evidence to label a run pass or fail; if you still cannot tell, mark it unresolved.
 :::
 
 ::: {.concepts}
@@ -32,11 +34,6 @@ A span is one recorded operation inside a trace. Spans are organized as a tree w
 `Instrumentation`
 
 Instrumentation is the code that records operations as they happen. Without it, the trace will not contain the evidence needed to inspect or evaluate the run properly.
-:::
-::: {.concept}
-`Phoenix inspection`
-
-The tracing integration sends spans to Phoenix, where you can open a run, follow the tree, and select spans for closer inspection. Phoenix is the main interface used in the course to review traces.
 :::
 ::: {.concept}
 `Traces as evaluation evidence`
@@ -73,36 +70,11 @@ flowchart TD
   R --> F
 ```
 
-### What a span records
-
-A span records details about one operation:
-
-- **Name**: what ran
-- **Type**: for example, a tool call or a model call
-- **Input**: what went into the operation
-- **Output**: what came back
-
-For **tool-call spans**, the span records the input sent to the tool and the output returned from the tool. The span type identifies it as a tool call. For example, the tool input might include an order ID, and the tool output might include order details and the purchase price.
-
-For **model calls**, a span can also record:
-
-- the customer message
-- the agent instructions
-- information from earlier tools
-- the model output, such as an answer or a tool request
-- **token usage**: how much text the model took in and generated
-- the **model version**
-- the **prompt** used
-
-These details are stored as attributes on the span. They help you compare runs and see what changed.
-
 ::: {.example}
 **Northwind refund trace.** A customer asks Northwind for a refund. The trace starts with a root span for the whole refund request. Under it, there is an order lookup span that checks the order details, then a refund span that processes the refund. If the refund amount is wrong, the trace lets you check whether the agent looked up the right order and what purchase price the tool returned.
 :::
 
 ## What each span records
-
-A **span** is one recorded operation in a trace. The trace is a tree of spans. The root span covers the whole request. Child spans show smaller steps, such as a tool call or a model call. The root span’s parent/child relationships reflect the operations your application recorded, and another run might include different tool calls or repeated steps. The tree is not a fixed plan for the agent to follow.
 
 ### What a span can tell you
 
@@ -173,14 +145,6 @@ Spans can also reveal repeated tool calls that add unnecessary work, even if the
 
 But tracing has limits. A trace does **not** show everything happening inside the model. Any reasoning text you see is still generated output, not a direct view into the model's internal process.
 
-It also only shows what your setup recorded. If a tool call was not instrumented, you may see the model calls but miss that tool call in between. An absent span does not automatically mean the agent skipped an action. Before drawing that conclusion, you need to know that the relevant work was being captured.
-
-::: {.callout-warning}
-## Watch out
-
-Do not assume a missing span means the agent did nothing. First check that the relevant operation was instrumented and sent to the tracing tool.
-:::
-
 ### Annotated span detail panel
 
 | Field | What it shows |
@@ -209,6 +173,10 @@ A trace is only useful if your app records the right work. That recording is cal
 
 The tracing integration sends recorded spans to **Phoenix**, which is the tool you will use in this course to collect and inspect traces.
 
+::: {.column-margin .define label="Phoenix"}
+The tracing integration sends spans to Phoenix, where you can open a run, follow the tree, and select spans for closer inspection. Phoenix is the main interface used in the course to review traces.
+:::
+
 ```{mermaid}
 flowchart LR
     A[Your app] --> B[Instrumentation]
@@ -234,7 +202,7 @@ In Phoenix, you can:
 2. Follow the **tree** of spans.
 3. Select one span to inspect its recorded details.
 
-This lets you see what happened step by step. Spans also record when each operation **started** and **ended**, so you can see how long it took. If the customer waited a long time, you can check whether the delay came from the model call or the order lookup. You can also spot repeated tool calls that added unnecessary work, even if the agent eventually gave a correct answer.
+This lets you see what happened step by step.
 
 ::: {.example}
 **Open a run and inspect one span.** A user asks something that triggers a model call and a tool call. In Phoenix, you open the run, follow the tree, and click one span to check its inputs, outputs, and timing.
@@ -252,9 +220,7 @@ That means:
 ::: {.callout-warning}
 ## Watch out
 
-A trace does not show everything inside the model. Even any reasoning text you see is generated output, not a direct view of the model’s internal workings.
-
-If the setup did not instrument a step, there will be a gap in the trace. Do not assume the agent skipped that step until you know it was recorded.
+Do not assume a missing span means the agent did nothing. First check that the relevant operation was instrumented and sent to the tracing tool.
 :::
 
 ## Use traces to label failures
@@ -326,12 +292,32 @@ After you record the assessment, you can then practice the process in a lab and 
 ::: {.callout-tip}
 ## Remember
 - A trace shows what the agent did, not just what it answered.
-- Spans are the recorded steps inside a trace.
-- The span tree reflects recorded operations, not a fixed plan.
+- Spans are the recorded steps inside a trace; their tree reflects recorded operations, not a fixed plan.
 - Instrument your app so the important work is captured.
 - Use the trace as evidence before deciding pass or fail.
 - If you cannot tell, mark the case unresolved.
 :::
+
+<details class="quiz">
+<summary>The trace shows no inventory lookup span. Did the agent skip the inventory check?</summary>
+
+Not necessarily. First check that the lookup was instrumented: a trace only contains what your setup recorded.
+
+</details>
+
+<details class="quiz">
+<summary>A customer waited too long. Where in the trace do you look?</summary>
+
+At the start and end times of the spans, to see whether the delay came from the model call or from a tool such as the order lookup.
+
+</details>
+
+<details class="quiz">
+<summary>Why count passing runs when ranking failure groups by frequency?</summary>
+
+Frequency is measured over all the runs checked for that problem; counting only failures makes it look more or less common than it is.
+
+</details>
 
 ## Sources {.sources}
 

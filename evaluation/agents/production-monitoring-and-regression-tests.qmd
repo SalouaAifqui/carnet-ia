@@ -9,12 +9,14 @@ categories:
 - Evaluating agents
 ---
 
-::: {.lesson-meta}
-[Evaluation & Guardrails]{.pill .t-eval} [Evaluating agents]{.pill .muted}
+::: {.synthesis}
+![Two worlds joined by a loop: every production failure becomes a permanent offline test.](/assets/visuals/production-monitoring-and-regression-tests.svg){fig-alt="Production failures turned into regression tests in the offline benchmark, in a closed loop"}
 :::
 
-::: {.tldr}
-Offline evaluation gives you a stable way to compare versions, but production reveals the messy reality that benchmarks miss: ambiguous wording, missing context, mixed intents, and unexpected user behavior. The page teaches a closed loop: observe failures in live traffic through monitoring, manual review, feedback, and A/B tests; then convert real failures into regression tests so they become permanent parts of your offline benchmark. Over time, this turns production into a source of durable evaluation cases and keeps future versions from reintroducing old bugs.
+::: {.in30}
+- Offline evals give a stable comparison; production shows what they missed: new wording, missing context, mixed requests.
+- Find failures with monitoring, manual review, user feedback and A/B tests, then read the traces to see the pattern.
+- Turn each failure worth fixing into a regression test with the user's original wording, and rerun the full benchmark.
 :::
 
 ::: {.concepts}
@@ -38,11 +40,6 @@ Inspect individual traces by hand when you need to understand a specific failure
 
 Explicit feedback like thumbs down, and behavioral signals like repeated rephrasing or abandonment, point to user pain. A/B tests compare current and revised behavior on real traffic to validate fixes.
 :::
-::: {.concept}
-`Regression tests from failures`
-
-When a live failure is worth fixing, preserve the original user wording, define the expected behavior, and add it to the offline dataset. This makes the bug a lasting test case.
-:::
 :::
 
 ## Why production matters
@@ -50,6 +47,10 @@ When a live failure is worth fixing, preserve the original user wording, define 
 Offline evaluation is useful before release. It gives you a fixed set of cases, so you can change the agent and run the same cases again to see what improved and what regressed.
 
 But once the agent is live, production shows things your benchmark missed. People ask new questions. They use familiar requests in unfamiliar words. They leave out context. They combine several needs in one message, and sometimes behave in ways that are hard to anticipate in advance.
+
+::: {.column-margin .watch}
+Do not treat offline evals as enough once the agent is live. A good benchmark only tests the situations you put into it. Production is where you discover what you did not think to test, and it becomes another source of evidence for improvement. Monitoring, manual review, user feedback, and A/B testing can help you find where the next optimization work should focus.
+:::
 
 ### Offline benchmark vs production signals
 
@@ -77,11 +78,6 @@ Production can surface issues that a benchmark did not cover, such as:
 **Operational cost from grounding.** Suppose you add the rule, “Never state a product detail unless a tool result supports it.” That can reduce ungrounded answers, but it may also cause unnecessary tool calls, which can increase latency and cost.
 :::
 
-::: {.callout-warning}
-## Watch out
-Do not treat offline evals as enough once the agent is live. A good benchmark only tests the situations you put into it. Production is where you discover what you did not think to test, and it becomes another source of evidence for improvement. Monitoring, manual review, user feedback, and A/B testing can help you find where the next optimization work should focus.
-:::
-
 Once you find a production failure, you can turn it into a new offline test:
 
 1. Monitor production and notice a behavior failure.
@@ -106,13 +102,13 @@ These sources complement each other:
 - User feedback tells you **what matters to users**.
 - A/B testing tells you **whether a change still looks useful** under live traffic.
 
-::: {.mermaid}
+```{mermaid}
 flowchart LR
   A[Metric changes in production\nfor example, more failed evaluations] --> B[Open traces]
   B --> C[Read a few examples by hand]
   C --> D[Find the failure pattern]
   D --> E[Decide what to fix]
-:::
+```
 
 ::: {.example}
 **37 failed shelter conversations.** A policy or eligibility evaluator flags 37 shelter conversations. The count shows there is a problem, but not the pattern. You open a few traces to see whether the agent skipped the eligibility check, used the right tool with the wrong argument, got the correct lookup result and ignored it, or followed the right process and still reached the wrong conclusion.
@@ -140,6 +136,10 @@ The important thing is that these methods answer different questions, and you'll
 ## Turn it into a test
 
 When production shows a real failure, turn it into a regression test. A regression test is a test you keep so the same bug does not come back later.
+
+::: {.column-margin .define label="Regression test"}
+When a live failure is worth fixing, preserve the original user wording, define the expected behavior, and add it to the offline dataset. This makes the bug a lasting test case.
+:::
 
 ### How to convert the failure
 
@@ -196,14 +196,6 @@ That is how production becomes part of your offline eval set. Each real failure 
 4. **Improve**: only release or consider a stronger candidate if the new version handles the 10-minute walking constraint correctly and the rest of the benchmark stays healthy. Once it’s live, keep monitoring the same kinds of conversations, and when another volunteer introduces new constraints, repeat the loop.
 :::
 
-```{mermaid}
-flowchart LR
-    A[Observe] --> B[Benchmark]
-    B --> C[Evaluate]
-    C --> D[Improve]
-    D --> A
-```
-
 This creates a continuous loop: production reveals something your tests missed, you inspect it and turn it into a case, you test the change offline, and then you release the new version and look for the next failure.
 
 ::: {.callout-tip}
@@ -214,6 +206,27 @@ This creates a continuous loop: production reveals something your tests missed, 
 - Keep fixed failures in the benchmark.
 - Your eval set should grow with real traffic.
 :::
+
+<details class="quiz">
+<summary>An evaluator flags 37 shelter conversations. What does that number tell you, and what does it not?</summary>
+
+That there is a problem and where to look. Not the pattern: you open a few traces to see whether the agent skipped a check, used a wrong argument, ignored a result, or reasoned wrongly.
+
+</details>
+
+<details class="quiz">
+<summary>Why keep the user's exact wording when you turn a production failure into a test?</summary>
+
+Because the wording is often the cause: "Can I get my money back?" was missed because it never says "refund".
+
+</details>
+
+<details class="quiz">
+<summary>You fixed the new case. Why run the whole benchmark again?</summary>
+
+To protect the older cases: explicit refund requests must still work, and ordinary product questions must not start looking like refunds.
+
+</details>
 
 ## Sources {.sources}
 

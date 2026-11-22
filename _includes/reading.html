@@ -84,17 +84,21 @@ function carnetReading() {
     var topic = topicKey && topics[topicKey];
     var menu = sidebar.querySelector(".sidebar-menu-container");
     if (topic && menu && !sidebar.querySelector(".sb-topic")) {
-      var all = [];
+      var all = [], name = topic.title, minutes = topic.minutes;
       topic.sections.forEach(function (s) { all = all.concat(s.notes); });
+      if (topic.tracks && here) {          /* a topic read as tracks: progress within the current track */
+        var track = topic.sections.filter(function (s) { return s.notes.indexOf(here) > -1; })[0];
+        if (track) { all = track.notes; name = track.title; minutes = track.minutes; }
+      }
       var pos = here ? all.indexOf(here) + 1 : 0;
       var box = document.createElement("div");
-      box.className = "sb-topic t-" + ({ evaluation: "eval", toolbox: "tools" }[topicKey] || topicKey);
+      box.className = "sb-topic";          /* colour inherited from the page: guardrails notes are green */
       box.innerHTML = '<p class="sb-name"></p><div class="sb-bar" aria-hidden="true"><span></span></div><p class="sb-count"></p>';
-      box.querySelector(".sb-name").textContent = topic.title;
+      box.querySelector(".sb-name").textContent = name;
       box.querySelector(".sb-bar span").style.width = (all.length ? pos / all.length * 100 : 0) + "%";
       box.querySelector(".sb-count").textContent =
         (pos ? pos + " of " + all.length + " lessons" : all.length + (all.length === 1 ? " lesson" : " lessons")) +
-        " · " + fmt(topic.minutes) + " total";
+        " · " + fmt(minutes) + " total";
       menu.insertBefore(box, menu.firstChild);
     }
   }
