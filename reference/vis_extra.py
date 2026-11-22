@@ -51,12 +51,12 @@ def designing_custom_skills():
         s.text(52, y + 13, str(i + 1), 10, 700, PAPER)
         s.text(70, y + 13, step, 12, 500, INK, "start")
     s.text(130, 236, "under 500 lines", 11, 500, MUTED)
-    x = 40
+    x = 32
     for label in ("scripts/", "references/", "assets/"):
-        w = int(len(label) * 6.3 + 14)
+        w = len(label) * 6 + 10
         s.rect(x, 246, w, 20, PAPER, MUTED, rx=6, dash="3 3")
         s.mono(x + w / 2, 260, label, 10, MUTED)
-        x += w + 6
+        x += w + 5
     checks = [("Review skill", "skill-creator scores it", "solid"), ("Test harness", "files, formats, order", "white"),
               ("Across models", "every model you plan to use", "white")]
     for i, (a, b, style) in enumerate(checks):
