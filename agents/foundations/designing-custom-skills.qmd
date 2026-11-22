@@ -1,6 +1,6 @@
 ---
 title: Designing custom skills
-subtitle: How to structure, constrain, and test skills so they behave predictably.
+subtitle: 'Structure, constrain and test skills so they behave predictably.'
 order: 9
 image: /assets/visuals/designing-custom-skills.svg
 date: '2026-11-22'

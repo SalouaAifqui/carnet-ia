@@ -12,7 +12,7 @@ from pathlib import Path
 
 import yaml
 
-from .config import SELF_URLS, TOPICS
+from .config import SECTION_DIRS, SELF_URLS, TOPICS
 from .state import Finding, Source
 
 SOURCES_HEADING = "## Sources {.sources}"
@@ -49,14 +49,25 @@ class PageInfo:
     subtitle: str
 
 
+def section_dir(topic: str, folder: str) -> str:
+    """The folder where the notes of a section live."""
+    return SECTION_DIRS.get((topic, folder), f"{topic}/{folder}")
+
+
+def owner_of(topic: str, folder: str) -> tuple[str, str]:
+    """The (topic, section) that the notes of the folder <topic>/<folder> belong to."""
+    return next((key for key, where in SECTION_DIRS.items() if where == f"{topic}/{folder}"), (topic, folder))
+
+
 def list_pages(root: Path) -> list[PageInfo]:
     """Every note of the site. Notes always live in topic/<folder>/<page>.qmd."""
     pages = []
     for topic in TOPICS:
         for file in sorted((root / topic).glob("*/*.qmd")):
             fm, _ = split_front_matter(file.read_text())
+            owner, folder = owner_of(topic, file.parent.name)
             pages.append(PageInfo(
-                path=str(file.relative_to(root)), topic=topic, folder=file.parent.name,
+                path=str(file.relative_to(root)), topic=owner, folder=folder,
                 title=str(fm.get("title", file.stem)), subtitle=str(fm.get("subtitle", "")),
             ))
     return pages
@@ -97,7 +108,8 @@ def list_sections(root: Path) -> list[Section]:
         # A folder with pages but no declared section still counts.
         declared = {s.folder for s in sections if s.topic == topic}
         if (root / topic).exists():
-            for d in sorted(p for p in (root / topic).iterdir() if p.is_dir() and p.name not in declared):
+            for d in sorted(p for p in (root / topic).iterdir() if p.is_dir() and p.name not in declared
+                            and owner_of(topic, p.name) == (topic, p.name)):
                 sections.append(Section(topic, d.name, d.name.replace("-", " ").capitalize(), ""))
     return sections
 
@@ -297,6 +309,8 @@ def _long_code_outside_steps(body: str) -> int:
 
 def ensure_listed(root: Path, topic: str, folder: str, folder_title: str, description: str = "") -> None:
     """Make sure topic/<folder> appears on the topic page and in the sidebar."""
+    if (topic, folder) in SECTION_DIRS:
+        return                                  # declared by hand, with its folder
     _add_listing_to_topic_page(root / topic / "index.qmd", folder, folder_title, description)
     _add_folder_to_sidebar(root / "_quarto.yml", topic, folder, folder_title)
 

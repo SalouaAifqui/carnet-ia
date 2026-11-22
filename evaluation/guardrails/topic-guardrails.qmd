@@ -1,6 +1,6 @@
 ---
 title: Topic guardrails
-subtitle: Use topic classification to keep model outputs on the intended subject.
+subtitle: 'Keep model outputs on the intended subject.'
 order: 3
 image: /assets/visuals/topic-guardrails.svg
 date: '2026-11-17'

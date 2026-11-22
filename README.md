@@ -12,7 +12,8 @@ A learning notebook on applied AI, published at **https://salouaaifqui.github.io
 |---|---|
 | `llms/` | **LLMs**: how LLMs work, foundation models, open-source models |
 | `agents/` | **Agents**: foundations, memory, control |
-| `evaluation/` | **Evaluation & Guardrails**: evaluating LLMs, evaluating agents, guardrails |
+| `evaluation/` | **Measure What Matters**: evaluation frameworks, evaluating LLMs, evaluating agents |
+| `guardrails/` | **Ship with Guardrails**: the section page. Its notes live in `evaluation/guardrails/`, so their URLs never changed |
 | `toolbox/` | **Toolbox**: one card per tool or framework, tagged with the topics it touches |
 | `agent/` | **The Carnet IA agent**: turns web pages into notes, with your approval ([guide](agent/README.md)) |
 | `assets/` | Site design (colors, fonts, logo) and the synthesis visual of each note |
@@ -21,7 +22,7 @@ A learning notebook on applied AI, published at **https://salouaaifqui.github.io
 | `.github/` | The "New source" issue form and the two automations (agent, site publishing) |
 
 The site is organised by **concept**, not by course: each topic page (`llms/index.qmd`,
-`agents/index.qmd`, `evaluation/index.qmd`) declares its sections, and each note lives in the
+`agents/index.qmd`, `evaluation/index.qmd`, `guardrails/index.qmd`) declares its sections, and each note lives in the
 folder of its section, e.g. `agents/memory/short-term-memory.qmd`.
 
 ## Adding a note

@@ -1,6 +1,6 @@
 ---
 title: Red teaming LLM applications
-subtitle: How to find jailbreaks, prompt injections, and policy failures with manual probing, automated scans, and LLM-assisted red teaming.
+subtitle: 'Find jailbreaks, prompt injections and policy failures.'
 order: 4
 image: /assets/visuals/red-teaming-llm-applications.svg
 date: '2026-11-22'

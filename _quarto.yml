@@ -20,15 +20,18 @@ website:
   page-navigation: true
   bread-crumbs: true
   navbar:
+    collapse-below: xl
     logo: assets/logo.svg
     title: Carnet IA
     left:
     - href: llms/index.qmd
-      text: LLMs
+      text: Inside LLMs
     - href: agents/index.qmd
-      text: Agents
+      text: Build Agents
     - href: evaluation/index.qmd
-      text: Evaluation & Guardrails
+      text: Measure What Matters
+    - href: guardrails/index.qmd
+      text: Ship with Guardrails
     - href: toolbox/index.qmd
       text: Toolbox
     right:
@@ -36,37 +39,43 @@ website:
       href: https://github.com/SalouaAifqui/carnet-ia
       aria-label: GitHub
   sidebar:
-  - id: agents
-    title: Agents
-    style: docked
-    collapse-level: 1
-    contents:
-    - agents/index.qmd
-    - section: Foundations
-      contents: agents/foundations/*.qmd
-    - section: Memory
-      contents: agents/memory/*.qmd
-    - section: Control
-      contents: agents/control/*.qmd
   - id: llms
-    title: LLMs
+    title: Inside LLMs
     style: docked
     collapse-level: 1
     contents:
     - llms/index.qmd
-    - section: How LLMs work
+    - section: Architectures
       contents: llms/how-llms-work/*.qmd
+  - id: agents
+    title: Build Agents
+    style: docked
+    collapse-level: 1
+    contents:
+    - agents/index.qmd
+    - section: Agents, tools and skills
+      contents: agents/foundations/*.qmd
+    - section: Give agents a memory
+      contents: agents/memory/*.qmd
+    - section: Stay in control
+      contents: agents/control/*.qmd
   - id: evaluation
-    title: Evaluation & Guardrails
+    title: Measure What Matters
     style: docked
     collapse-level: 1
     contents:
     - evaluation/index.qmd
-    - section: Evaluating agents
-      contents: evaluation/agents/*.qmd
     - section: Evaluating LLMs
       contents: evaluation/llms/*.qmd
-    - section: Guardrails
+    - section: Evaluating agents
+      contents: evaluation/agents/*.qmd
+  - id: guardrails
+    title: Ship with Guardrails
+    style: docked
+    collapse-level: 1
+    contents:
+    - guardrails/index.qmd
+    - section: Build the right guardrails
       contents: evaluation/guardrails/*.qmd
   - id: toolbox
     title: Toolbox

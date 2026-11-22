@@ -211,6 +211,11 @@ def test_routing():
     assert (r.folder, r.new_section) == ("llms", False), "section title mapped to its id"
     r = validate_route(root, Route(topic="evaluation", folder="agent-eval", folder_title="Agent eval", **base))["route"]
     assert r.new_section
+    r = validate_route(root, Route(topic="guardrails", folder="guardrails", folder_title="x", **base))["route"]
+    assert (r.topic, r.new_section) == ("guardrails", False)
+    pii = dict(base, title="PII guardrails")
+    r = validate_route(root, Route(topic="guardrails", folder="guardrails", folder_title="x", **pii))["route"]
+    assert r.target_path == "evaluation/guardrails/pii-guardrails.qmd", "guardrails notes keep their URLs"
     dup = dict(base, title="What is an agent")
     r = validate_route(root, Route(topic="agents", folder="foundations", folder_title="Foundations", **dup))["route"]
     assert (r.action, r.target_path) == ("update", "agents/foundations/what-is-an-agent.qmd"), "no duplicate page"
@@ -284,8 +289,9 @@ def test_article_create_with_pause_and_research():
     assert len(drawings) == 2 and "cannot be used" in drawings[1], "an invalid SVG gets one retry with its errors"
     assert "PARA1" not in drawings[0] and "Inputs are checked before the model." in drawings[0], \
         "the illustrator sees the In-30-seconds bullets, never the source"
-    index = (root / "evaluation/index.qmd").read_text()
-    assert '## Guardrails {.group-title data-folder="guardrails"}' in index and "{#guardrails}" in index
+    index = (root / "guardrails/index.qmd").read_text()
+    assert 'data-folder="guardrails"' in index and "{#guardrails}" in index
+    assert final["plan"].route.topic == "guardrails", "guardrails is a topic of its own, with unchanged paths"
     print("✓ create: plan → pause → /approve F1 in a new process → parts written from their chunks, "
           "checked, patched, assembled")
 
@@ -547,7 +553,7 @@ def test_mixed_source_gives_concept_page_and_tool_card():
     assert final["extra_pages"][0]["page_path"] == card_path
     card = (root / card_path).read_text()
     fm, body = split_front_matter(card)
-    assert fm["categories"] == ["Agents", "Evaluation & Guardrails"], "the card is tagged with the topics it touches"
+    assert fm["categories"] == ["Agents", "Evaluation"], "the card is tagged with the topics it touches"
     assert fm["image"] == "/assets/visuals/toolbox-card.svg" and "{.synthesis}" not in body, "cards share the template"
     assert "| **Made by** | NVIDIA |" in body and "Yes (Apache 2.0)" in body, "fact sheet written by code"
     assert [t for t, _ in split_parts(split_sources(body)[0])[1]] == ["What it is", "What it does", "How to use it",

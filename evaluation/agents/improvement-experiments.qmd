@@ -1,6 +1,6 @@
 ---
 title: Improvement experiments
-subtitle: How to test changes safely, compare versions, and choose the right intervention when an agent fails.
+subtitle: 'Test changes safely, compare versions, choose where to intervene.'
 order: 5
 image: /assets/visuals/improvement-experiments.svg
 date: '2026-11-16'

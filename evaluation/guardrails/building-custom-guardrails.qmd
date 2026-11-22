@@ -1,6 +1,6 @@
 ---
 title: Building custom guardrails
-subtitle: How to write a validator, attach it to a guard, and enforce it in an app.
+subtitle: 'Write a validator, attach it to a guard, enforce it in an app.'
 order: 2
 image: /assets/visuals/building-custom-guardrails.svg
 date: '2026-11-17'

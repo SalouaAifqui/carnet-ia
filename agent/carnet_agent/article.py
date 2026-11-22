@@ -40,7 +40,7 @@ from .core import Services, ask, clean_markdown, feedback_block, text_of, valida
 from .illustrator import illustrate
 from .site import (add_in_practice, check_page, describe_site, ensure_listed, find_block, is_self,
                    join_front_matter, list_pages, render_tool_facts,
-                   merge_sources, remember_block, render_sources, render_synthesis_blocks, slugify,
+                   merge_sources, remember_block, render_sources, render_synthesis_blocks, section_dir, slugify,
                    split_front_matter, split_parts, split_sources)
 from .state import (ArticlePlan, Findings, MissingDetails, Proposal, ResearchPlan, Route, Source,
                     Synthesis, ToolInfo)
@@ -350,7 +350,7 @@ class ArticleAgent:
         if route.action == "update":
             path = self.s.root / route.target_path
         else:
-            path = self.s.root / route.topic / route.folder / f"{slugify(route.title)}.qmd"
+            path = self.s.root / section_dir(route.topic, route.folder) / f"{slugify(route.title)}.qmd"
             n = 2
             while path.exists():
                 path, n = path.with_name(f"{slugify(route.title)}-{n}.qmd"), n + 1
@@ -491,7 +491,7 @@ class ArticleAgent:
 def describe_plan(state: dict) -> str:
     plan = state["plan"]
     route = plan.route
-    target = route.target_path if route.action == "update" else f"{route.topic}/{route.folder}/{slugify(route.title)}.qmd"
+    target = route.target_path if route.action == "update" else f"{section_dir(route.topic, route.folder)}/{slugify(route.title)}.qmd"
     lines = [
         f"## 📝 Plan: {route.title}",
         f"*{route.subtitle}*",

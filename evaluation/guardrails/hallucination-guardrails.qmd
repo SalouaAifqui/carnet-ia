@@ -1,6 +1,6 @@
 ---
 title: Hallucination guardrails
-subtitle: Use groundedness checks, especially NLI, to block unsupported model claims.
+subtitle: 'Block unsupported claims with groundedness checks.'
 order: 5
 image: /assets/visuals/hallucination-guardrails.svg
 date: '2026-11-17'

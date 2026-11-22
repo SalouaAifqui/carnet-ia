@@ -1,6 +1,6 @@
 ---
 title: LLM judges and custom rubrics
-subtitle: How to automate context-sensitive evaluation with a judge model and a well-specified rubric.
+subtitle: 'Automate context-sensitive evaluation with a judge model and a rubric.'
 order: 2
 image: /assets/visuals/llm-judges-and-custom-rubrics.svg
 date: '2026-11-16'

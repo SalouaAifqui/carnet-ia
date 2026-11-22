@@ -1,6 +1,6 @@
 ---
 title: Agent-based evaluation in practice
-subtitle: How agents can help evaluate other agents, and where human oversight still matters.
+subtitle: 'Agents evaluating agents, and where human oversight still matters.'
 order: 7
 image: /assets/visuals/agent-based-evaluation-in-practice.svg
 date: '2026-11-16'

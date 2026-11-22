@@ -1,6 +1,6 @@
 ---
 title: Agent evaluation workflow
-subtitle: How to move from traces and requirements to systematic evaluation and improvement.
+subtitle: 'Move from traces and requirements to systematic evaluation and improvement.'
 order: 2
 image: /assets/visuals/agent-evaluation-workflow.svg
 date: '2026-11-16'

@@ -45,9 +45,13 @@ MAX_SOURCE_CHARS = 60_000    # we cut very long pages so prompts stay affordable
 TOPICS = {
     "llms": ("LLMs", "t-llms"),
     "agents": ("Agents", "t-agents"),
-    "evaluation": ("Evaluation & Guardrails", "t-eval"),
+    "evaluation": ("Evaluation", "t-eval"),
+    "guardrails": ("Guardrails", "t-guardrails"),
     "toolbox": ("Toolbox", "t-tools"),
 }
+# (topic, section) -> folder, for the sections whose notes don't live in <topic>/<section>.
+# Guardrails was split from Evaluation: its notes kept their folder, so their URLs did not change.
+SECTION_DIRS = {("guardrails", "guardrails"): "evaluation/guardrails"}
 
 # The site never cites itself: these URLs are dropped from search results and sources.
 SELF_URLS = ["salouaaifqui.github.io/carnet-ia", "github.com/SalouaAifqui/carnet-ia"]

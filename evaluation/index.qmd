@@ -1,17 +1,11 @@
 ---
-title: Evaluation & Guardrails
+title: Measure What Matters
 body-classes: topic t-eval tracks
 path: tracks
 toc: false
+sidebar: false
+page-layout: full
 listing:
-- id: agents
-  contents: agents/*.qmd
-  template: ../_templates/path.ejs
-  sort: order
-  fields:
-  - title
-  - subtitle
-  - image
 - id: llms
   contents: llms/*.qmd
   template: ../_templates/path.ejs
@@ -20,39 +14,61 @@ listing:
   - title
   - subtitle
   - image
-- id: guardrails
-  contents: guardrails/*.qmd
+- id: agents
+  contents: agents/*.qmd
   template: ../_templates/path.ejs
   sort: order
   fields:
   - title
   - subtitle
   - image
-aliases:
-- /guardrails/index.html
 ---
 
 ::: {.topic-hero}
-[Topic]{.topic-kicker}
+# Measure What Matters {.topic-h1}
 
-# Evaluation & Guardrails {.topic-h1}
-
-How to know whether a model or an agent is good enough, and how to stop a bad answer before it reaches anyone: measuring quality on test sets, and enforcing rules on every request.
+Know whether a model or an agent is good enough, and keep it that way.
 
 []{.topic-stats data-stat="topic" data-topic="evaluation"}
 :::
 
 ::: {.track-cards}
 ::: {.t-eval}
-[**Evaluating agents** []{.tc-stat data-stat="summary" data-topic="evaluation" data-section="agents"}](#evaluating-agents)
+[**Evaluation frameworks** []{.tc-stat data-stat="summary" data-topic="evaluation" data-section="frameworks"}](#track-frameworks)
 :::
 ::: {.t-eval}
-[**Evaluating LLMs** []{.tc-stat data-stat="summary" data-topic="evaluation" data-section="llms"}](#evaluating-llms)
+[**Evaluating LLMs** []{.tc-stat data-stat="summary" data-topic="evaluation" data-section="llms"}](#track-llms)
 :::
-::: {.t-guardrails}
-[**Guardrails** []{.tc-stat data-stat="summary" data-topic="evaluation" data-section="guardrails"}](#guardrails)
+::: {.t-eval}
+[**Evaluating agents** []{.tc-stat data-stat="summary" data-topic="evaluation" data-section="agents"}](#track-agents)
 :::
 :::
+
+## Evaluation frameworks {#track-frameworks .group-title .planned data-folder="frameworks"}
+
+::: {.group-meta}
+The methods and frameworks used to run evaluations, and how to choose between them.
+:::
+
+## Evaluating LLMs {#track-llms .group-title data-folder="llms"}
+
+::: {.group-meta}
+Build the cases, the judge and the checks that tell you an answer is good enough. Suggested order below.
+:::
+
+::: {#llms}
+:::
+
+## Evaluating agents {#track-agents .group-title data-folder="agents"}
+
+::: {.group-meta}
+From traces to experiments: how to know whether an agent works, and keep it working. Suggested order below.
+:::
+
+::: {#agents}
+:::
+
+## Measure, then protect {.versus}
 
 ::: {.compare}
 ::: {.col}
@@ -73,29 +89,4 @@ How to know whether a model or an agent is good enough, and how to stop a bad an
 
 The two use the same tools in opposite directions. A guardrail is often an evaluator running live, like an LLM-as-a-judge that scores each answer before it is shown. And guardrails are themselves evaluated: choosing a threshold means counting false positives (good answers blocked) and false negatives (bad answers let through).
 
-## Evaluating agents {.group-title data-folder="agents"}
-
-::: {.group-meta}
-Evaluating agents: final answers, the path they took, tool use, and behaviour over many runs.
-:::
-
-::: {#agents}
-:::
-
-## Evaluating LLMs {.group-title data-folder="llms"}
-
-::: {.group-meta}
-Evaluating models: benchmarks, test sets, metrics, LLM-as-a-judge, and comparing models for a given task.
-:::
-
-::: {#llms}
-:::
-
-## Guardrails {.group-title data-folder="guardrails"}
-
-::: {.group-meta}
-Runtime safeguards: checking inputs and outputs, prompt injection and jailbreaks, sensitive data, choosing thresholds, and the frameworks that implement them.
-:::
-
-::: {#guardrails}
-:::
+[Ship with Guardrails →](../guardrails/index.qmd)

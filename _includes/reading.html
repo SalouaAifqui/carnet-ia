@@ -142,7 +142,7 @@ function carnetReading() {
     if (kind === "count") s.textContent = n + word;
     else if (kind === "summary") s.textContent = n ? n + word + " · " + fmt(src.minutes) : "Coming soon";
     else if (kind === "topic") {
-      var tracks = t.tracks ? t.sections.filter(function (x) { return !x.planned; }).length : 0;
+      var tracks = t.tracks && t.sections.length > 1 ? t.sections.length : 0;
       s.textContent = n + word + " · about " + fmt(src.minutes) + " of reading" +
         (tracks ? " · " + tracks + " tracks" : "");
     }
@@ -170,17 +170,17 @@ function carnetReading() {
   /* 8. Topic pages: track labels, and one continuous numbering when the topic is a single path */
   var topicPage = document.body.classList.contains("topic");
   if (topicPage) {
-    var heads = Array.prototype.slice.call(document.querySelectorAll("h2.group-title"))
-      .filter(function (h) { return !h.closest("section.planned"); });
+    var heads = Array.prototype.slice.call(
+      document.querySelectorAll("section.group-title > h2, h2.group-title"));   /* planned tracks count too */
     var isTracks = document.body.classList.contains("tracks");
-    if (isTracks) {
+    if (isTracks && heads.length > 1) {
       heads.forEach(function (h, i) {
         var tag = document.createElement("span");
         tag.className = "track-tag";
         tag.textContent = "Track " + (i + 1) + " of " + heads.length;
         h.appendChild(tag);
       });
-    } else {
+    } else if (!isTracks) {
       var n = 0;
       document.querySelectorAll(".note-path .path-step").forEach(function (li) {
         n += 1;

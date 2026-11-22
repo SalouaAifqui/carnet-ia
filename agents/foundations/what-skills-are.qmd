@@ -1,6 +1,6 @@
 ---
 title: What skills are
-subtitle: Reusable instruction packages that extend an agent with specialized workflows.
+subtitle: 'Package a repeated workflow so any agent can reuse it.'
 order: 8
 image: /assets/visuals/what-skills-are.svg
 date: '2026-11-22'

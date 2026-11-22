@@ -1,6 +1,6 @@
 ---
 title: Validating evaluators
-subtitle: How to measure whether your code evaluators and LLM judges are trustworthy enough to use.
+subtitle: 'Measure whether your evaluators and LLM judges can be trusted.'
 order: 3
 image: /assets/visuals/validating-evaluators.svg
 date: '2026-11-16'

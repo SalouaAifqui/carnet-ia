@@ -1,6 +1,6 @@
 ---
 title: Test cases and benchmarks
-subtitle: How to turn requirements and real failures into a curated benchmark for repeated evaluation.
+subtitle: 'Turn requirements and real failures into a curated benchmark.'
 order: 1
 image: /assets/visuals/test-cases-and-benchmarks.svg
 date: '2026-11-16'

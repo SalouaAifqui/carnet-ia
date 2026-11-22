@@ -1,6 +1,6 @@
 ---
 title: How Transformer LLMs Work
-subtitle: From tokenization and embeddings to self-attention, transformer blocks, and inference optimizations.
+subtitle: 'From tokens and embeddings to attention and faster inference.'
 image: /assets/visuals/how-transformer-llms-work.svg
 date: '2026-11-15'
 categories:

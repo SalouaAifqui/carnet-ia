@@ -40,16 +40,14 @@ local function pretty_date(iso)
 end
 
 local function topic_class(note)
-  if note.topic == "evaluation" then
-    return note.section == "guardrails" and "t-guardrails" or "t-eval"
-  end
-  return ({ llms = "t-llms", agents = "t-agents", toolbox = "t-tools" })[note.topic] or "t-agents"
+  return ({ llms = "t-llms", agents = "t-agents", evaluation = "t-eval", guardrails = "t-guardrails",
+            toolbox = "t-tools" })[note.topic] or "t-agents"
 end
 
 local function pill_text(note)
-  -- "Evaluation & Guardrails" is two tracks in one topic: the pill names the track.
-  if note.topic == "evaluation" then return note.sectionTitle end
+  -- Lessons are numbered within a track, so the pill names the track.
   local topic = data.topics[note.topic]
+  if topic and topic.tracks then return note.sectionTitle end
   return topic and topic.title or note.topic
 end
 

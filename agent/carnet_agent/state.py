@@ -13,7 +13,7 @@ import re
 
 from pydantic import BaseModel, Field, field_validator
 
-Topic = Literal["llms", "agents", "evaluation", "toolbox"]
+Topic = Literal["llms", "agents", "evaluation", "guardrails", "toolbox"]
 
 
 # --- Filled by the LLM ---------------------------------------------------------
@@ -158,7 +158,7 @@ class ToolInfo(BaseModel):
     open_source: Literal["yes", "no", "partly", "unknown"] = "unknown"
     licence: str = Field(default="", description="Licence name if the source states it, else ''.")
     website: str = Field(default="", description="Official documentation or site URL, ONLY if it appears in the source.")
-    topics: list[Literal["llms", "agents", "evaluation"]] = Field(
+    topics: list[Literal["llms", "agents", "evaluation", "guardrails"]] = Field(
         description="The site topics this tool touches (one or several).")
     implements: list[str] = Field(description="The concepts it implements, a few words each "
                                               "(e.g. 'tracing', 'LLM judges', 'input guardrails').")

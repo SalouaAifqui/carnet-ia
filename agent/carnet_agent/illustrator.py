@@ -47,8 +47,10 @@ EXAMPLES = ["what-is-an-agent", "guardrails-for-llm-apps", "validating-evaluator
 
 def topic_key(topic: str, folder: str = "") -> str:
     """The vis.py colour family of a page."""
+    if topic == "guardrails" or (topic == "evaluation" and folder == "guardrails"):
+        return "guard"
     if topic == "evaluation":
-        return "guard" if folder == "guardrails" else "eval"
+        return "eval"
     return {"llms": "llms", "agents": "agents", "toolbox": "tools"}.get(topic, "agents")
 
 

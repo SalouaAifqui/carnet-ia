@@ -84,7 +84,7 @@ a { text-underline-offset: .18em; }
   font-weight: 500; font-size: .95rem; min-height: 44px; display: inline-flex; align-items: center; gap: .5rem;
   padding: 0 .75rem !important; border-radius: 10px;
 }
-.navbar .nav-link.active { color: $accent !important; background: $accent-soft; }
+.navbar .nav-link.active { color: var(--t, #{$accent}) !important; background: var(--t-soft, #{$accent-soft}); }
 .navbar #navbarCollapse .navbar-nav .nav-link .menu-text::before {
   content: ""; display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: .5rem;
   vertical-align: middle; background: var(--dot, transparent);
@@ -92,6 +92,7 @@ a { text-underline-offset: .18em; }
 .navbar .nav-link[href*="llms/"] { --dot: #{$t-llms}; }
 .navbar .nav-link[href*="agents/"] { --dot: #{$t-agents}; }
 .navbar .nav-link[href*="evaluation/"] { --dot: #{$t-eval}; }
+.navbar .nav-link[href*="guardrails/"] { --dot: #{$t-guardrails}; }
 .navbar .nav-link[href*="toolbox/"] { --dot: #{$t-tools}; }
 .navbar .quarto-color-scheme-toggle, .navbar .quarto-navigation-tool, .navbar .nav-link[aria-label="GitHub"] {
   min-width: 44px; min-height: 44px; display: inline-grid; place-items: center;
@@ -577,7 +578,9 @@ body.home main.content { max-width: 1240px; margin-left: auto; margin-right: aut
 .home-section .listing-actions-group, #listing-start-here .listing-actions-group { display: none; }
 
 /* ---------- topic pages ---------- */
-body.topic main.content { max-width: 1100px; }
+body.topic main.content { max-width: 1100px; width: 100%; margin-left: auto; margin-right: auto; }
+body.topic nav.page-navigation, body.topic .quarto-title-breadcrumbs { display: none !important; }
+#listing-start-here .note-cards { grid-template-columns: repeat(auto-fit, minmax(min(240px, 100%), 1fr)); }
 .topic-hero {
   margin: 0 0 2rem;
   p { color: $muted; font-size: 1.25rem; line-height: 1.55; max-width: 60ch; margin: 0 0 .6rem; }
@@ -616,19 +619,22 @@ section:has(> h2[data-folder="guardrails"]), .track-cards .t-guardrails, section
   strong { color: var(--t, #{$accent}); font-weight: 600; }
 }
 section.planned {
-  display: flex; flex-wrap: wrap; align-items: baseline; gap: .25rem .6rem;
-  padding: .75rem 0; border-top: 1px dashed $line-strong; margin: 0;
-  h2 { font-size: 1.06rem !important; margin: 0 !important; color: $muted; }
-  h2::after {
-    content: "Coming soon"; margin-left: .55rem; vertical-align: middle;
-    font: 600 .7rem $ui; letter-spacing: .08em; text-transform: uppercase; padding: .2rem .5rem; border-radius: 999px;
-    background: var(--t-soft, #{$accent-soft}); color: var(--t, #{$accent});
+  h2 { color: $muted; }
+  /* a track with no note yet keeps the shape of the others: heading, phrase, then a dashed step */
+  &::after {
+    content: "Coming soon"; display: block; margin-left: 60px; padding: 1.4rem 1.5rem;
+    border: 1.5px dashed $line-strong; border-radius: 16px; color: var(--t, #{$accent}); font: 600 .875rem $ui;
   }
-  .group-meta { flex-basis: 100%; margin: 0 !important; font-size: .9rem; }
-  .group-meta p { margin: 0; }
 }
-section.planned + section.planned { border-top-style: none; padding-top: 0; }
+@media (max-width: 600px) { section.planned::after { margin-left: 44px; } }
 h2.section-title, .section-title { font-size: 1.35rem; margin-top: 0; }
+
+/* pages without a sidebar sit in the middle of the window */
+body.home #quarto-content, body.topic.tracks #quarto-content, body.all-notes #quarto-content {
+  display: block; padding: 0;
+  > main.content { display: block; width: 100%; margin-left: auto; margin-right: auto; padding-left: 24px; padding-right: 24px; }
+}
+body.all-notes #quarto-content > main.content { max-width: 1240px; }
 
 /* ---------- footer ---------- */
 .nav-footer { border-top: 1px solid $line; font-family: $ui; font-size: .875rem; color: $muted; min-height: 64px; }

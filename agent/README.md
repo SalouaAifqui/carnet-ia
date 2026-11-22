@@ -184,6 +184,10 @@ Une page qui existe déjà au même endroit avec le même titre est **mise à jo
 
 ---
 
+**Les quatre sections** : Inside LLMs (`llms`), Build Agents (`agents`), Measure What Matters (`evaluation`), Ship with Guardrails (`guardrails`). Les fiches Guardrails restent dans `evaluation/guardrails/` pour garder leurs URL : la correspondance est `SECTION_DIRS` dans `config.py`.
+
+---
+
 ## 8. Les sources : garanties par le code
 
 - Chaque URL donnée devient une source principale.

@@ -1,6 +1,6 @@
 ---
 title: Evaluating AI Agents
-subtitle: How to assess, debug, and improve agents with traces, component tests, trajectory metrics, and structured experiments.
+subtitle: 'Assess, debug and improve agents with traces, component tests, trajectory metrics and experiments.'
 order: 1
 image: /assets/visuals/evaluating-ai-agents.svg
 date: '2026-11-15'

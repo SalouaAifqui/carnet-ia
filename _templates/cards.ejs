@@ -5,8 +5,8 @@ const pillOf = (p) => {
   if (p.includes('/guardrails/')) return ['t-guardrails', 'Guardrails'];
   if (p.includes('evaluation/agents/')) return ['t-eval', 'Evaluating agents'];
   if (p.includes('evaluation/llms/')) return ['t-eval', 'Evaluating LLMs'];
-  if (p.includes('agents/')) return ['t-agents', 'Agents'];
-  if (p.includes('llms/')) return ['t-llms', 'LLMs'];
+  if (p.includes('agents/')) return ['t-agents', 'Build Agents'];
+  if (p.includes('llms/')) return ['t-llms', 'Inside LLMs'];
   if (p.includes('toolbox/')) return ['t-tools', 'Toolbox'];
   return ['t-agents', ''];
 };

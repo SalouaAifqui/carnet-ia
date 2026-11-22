@@ -1,6 +1,6 @@
 ---
 title: Action and tool-use evaluation
-subtitle: How to check whether an agent chose the right tool, used it correctly, and followed the right sequence.
+subtitle: 'Check the right tool, used correctly, in the right sequence.'
 order: 4
 image: /assets/visuals/action-and-tool-use-evaluation.svg
 date: '2026-11-16'
