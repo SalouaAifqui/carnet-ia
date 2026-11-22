@@ -135,7 +135,7 @@ If the correct behavior is to ask for the missing detail first, then that questi
 ```{mermaid}
 flowchart TD
     A[Customer asks about order 4521] --> B{Tool call}
-    B --> C[order_lookup(order_id=\"4512\")]
+    B --> C["order_lookup(order_id=#quot;4512#quot;)"]
     C --> D[Tool returns valid-looking result]
     D --> E[Agent answers about the wrong order]
 ```
