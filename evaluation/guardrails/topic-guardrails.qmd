@@ -1,18 +1,22 @@
 ---
 title: Topic guardrails
-subtitle: Use topic classification to keep model outputs on the intended subject.
+subtitle: 'Keep model outputs on the intended subject.'
+order: 3
+image: /assets/visuals/topic-guardrails.svg
 date: '2026-11-17'
 categories:
 - Evaluation & Guardrails
 - Guardrails
 ---
 
-::: {.lesson-meta}
-[Evaluation & Guardrails]{.pill .t-eval} [Guardrails]{.pill .muted}
+::: {.synthesis}
+![The Chick-fil-A example from the note, with its real topic scores and a blocking threshold.](/assets/visuals/topic-guardrails.svg){fig-alt="Topic guardrail: a zero-shot classifier scores the text per topic; a banned topic above the threshold is blocked"}
 :::
 
-::: {.tldr}
-This page explains how topic guardrails keep a chatbot or RAG app on its intended subject by checking user input at runtime before the model responds. It introduces zero-shot topic classification as a way to detect whether text fits a target domain, compares it with LLM-based classification, and then shows how to build a validator that flags or blocks banned topics using a score threshold. The main idea is that even a well-performing assistant needs a lightweight gate to prevent misuse, drift, or off-domain answers.
+::: {.in30}
+- A topic guard keeps a chatbot or RAG app on its business subject by checking text at runtime, before an off-topic answer reaches the user.
+- Zero-shot classification turns topic detection into NLI: the text is the premise, “this text is about [topic]” the hypothesis.
+- A validator flags banned topics whose score passes a threshold; a local classifier is more consistent than an LLM and keeps data private.
 :::
 
 ::: {.concepts}
@@ -20,11 +24,6 @@ This page explains how topic guardrails keep a chatbot or RAG app on its intende
 `Topic guardrails`
 
 A runtime check that keeps model outputs aligned with the intended business or application domain. It helps prevent the chatbot from answering requests that are outside scope, even when the prompt seems valid.
-:::
-::: {.concept}
-`RAG domain control`
-
-RAG systems can still drift off-topic because users may ask for unrelated tasks. Topic guards add a layer before generation to make sure the request belongs to the supported use case.
 :::
 ::: {.concept}
 `Zero-shot topic classification`
@@ -49,6 +48,10 @@ A chatbot can drift outside its business domain. Then it may answer a request th
 
 This is a problem for RAG apps too, especially when you are keeping an LLM running RAG applications on the topic intended for your use case or your business. Even if the chatbot is working well, users can try to use it for other tasks. A runtime topic check helps stop that misuse before the response is shown.
 
+::: {.column-margin .define label="RAG domain control"}
+RAG systems can still drift off-topic because users may ask for unrelated tasks. Topic guards add a layer before generation to make sure the request belongs to the supported use case.
+:::
+
 ::: {.compare}
 ::: {.col .bad}
 **Without a topic guard**
@@ -61,10 +64,6 @@ A pizzeria chatbot is asked about the differences between a Ford F-150 and a For
 
 The app checks the topic first. If the request is outside the intended business topic, it can block or reject the answer before the user sees it.
 :::
-:::
-
-::: {.example}
-**Pizza chatbot, car question.** A pizzeria chatbot is asked to compare a Ford F-150 and a Ford Ranger. The unguarded bot answers with an amazing detail list about versatility and convenience, but this is off topic for a pizza business.
 :::
 
 Before building the validator, first understand the underlying model being used: a **zero-shot topic classification** model. The model used here is **BART**, a zero-shot topic classification model created by **Meta Labs**.

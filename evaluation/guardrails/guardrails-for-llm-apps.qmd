@@ -1,18 +1,22 @@
 ---
 title: Guardrails for LLM apps
-subtitle: Runtime validations that enforce safety, reliability, and policy at inference time.
+subtitle: 'Runtime validations for safety, reliability and policy.'
+order: 1
+image: /assets/visuals/guardrails-for-llm-apps.svg
 date: '2026-11-17'
 categories:
 - Evaluation & Guardrails
 - Guardrails
 ---
 
-::: {.lesson-meta}
-[Evaluation & Guardrails]{.pill .t-eval} [Guardrails]{.pill .muted}
+::: {.synthesis}
+![The basic pipeline: a validator before and after the LLM, which can block, raise an error or re-check.](/assets/visuals/guardrails-for-llm-apps.svg){fig-alt="Guardrails: validators check the input before the LLM and the output after it, and can block, raise an error or re-check"}
 :::
 
-::: {.tldr}
-This page explains that guardrails are runtime validators for LLM applications: they check prompts, responses, or both against explicit rules so an app can block, reroute, or reject unsafe or unreliable outputs. It emphasizes that prompting, RAG, RLHF, and fine-tuning improve behavior but do not make models fully predictable, which is why production systems—especially in regulated domains—need validation for failure modes like hallucinations, policy violations, and bad formatting. The page also introduces common validator implementations, from rules and regex to smaller ML models, and frames guardrails as a practical layer for safety, reliability, and compliance at inference time.
+::: {.in30}
+- Guardrails are runtime **validators**: they check the prompt, the response or both against explicit rules, then block, raise or re-check.
+- Prompting, RAG, RLHF and fine-tuning help but never make a model fully predictable, which production apps in regulated domains need.
+- Validators range from regex and rules to small ML models and LLM judges, matched to the risk: PII, off-topic use, hallucinations, competitors.
 :::
 
 ::: {.concepts}
@@ -32,11 +36,6 @@ Good prompts, RAG, RLHF, and fine-tuning help, but they do not remove all unpred
 Guardrails can inspect the input, the output, or both. Common targets include hallucinations, policy violations, unsafe content, and format constraints.
 :::
 ::: {.concept}
-`Hallucination checks`
-
-A key use case is verifying that answers are grounded in source text, especially in RAG systems. NLI-style checks can help determine whether the retrieved context actually supports the response.
-:::
-::: {.concept}
 `Validator implementations`
 
 Validators can be built with rules engines, regex, or smaller ML models such as Transformers. The choice depends on the kind of rule and the depth of checking needed.
@@ -47,11 +46,15 @@ Validators can be built with rules engines, regex, or smaller ML models such as 
 
 Guardrails are **secondary checks** in an LLM app. They do not replace the model. They check the **input** or the **output** against clear rules at runtime, so the app does not trust the model blindly.
 
-A guardrail acts like a **validator**. A validator is a function that takes a user prompt, an LLM response, or both, then checks whether it matches a predefined rule. If it does not, the app can block it, raise an exception, or send it back for more checking.
+::: {.column-margin .watch}
+Guardrails do not remove all variability from LLMs. They add checks that improve safety and reliability, but they are not a full replacement for good prompting, fine-tuning, RLHF, or RAG.
+:::
+
+A guardrail acts like a **validator**. A validator is a function that takes a user prompt, an LLM response, or both, then checks whether it matches a predefined rule. If it does not, the app can block it, reroute it, raise an exception, or send it back for more checking.
 
 Guardrails are built into AI applications as a **protective framework**: they add a layer of control and oversight that helps align runtime behavior with developer expectations. They support building safe and responsible AI.
 
-Guardrails are especially important because even with prompting, fine-tuning, RLHF, and RAG, LLM output can still be hard to predict in advance. Those techniques help a lot, but they cannot fully eliminate output variability and unpredictability. This matters most in applications for domains like healthcare, government, and finance, where clients need high consistency and have strict reliability and compliance requirements. Guardrails help prevent unintended, incorrect, irrelevant, or sensitive content from reaching the user. They also help applications move from proof of concept to production.
+Guardrails help prevent unintended, incorrect, irrelevant, or sensitive content from reaching the user, and help applications move from proof of concept to production.
 
 ### Simple and complex checks
 
@@ -62,14 +65,6 @@ Other validators are **more complex**. They may check meaning, policy, formattin
 ::: {.example}
 **Blocking private contact details.** A user types a message that contains a phone number or an email address. A regex-based validator checks the input, and if it finds personal information, the app throws an exception to prevent the information from being revealed to the user.
 :::
-
-```{mermaid}
-flowchart LR
-  A[Input] --> B[Validator]
-  B --> C[LLM]
-  C --> D[Validator]
-  D --> E[Response]
-```
 
 ## Why prompting is not enough
 
@@ -89,19 +84,15 @@ That is a problem in production. A proof of concept can look good, but real prod
 **Alfredo’s Pizza Cafe still hallucinates.** A RAG chatbot for Alfredo’s Pizza Cafe uses a shared document set with menu items, directions, payment methods, offers, and company info. In the notebook, there is a working POC where the bot can respond to a simple “Hi, how’s it going?” message. But when the user asks for a detailed recipe for the “Veggie Supreme” pizza, the bot still gives ingredients and cooking steps like preheating the pizza oven and rolling out dough, even though the recipe is not in the shared data drive. This shows that even with system prompts and retrieval, hallucinations can still happen.
 :::
 
-A pizzeria chatbot shows the problem clearly. In the notebook, the first version of the RAG app looks fine: it can answer basic customer questions and it uses retrieved documents. But when the user asks for a recipe that is not in the data, the model still makes one up. This happens even after prompt engineering and retrieval.
-
 The same thing can happen with unintended use. The bot can be pushed to answer unrelated topics, even with a system instruction like: “Answer the customer’s question about world or politics… Weave in the pizza offerings…” When the actual question is, “What’s the difference between a Ford F-150 and a Ford Ranger?”, the model can still drift into out-of-domain content and include a pizza upsell. That is why production systems need runtime guardrails. They add checks after the model runs, so the app can enforce safety, reliability, and policy before the user sees the output.
-
-At the heart of the guardrails implementation is a component called the **validator**. A validator takes a user prompt and/or an LLM response and checks it against a predefined rule at runtime. Validators can be quite simple. For example, a PII validator can use a regex to detect phone numbers or emails, and then throw an exception to prevent disclosure to the user.
-
-You can also create more advanced validators that use machine learning models, including Transformers or even other LLMs, to carry out more complex analysis of the text. These can help with checks like keeping a chatbot on allowed topics, or blocking trademark terms or competitive names.
-
-Guardrails can also be used to reduce hallucinations. One approach is to build a hallucination validator using natural language inference (NLI) to check whether an answer in a RAG system is actually grounded in the retrieved text. In other words, the source text must confirm the truthfulness of what the model generated.
 
 ## What to validate
 
 Guardrails target common failure modes in LLM apps. You can check the **input** before the model runs, the **output** after it runs, or both.
+
+::: {.column-margin .define label="Hallucination checks"}
+A key use case is verifying that answers are grounded in source text, especially in RAG systems. NLI-style checks can help determine whether the retrieved context actually supports the response.
+:::
 
 ### Main things to validate
 
@@ -136,6 +127,8 @@ Output checks can stop a response that mentions a competitor or gives an off-top
 ::: {.example}
 **Blocking sensitive input and a competitor mention.** A customer sends a message that includes a name and phone number. An input validator blocks it before it reaches the model. Later, the chatbot tries to answer a question by comparing **Alfredo’s Pizza Cafe** with a competing pizza chain. An output validator stops that response because competitor mentions are not allowed.
 :::
+
+Validators can also block trademark terms or competitive names.
 
 ### Input checks vs output checks
 
@@ -173,7 +166,7 @@ Validators can check that an output or input follows a set of rules or guideline
 
 They are useful in production settings where teams need stricter reliability and compliance than prompting, fine-tuning, RLHF, or RAG can provide on their own. The source explicitly ties guardrails and validators to moving beyond the proof-of-concept stage and making applications production-ready.
 
-Validators can also be implemented to throw an exception when prohibited data is present, such as PII, so that the information is not revealed to the user.
+GuardrailsAI uses validators in sectors such as healthcare, government, and finance, where strict reliability and compliance are required.
 
 ### Why guardrails matter
 
@@ -189,9 +182,7 @@ The course also describes a coding pattern for building guardrails at the compan
 **Hallucination validator with NLI.** In a RAG system, you retrieve text first and then generate an answer. An NLI model can check whether the answer is grounded in the words of the retrieved text. If the source text does not confirm the answer, the validator flags the response as a hallucination, using the source text to confirm truthfulness.
 :::
 
-GuardrailsAI uses validators in sectors such as healthcare, government, and finance, where strict reliability and compliance are required.
-
-::: {mermaid}
+```{mermaid}
 flowchart TD
     A[User prompt] --> B[Rules engine]
     B --> C[Regex checks]
@@ -203,13 +194,7 @@ flowchart TD
     C -. emails, phone numbers, names .-> G
     D -. topic checks, hallucination checks .-> G
     E -. deeper judgment .-> G
-:::
-
-::: {.callout-warning}
-## Watch out
-
-Guardrails do not remove all variability from LLMs. They add checks that improve safety and reliability, but they are not a full replacement for good prompting, fine-tuning, RLHF, or RAG.
-:::
+```
 
 ::: {.callout-tip}
 ## Remember

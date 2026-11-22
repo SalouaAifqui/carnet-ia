@@ -1,18 +1,22 @@
 ---
 title: What skills are
-subtitle: Reusable instruction packages that extend an agent with specialized workflows.
+subtitle: 'Package a repeated workflow so any agent can reuse it.'
+order: 8
+image: /assets/visuals/what-skills-are.svg
 date: '2026-11-22'
 categories:
 - Agents
 - Foundations
 ---
 
-::: {.lesson-meta}
-[Agents]{.pill .t-agents} [Foundations]{.pill .muted}
+::: {.synthesis}
+![A skill is a folder: name and description always in context, instructions loaded on a match, extra files only when needed.](/assets/visuals/what-skills-are.svg){fig-alt="A skill folder: SKILL.md with name and description always in context, full instructions loaded on a match, reference files only when needed"}
 :::
 
-::: {.tldr}
-Skills are reusable instruction packages that give an agent specialized workflows or knowledge in a lightweight, portable format. A skill lives in a folder centered on a required `SKILL.md` file, and the agent loads the full instructions only when a request matches the skill’s description. This progressive disclosure keeps the context window lean while still allowing skills to expand with extra files, and positions them as the workflow layer that helps coordinate tools, MCP data, and sub-agents.
+::: {.in30}
+- A skill is a reusable folder of instructions centred on a required `SKILL.md` file: a repeated workflow or specialised knowledge.
+- The agent keeps only names and descriptions in context, and loads a skill's full instructions when a request matches.
+- Skills are the workflow layer: they tell the agent how to combine tools, MCP data and sub-agents.
 :::
 
 ::: {.concepts}
@@ -22,7 +26,7 @@ Skills are reusable instruction packages that give an agent specialized workflow
 A skill is not just a prompt; it is a folder that packages a repeated workflow or specialized knowledge for reuse. The core file is `SKILL.md`, which must include the skill name, description, and main instructions.
 :::
 ::: {.concept}
-``SKILL.md` as the entry point`
+`SKILL.md` as the entry point
 
 `SKILL.md` is the main file of a skill and must be written in Markdown. It defines what the skill is for and gives the instructions the agent uses when the skill is activated.
 :::
@@ -30,11 +34,6 @@ A skill is not just a prompt; it is a folder that packages a repeated workflow o
 `Progressive disclosure`
 
 Skills keep the context window lightweight by loading only the name and description up front. The full instructions in `SKILL.md`, and any extra files, are pulled in only when the user’s request matches the skill.
-:::
-::: {.concept}
-`Reusable workflow packaging`
-
-Skills are useful for tasks you do repeatedly because they let you store a long prompt once and use it again later. This makes recurring work easier to standardize, share, and update.
 :::
 ::: {.concept}
 `Skills in the agent stack`
@@ -61,11 +60,7 @@ These supporting files must be in the same parent folder as `SKILL.md`.
 
 Skills are an open standard, which means they use a standardized format compatible with any skills-compatible agent. You can build a skill once and deploy it across multiple agent products.
 
-To use a skill, an agent needs a basic tool set, including filesystem access to read and write files and a bash tool to execute code.
-
-Skills also use progressive disclosure. That means the agent always keeps the skill name and description in context, but it does not load the full instructions until the request matches the skill description. Then it can load the extra reference files if needed, and only then will additional reference or asset files be loaded if the user request actually requires them.
-
-Skills can also be combined with MCP and sub-agents to create workflows. For example, you can use MCP to get data from external sources, then use a skill to process that data or retrieve information efficiently. You can also delegate to a sub-agent with isolated context, and that sub-agent can use skills too.
+To use a skill, an agent needs a basic tool set, including filesystem access to read and write files and a bash tool to execute code. Those tools let the agent run whatever commands the skill requires.
 
 ::: {.example}
 **Weekly marketing campaign analysis.** A team wants to analyze campaign performance every week. The skill folder contains a `SKILL.md` file with the analysis workflow, plus a `budget_reallocation_rules.md` reference file that is only used when the user asks about budget reallocation. That file is not loaded generically; it is loaded only when the user specifically asks about Budget Reallocation.
@@ -87,8 +82,6 @@ Skills stay lightweight in the context window. The skill name and description ar
 
 This is called **progressive disclosure**: the agent sees only the parts it needs, when it needs them. It helps avoid putting every instruction into the context window all the time. At that point, the agent may also load reference and asset files if needed.
 
-To use a skill, the agent needs a basic set of tools: filesystem access to read and write files, and a bash tool to execute code. Those tools let the agent run whatever commands the skill requires.
-
 ::: {.example}
 **Budget reallocation on demand.** A skill can include a note about budget reallocation in `SKILL.md`, and point to `budget_reallocation_rules.md`. Those rules are read only when the user asks about Budget Reallocation, not for every request. This is similar to a previous prompt that included input requirements, a data quality check, funnel analysis with specific metrics, and historical benchmarks.
 :::
@@ -104,11 +97,13 @@ flowchart TD
     G --> F
 ```
 
-In the example YAML setup, every skill requires both a name and a description.
-
 ## Why use skills
 
 Skills help you package a repeated workflow into something you can reuse. Instead of pasting the same long prompt every time, you put the instructions in one place and use them again later. This is useful for work you do often, like weekly campaign analysis.
+
+::: {.column-margin .define label="Reusable workflow"}
+Skills are useful for tasks you do repeatedly because they let you store a long prompt once and use it again later. This makes recurring work easier to standardize, share, and update.
+:::
 
 Skills also help with portability. A skill is a folder with a `SKILL.md` file, and it can include extra reference files. You can upload that package to Claude AI and use it in later chats. Because skills are an open standard, the same skill can also be shared across other products and environments, such as Codex and Gemini CLI.
 
@@ -149,9 +144,9 @@ Skills sit in the middle of the agent ecosystem.
 - **Sub-agents** handle isolated work or parallel work. They can run in their own context window with limited tool permissions.
 - **Skills** provide the repeatable workflow. They tell the agent how to use tools, MCP data, and sub-agents in a predictable way.
 
-Skills are progressively disclosed: the skill name and description are always in the agent’s context window, but the rest of the instructions are only loaded when a user request matches the skill description. If needed, reference files and asset files can be loaded at that point too. Tool definitions live in the context window, while skills are loaded progressively when necessary.
+Tool definitions live in the context window, while skills are loaded progressively when necessary (see Progressive disclosure).
 
-To use a skill, the agent needs a basic tool set, filesystem access to read and write files, and a bash tool to execute code.
+Skills can also be combined with MCP and sub-agents to create workflows. For example, you can use MCP to get data from external sources, then use a skill to process that data or retrieve information efficiently. You can also delegate to a sub-agent with isolated context, and that sub-agent can use skills too.
 
 ### How they work together
 
@@ -188,8 +183,7 @@ Skills are useful when you want a workflow to stay the same each time. If a task
 ## Remember
 - A skill is a reusable workflow, not just a prompt.
 - `SKILL.md` is the required main file.
-- Only the skill name and description stay in context by default.
-- The full skill loads only when the request matches it.
+- Only the skill name and description stay in context by default; the full skill loads when the request matches it.
 - Skills help standardize repeated work and stay portable.
 - Skills guide how to use tools, MCP, and sub-agents.
 :::

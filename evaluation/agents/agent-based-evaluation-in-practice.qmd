@@ -1,18 +1,22 @@
 ---
 title: Agent-based evaluation in practice
-subtitle: How agents can help evaluate other agents, and where human oversight still matters.
+subtitle: 'Agents evaluating agents, and where human oversight still matters.'
+order: 7
+image: /assets/visuals/agent-based-evaluation-in-practice.svg
 date: '2026-11-16'
 categories:
 - Evaluation & Guardrails
 - Evaluating agents
 ---
 
-::: {.lesson-meta}
-[Evaluation & Guardrails]{.pill .t-eval} [Evaluating agents]{.pill .muted}
+::: {.synthesis}
+![Who judges what: the human sets the target, an agent judge reads trajectories, and failures are located by layer.](/assets/visuals/agent-based-evaluation-in-practice.svg){fig-alt="Agent-based evaluation: a human sets goals, an agent judge reads trajectories, failures split into harness, context and model"}
 :::
 
-::: {.tldr}
-The page explains how agent-based evaluation works in practice: agents can help assess other agents by reading traces, judging trajectories, and monitoring production traffic, but human judgment remains essential for setting goals and deciding what counts as good. It also shows that effective evaluation depends on separating failures in the model, the context, and the surrounding harness, especially in multi-agent systems where the behavior emerges from the whole setup rather than the model alone.
+::: {.in30}
+- Humans define what “good” means; agents do the heavy lifting: crawling traces, finding patterns and unknown unknowns, drafting evals.
+- An agent judge reads the whole trajectory and can adapt its criteria, but a human still reviews and approves what ships.
+- Locate failures in the model, the context or the harness, and change one layer at a time; multi-agent systems add coordination and cost.
 :::
 
 ::: {.concepts}
@@ -27,11 +31,6 @@ Agents can assist with evaluation, but domain experts must define what “good�
 An agent judge evaluates another agent by looking at the full trajectory: steps, turns, reasoning path, and final output. Compared with a simple LLM judge, it can adapt criteria and make debugging more actionable.
 :::
 ::: {.concept}
-`Trajectory-aware evaluation`
-
-Evaluating only the final answer can miss important failures or successes along the way. Looking at the full sequence of actions helps explain why an agent behaved the way it did and where to improve it.
-:::
-::: {.concept}
 `Online evals and monitoring`
 
 Evaluation continues after launch through live traffic, traces, and dashboards. Agents can help triage production data by grouping patterns and flagging suspicious cases, while humans still review the important ones.
@@ -40,11 +39,6 @@ Evaluation continues after launch through live traffic, traces, and dashboards. 
 `Model, context, harness`
 
 A bad agent outcome may come from the base model, the prompt/context, or the control system around it. Separating these layers helps engineers diagnose problems and avoid blaming the wrong part of the system.
-:::
-::: {.concept}
-`Multi-agent system behavior`
-
-In multi-agent setups, performance depends on how agents interact, not just on one model’s capability. That makes system-level evaluation and harness design especially important.
 :::
 :::
 
@@ -90,20 +84,24 @@ An agent judge can:
 
 Trajectory-aware evaluation means judging the path, not only the final result. This matters because an agent may take several turns before it understands the user.
 
+::: {.column-margin .define label="Trajectory-aware"}
+Evaluating only the final answer can miss important failures or successes along the way. Looking at the full sequence of actions helps explain why an agent behaved the way it did and where to improve it.
+:::
+
 A path can be:
 - **valid**, even if it is not the shortest path;
 - **invalid**, if the agent keeps taking unnecessary turns when the user was already clear.
 
 This is useful for debugging and improvement. If you only check the final answer, you may miss a problem in the agent’s behavior. If you check the trajectory, you can tell whether the agent handled the interaction in a sensible way.
 
-::: {.mermaid}
+```{mermaid}
 flowchart LR
     A[User input] --> B[Agent turns]
     B --> C[Final output]
     C --> D[Agent judge]
     D --> E[Feedback on the trajectory]
     D --> F[Fixes or follow-up agents]
-:::
+```
 
 ::: {.example}
 **Alex took extra turns.** Alex is an agent in a product. A user asks a question, and Alex may need a couple of turns to understand the real intent. If the user was vague, those turns can be fine. But if the user was super direct and Alex still took extra turns, an agent judge can flag that the trajectory was not valid, even if the final answer looked acceptable. Those turns should probably have been similar to what a human would have done.
@@ -118,6 +116,10 @@ Agent judges can create a **slop loop**: one weak judgment leads to more weak ju
 ## Production loops and monitoring
 
 In production, evaluation is not only about testing before launch. It also means watching live traffic, reading traces, and using dashboards to spot problems, trends, and next improvements. These are **online evals**: evaluations that run continuously across your stream of production data.
+
+::: {.column-margin .watch}
+Do not depend only on complex evals. Start simple if you are new. A basic signal like “user happy” or “user frustrated” can be enough at first. Also, online evals are useful because real users reveal issues that benchmarks may miss. The big advantage of evals on traces is that, unlike offline benchmarking, they teach you from real telemetry after the product is out in the world.
+:::
 
 ### How the production loop works
 
@@ -161,12 +163,6 @@ A team does not need to wait for a person to start the loop every time. The agen
 **Signal reading traces on a cadence.** A team uses Arize Signal to read traces from a production app every day. Signal finds repeated issues across 4, 5, or even 20 traces, then suggests a fix. A human reviews the proposed fix, runs tests and benchmark checks, and only then approves it.
 :::
 
-::: {.callout-warning}
-## Watch out
-
-Do not depend only on complex evals. Start simple if you are new. A basic signal like “user happy” or “user frustrated” can be enough at first. Also, online evals are useful because real users reveal issues that benchmarks may miss. The big advantage of evals on traces is that, unlike offline benchmarking, they teach you from real telemetry after the product is out in the world.
-:::
-
 ## System design and multi-agent evals
 
 When you evaluate agents, it helps to split the system into **three layers**:
@@ -195,6 +191,10 @@ A useful eval pattern is to **keep the model constant and keep the context const
 
 When a system uses more than one agent, some evals stay the same, but new things matter more:
 
+::: {.column-margin .define label="Multi-agent systems"}
+In multi-agent setups, performance depends on how agents interact, not just on one model’s capability. That makes system-level evaluation and harness design especially important.
+:::
+
 - **Efficiency**: did multiple agents actually improve performance, or did you need many agents for only a small gain?
 - **Coordination**: did the agents pass information to each other correctly?
 - **Self-organization**: could they organize themselves, or did they need guidance?
@@ -204,7 +204,7 @@ One important caveat is that efficiency improvements may not scale linearly. Som
 
 It is also worth asking whether model capability is the real barrier, or whether better multi-agent design is the bigger lever. As models improve, you may see leaps in what multi-agent systems can do.
 
-::: {.mermaid}
+```{mermaid}
 flowchart TD
     A[Model layer] --> B[Context layer]
     B --> C[Harness layer]
@@ -214,7 +214,7 @@ flowchart TD
     F --> G[Information sharing]
     G --> H[Efficiency and cost]
     H --> I[Multi-agent result]
-:::
+```
 
 ### Decision models for evals
 
@@ -244,8 +244,7 @@ Also, prompt testing and prompt iterations are likely to go away in the next one
 - Humans define what “good” means; agents help measure it.
 - Judge the whole trajectory, not just the final answer.
 - Production eval is continuous, not a one-time test.
-- A failure may come from the model, the context, or the harness.
-- Better models do not automatically fix a broken system.
+- A failure may come from the model, the context, or the harness: a better model does not automatically fix a broken system.
 - In multi-agent systems, interaction effects matter as much as individual capability.
 :::
 

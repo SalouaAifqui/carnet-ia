@@ -12,7 +12,7 @@ from pathlib import Path
 
 import yaml
 
-from .config import SELF_URLS, TOPICS
+from .config import SECTION_DIRS, SELF_URLS, TOPICS
 from .state import Finding, Source
 
 SOURCES_HEADING = "## Sources {.sources}"
@@ -49,14 +49,25 @@ class PageInfo:
     subtitle: str
 
 
+def section_dir(topic: str, folder: str) -> str:
+    """The folder where the notes of a section live."""
+    return SECTION_DIRS.get((topic, folder), f"{topic}/{folder}")
+
+
+def owner_of(topic: str, folder: str) -> tuple[str, str]:
+    """The (topic, section) that the notes of the folder <topic>/<folder> belong to."""
+    return next((key for key, where in SECTION_DIRS.items() if where == f"{topic}/{folder}"), (topic, folder))
+
+
 def list_pages(root: Path) -> list[PageInfo]:
     """Every note of the site. Notes always live in topic/<folder>/<page>.qmd."""
     pages = []
     for topic in TOPICS:
         for file in sorted((root / topic).glob("*/*.qmd")):
             fm, _ = split_front_matter(file.read_text())
+            owner, folder = owner_of(topic, file.parent.name)
             pages.append(PageInfo(
-                path=str(file.relative_to(root)), topic=topic, folder=file.parent.name,
+                path=str(file.relative_to(root)), topic=owner, folder=folder,
                 title=str(fm.get("title", file.stem)), subtitle=str(fm.get("subtitle", "")),
             ))
     return pages
@@ -83,11 +94,17 @@ class Section:
 def list_sections(root: Path) -> list[Section]:
     sections = []
     for topic in TOPICS:
+        if topic == "toolbox":
+            sections.append(Section(topic, "tools", "Tools", "Tool cards only (one per product). Each card is "
+                                    "shown at the bottom of the theme of its tool, under 'Tools in practice'."))
+            continue
         index = root / topic / "index.qmd"
         _, body = split_front_matter(index.read_text()) if index.exists() else ({}, "")
         found = list(SECTION_RE.finditer(body))
         for i, match in enumerate(found):
             attrs = match.group(2)
+            if "data-theme=" in attrs:          # "Tools in practice" only shows cards: nothing is written there
+                continue
             folder = re.search(r'data-folder="([^"]+)"', attrs)
             chunk = body[match.end(): found[i + 1].start() if i + 1 < len(found) else len(body)]
             meta = re.search(r"::: \{\.(?:group-meta|empty-state)\}\n(.*?)\n:::", chunk, re.S)
@@ -97,7 +114,8 @@ def list_sections(root: Path) -> list[Section]:
         # A folder with pages but no declared section still counts.
         declared = {s.folder for s in sections if s.topic == topic}
         if (root / topic).exists():
-            for d in sorted(p for p in (root / topic).iterdir() if p.is_dir() and p.name not in declared):
+            for d in sorted(p for p in (root / topic).iterdir() if p.is_dir() and p.name not in declared
+                            and owner_of(topic, p.name) == (topic, p.name)):
                 sections.append(Section(topic, d.name, d.name.replace("-", " ").capitalize(), ""))
     return sections
 
@@ -187,6 +205,7 @@ def related_pages(root: Path, topic: str, folder: str, exclude: str = "", limit:
 VISUALS = {
     "diagram": "```{mermaid}", "table": "|---", "concept cards": "{.concepts}",
     "example box": "{.example}", "comparison": "{.compare}", "steps": "{.steps}", "callout": "{.callout-",
+    "margin note": "{.column-margin", "code steps": "{.code-step",
 }
 
 
@@ -253,13 +272,51 @@ def check_page(text: str, findings: list[Finding]) -> list[str]:
                       "kinds (diagram, table, concept cards, example box, comparison, steps, callout).")
     if "{.example}" not in body:
         errors.append("No concrete example: put at least one example in a ::: {.example} box.")
+    if re.search(r"(?m)^#{2,3} Watch out[ \t]*$", _without_callout_titles(body)):
+        errors.append("A 'Watch out' heading on its own: put the warning in a ::: {.column-margin .watch} note "
+                      "(or a callout-warning inside its section).")
+    long_code = _long_code_outside_steps(body)
+    if long_code:
+        errors.append(f"{long_code} code block(s) over 12 lines outside a ::: {{.code-step title=\"…\"}} block.")
     return errors
+
+
+def _without_callout_titles(body: str) -> str:
+    """The body without the '## Title' line that opens a callout (it is the callout's title, not a section)."""
+    return re.sub(r"(?m)^(::: \{\.callout[^}]*\})\n## [^\n]*", r"\1", body)
+
+
+def _long_code_outside_steps(body: str) -> int:
+    count, in_step = 0, False
+    lines, i = body.split("\n"), 0
+    while i < len(lines):
+        line = lines[i]
+        if line.startswith("::: {.code-step"):
+            in_step = True
+        elif in_step and re.match(r"^:::\s*$", line):
+            in_step = False
+        elif line.startswith("```") and not line.startswith("```{mermaid"):
+            j = i + 1
+            while j < len(lines) and not lines[j].startswith("```"):
+                j += 1
+            if j - i - 1 > 12 and not in_step:
+                count += 1
+            i = j
+        elif line.startswith("```"):
+            j = i + 1
+            while j < len(lines) and not lines[j].startswith("```"):
+                j += 1
+            i = j
+        i += 1
+    return count
 
 
 # --- Registering a new folder in the site's menus --------------------------------
 
 def ensure_listed(root: Path, topic: str, folder: str, folder_title: str, description: str = "") -> None:
     """Make sure topic/<folder> appears on the topic page and in the sidebar."""
+    if (topic, folder) in SECTION_DIRS:
+        return                                  # declared by hand, with its folder
     _add_listing_to_topic_page(root / topic / "index.qmd", folder, folder_title, description)
     _add_folder_to_sidebar(root / "_quarto.yml", topic, folder, folder_title)
 
@@ -271,11 +328,9 @@ def _add_listing_to_topic_page(index_file: Path, folder: str, folder_title: str,
         listings = [listings]
     if any(lst.get("id") == folder for lst in listings):
         return
-    listing = {"id": folder, "contents": f"{folder}/*.qmd", "type": "grid",
-               "grid-columns": 2, "sort": "date desc", "fields": ["title", "subtitle"]}
-    if index_file.parent.name == "toolbox":            # the catalogue: tags shown and filterable by topic
-        listing |= {"grid-columns": 3, "sort": "title", "fields": ["title", "subtitle", "categories"],
-                    "categories": True}
+    # a numbered reading path (see _templates/path.ejs), in the `order` of the notes
+    listing = {"id": folder, "contents": f"{folder}/*.qmd", "template": "../_templates/path.ejs",
+               "sort": "order", "fields": ["title", "subtitle", "image"]}
     listings.append(listing)
     fm["listing"] = listings
 
@@ -299,8 +354,8 @@ def _add_listing_to_topic_page(index_file: Path, folder: str, folder_title: str,
         if not sections:
             body = re.sub(r"::: \{\.empty-state\}.*?\n:::\n?", "", body, flags=re.S)
         meta = f"::: {{.group-meta}}\n{description}\n:::\n\n" if description else ""
-        body = body.rstrip() + (f'\n\n## {folder_title} {{.group-title data-folder="{folder}"}}\n\n'
-                                f"{meta}{placeholder}\n")
+        body = _insert_track(body, f'## {folder_title} {{.group-title data-folder="{folder}"}}\n\n'
+                                   f"{meta}{placeholder}", before_tools=True)
     index_file.write_text(join_front_matter(fm, body))
 
 
@@ -316,11 +371,87 @@ def _add_folder_to_sidebar(config_file: Path, topic: str, folder: str, folder_ti
             return
 
 
+def _insert_track(body: str, block: str, before_tools: bool = False) -> str:
+    """Add a track after the others: above the closing text of the page and, for a concept track,
+    above "Tools in practice", which stays last."""
+    at, seen = len(body), False
+    for match in re.finditer(r"(?m)^## .*$", body):
+        track = ".group-title" in match.group(0)
+        callout_title = body[:match.start()].rstrip().rsplit("\n", 1)[-1].startswith("::: {.callout")
+        if (before_tools and "data-theme=" in match.group(0)) or (seen and not track and not callout_title):
+            at = match.start()
+            break
+        seen = seen or track
+    return (f"{body[:at].rstrip()}\n\n{block.strip()}\n\n{body[at:].lstrip()}").rstrip() + "\n"
+
+
+TOOLS_TRACK = "tools-in-practice"
+
+
+def attach_tool(root: Path, page: str, theme: str) -> None:
+    """[code] Show a tool card at the bottom of its theme, under "Tools in practice": the track of
+    the theme page (created with the first card) and the sidebar of that theme only."""
+    path = root / page
+    front_matter, body = split_front_matter(path.read_text())
+    if front_matter.get("tool-theme") != theme:
+        front_matter["tool-theme"] = theme     # not "theme": Quarto's own key, it replaces the site's CSS
+        path.write_text(join_front_matter(front_matter, body.lstrip("\n")))
+
+    index = root / theme / "index.qmd"
+    front_matter, body = split_front_matter(index.read_text())
+    listings = front_matter.get("listing") or []
+    listings = [listings] if isinstance(listings, dict) else listings
+    if not any(lst.get("id") == TOOLS_TRACK for lst in listings):
+        listings.append({"id": TOOLS_TRACK, "contents": "../toolbox/tools/*.qmd", "include": {"tool-theme": theme},
+                         "template": "../_templates/path.ejs", "sort": "title",
+                         "fields": ["title", "subtitle", "image"]})
+        front_matter["listing"] = listings
+        body = _insert_track(body, f'''## Tools in practice {{#track-tools .group-title data-folder="{TOOLS_TRACK}" data-dir="toolbox/tools" data-theme="{theme}"}}
+
+::: {{.group-meta}}
+The products and frameworks that put these ideas to work, one card each.
+:::
+
+::: {{#{TOOLS_TRACK}}}
+:::''')
+        cards = find_block(body, "::: {.track-cards}")
+        if cards:
+            card = (f"::: {{.{TOPICS[theme][1]}}}\n[**Tools in practice** []{{.tc-stat data-stat=\"summary\" "
+                    f'data-topic="{theme}" data-section="{TOOLS_TRACK}"}}](#track-tools)\n:::\n')
+            end = body.rindex(":::", cards[0], cards[1])
+            body = body[:end] + card + body[end:]
+        index.write_text(join_front_matter(front_matter, body.lstrip("\n")))
+
+    config_file = root / "_quarto.yml"
+    config = yaml.safe_load(config_file.read_text())
+    before = yaml.safe_dump(config)
+    for sidebar in config["website"]["sidebar"]:
+        contents = sidebar.setdefault("contents", [])
+        track = next((c for c in contents if isinstance(c, dict) and c.get("section") == "Tools in practice"), None)
+        files = {f for f in (track["contents"] if track else []) if f != page}      # a card has one theme
+        if sidebar.get("id") == theme:
+            files.add(page)
+            if track is None:
+                track = {"section": "Tools in practice", "contents": []}
+                contents.append(track)
+        if track is not None:
+            track["contents"] = sorted(files, key=lambda f: _title_of(root / f))
+            if not files:
+                contents.remove(track)
+    if yaml.safe_dump(config) != before:
+        config_file.write_text(yaml.safe_dump(config, sort_keys=False, allow_unicode=True, width=1000))
+
+
+def _title_of(path: Path) -> str:
+    return str(split_front_matter(path.read_text())[0].get("title", path.stem)).lower() if path.exists() else path.stem
+
+
 # --- Reading and rebuilding a page made of blocks ------------------------------------
 #
-# A page body is: pills, summary (.tldr), concept cards (.concepts), then '##' parts, with the
-# "Remember" callout at the end. The editor rewrites summary, cards and Remember; parts are
-# inserted or replaced by code, so existing content is never silently dropped.
+# A page body is: synthesis visual (.synthesis), In 30 seconds (.in30, formerly .tldr), concept
+# cards (.concepts), then '##' parts, then the "Remember" callout.
+# The editor rewrites In 30 seconds, cards and Remember; parts are inserted or replaced
+# by code, so existing content is never silently dropped.
 
 def find_block(body: str, opener: str) -> tuple[int, int] | None:
     """Character span of the ':::' block whose first line starts with `opener` (nested ::: counted)."""
@@ -378,13 +509,19 @@ def split_parts(body: str) -> tuple[str, list[tuple[str, str]], str]:
     return head, parts, tail
 
 
-def render_synthesis_blocks(tldr: str, concepts: list, remember: list[str]) -> tuple[str, str, str]:
-    """Markdown for the summary, the concept cards and the Remember callout."""
-    tldr_md = f"::: {{.tldr}}\n{tldr.strip()}\n:::"
-    cards = "\n".join(f"::: {{.concept}}\n`{c.name}`\n\n{c.text.strip()}\n:::" for c in concepts)
-    concepts_md = f"::: {{.concepts}}\n{cards}\n:::"
-    remember_md = "::: {.callout-tip}\n## Remember\n" + "\n".join(f"- {r.strip()}" for r in remember) + "\n:::"
-    return tldr_md, concepts_md, remember_md
+def render_synthesis_blocks(synthesis, visual: str | None = None) -> dict[str, str]:
+    """Markdown for the blocks the editor writes, by name, in page order:
+    synthesis (the visual and its caption), in30, concepts, remember."""
+    blocks = {}
+    if visual:
+        caption = (synthesis.visual_caption or "").strip().replace("\n", " ")
+        blocks["synthesis"] = f"::: {{.synthesis}}\n![{caption}]({visual})\n:::"
+    blocks["in30"] = "::: {.in30}\n" + "\n".join(f"- {b.strip()}" for b in synthesis.in_30_seconds) + "\n:::"
+    cards = "\n".join(f"::: {{.concept}}\n`{c.name}`\n\n{c.text.strip()}\n:::" for c in synthesis.concepts)
+    blocks["concepts"] = f"::: {{.concepts}}\n{cards}\n:::"
+    blocks["remember"] = ("::: {.callout-tip}\n## Remember\n"
+                          + "\n".join(f"- {r.strip()}" for r in synthesis.remember) + "\n:::")
+    return blocks
 
 
 # --- Toolbox: identity card of a tool, and links from concept pages ---------------------

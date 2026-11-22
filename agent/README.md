@@ -22,7 +22,7 @@ sequenceDiagram
     A->>Issue: publie le PLAN + les faits web proposés ⏸
     Toi->>Issue: /approve (F1 F3 | all) ou /replan … ou /cancel
     Issue->>A: reprise
-    A->>A: rédaction des parties, vérification des détails, synthèse, assemblage
+    A->>A: rédaction des parties, vérification des détails, synthèse, visuel, assemblage
     A->>PR: ouvre une Pull Request
     A->>Site: construit l'APERÇU de la page
     Toi->>Site: lis l'aperçu
@@ -40,8 +40,9 @@ flowchart LR
     R --> H{{"⏸ tu valides<br/>plan + faits"}}
     H --> W["🧠 2. rédacteurs<br/>une partie chacun,<br/>en parallèle"]
     W --> C["🧠 3. vérificateur<br/>détails oubliés ?"]
-    C --> E["🧠 4. éditeur<br/>résumé, notions, Remember"]
-    E --> M["🔧 assemblage<br/>insère dans la page"]
+    C --> E["🧠 4. éditeur<br/>In 30 seconds, notions,<br/>Remember"]
+    E --> I["🧠 7. illustrateur<br/>visuel SVG,<br/>validé par le code"]
+    I --> M["🔧 assemblage<br/>insère dans la page"]
     M --> P["🔧 5. Pull Request<br/>+ aperçu web"]
 ```
 
@@ -54,8 +55,9 @@ flowchart LR
 | ⏸ | **Ta validation** | toi | le plan affiché sur l'issue | `/approve`, `/approve F1 F3`, `/approve all`, `/replan …`, `/cancel` | — | `hitl.py` |
 | 2 | **Rédacteur** (un par partie) | 🧠 | **seulement les morceaux de sa partie**, le plan de la page, les faits approuvés, le guide de style, et la partie existante s'il la complète | le texte de **sa** partie | gpt-5.4-mini | `article.py` → `write_part` |
 | 3 | **Vérificateur** | 🧠 | la partie écrite + **ses** morceaux | la liste des détails importants oubliés. S'il y en a, le rédacteur les **ajoute** en une seule passe ciblée (pas de réécriture complète). | gpt-5.4-nano | `article.py` → `write_part` |
-| 4 | **Éditeur** | 🧠 | les titres et débuts des parties (pas leur texte complet) | le résumé, les notions clés, le « Remember » | gpt-5.4-mini | `article.py` → `edit` |
-| — | **Assemblage** | 🔧 code | la page existante + les nouvelles parties | la page finale : les parties **insérées à leur place**, les autres **gardées à l'identique**, les sources fusionnées | — | `article.py` → `assemble` |
+| 4 | **Éditeur** | 🧠 | les titres et débuts des parties (pas leur texte complet) | « In 30 seconds » (3 puces de 25 mots max), 3 ou 4 notions, « Remember » (3 à 5 puces), la légende du visuel | gpt-5.4-mini | `article.py` → `edit` |
+| 7 | **Illustrateur** | 🧠 + 🔧 | le titre, le thème, l'idée de visuel du plan, les 3 puces, les titres des parties (**jamais la source**) | un SVG `assets/visuals/<slug>.svg`, validé par le code. Un nouvel essai s'il est refusé, sinon pas de visuel et un avertissement dans la PR. En mise à jour, le visuel existant est gardé, sauf si le plan dit `visual: new`. Pas de visuel pour une carte d'outil. | celui de l'éditeur | `article.py` → `illustrate`, `illustrator.py` |
+| — | **Assemblage** | 🔧 code | la page existante + les nouvelles parties | la page finale, dans l'ordre visuel → In 30 seconds → notions → parties → Remember → Sources (un ancien `.tldr` devient `.in30`) : les parties **insérées à leur place**, les autres **gardées à l'identique**, les sources fusionnées | — | `article.py` → `assemble` |
 | 5 | **Publication** | 🔧 code | la page | une branche, une Pull Request, et l'**aperçu** de la page sur le site | — | `publish.py` |
 
 Les rédacteurs des différentes parties travaillent **en parallèle** (un fil d'exécution par partie), d'où une page écrite en quelques dizaines de secondes.
@@ -146,21 +148,25 @@ flowchart LR
 
 ---
 
-## 6. Concept ou outil : la Toolbox
+## 6. Concept ou outil : les outils rangés par thème
 
 Le bibliothécaire **classe chaque source** (`ArticlePlan.source_kind`) :
 
 | Type | Exemple | Ce que l'agent produit |
 |---|---|---|
 | **concept** | un guide sur le LLM-as-a-judge | une page dans le thème concerné |
-| **tool** | la documentation de NVIDIA NeMo Agent Toolkit | une **fiche outil** dans la Toolbox, jamais dans une section concept |
+| **tool** | la documentation de NVIDIA NeMo Agent Toolkit | une **fiche outil**, affichée dans le thème de l'outil sous « Tools in practice », jamais dans un parcours de concepts |
 | **mixed** | un cours qui enseigne la fiabilité avec le toolkit de NVIDIA | une page concept **neutre** + une **fiche outil** (deuxième appel du bibliothécaire, dans la même exécution, la même validation et la même Pull Request) |
 
 **Une fiche outil a toujours le même format** : un tableau d'identité écrit par le code (éditeur, open source et licence, thèmes, concepts mis en œuvre, documentation), puis 4 parties fixes : *What it is*, *What it does*, *How to use it*, *When to use it*. Elle est étiquetée avec les thèmes qu'elle touche, ce qui permet de filtrer le catalogue par thème.
 
 **Les pages concepts restent neutres** (règle du guide de style). Le code ajoute sur chaque page concept qu'un outil met en œuvre un encadré **« In practice: tools »** avec un lien vers sa fiche (`site.py` → `add_in_practice`). Seules les pages qui existent vraiment sont retenues.
 
-Pour un **cours** construit autour d'un produit, le plan de cours prévoit une page pour ce produit dans la Toolbox, et garde les autres pages sur les concepts.
+Pour un **cours** construit autour d'un produit, le plan de cours prévoit une fiche pour ce produit, et garde les autres pages sur les concepts.
+
+**Où s'affiche une fiche outil** : il n'y a pas d'onglet Toolbox. Le fichier reste dans `toolbox/tools/`, et son champ `tool-theme` (le premier thème de l'outil, choisi par le bibliothécaire et montré dans le plan) décide de la section. Le code (`attach_tool`) crée le parcours « Tools in practice » à la première fiche d'un thème.
+
+---
 
 ## 7. La carte du site et le rangement
 
@@ -179,6 +185,10 @@ The large proprietary models (GPT, Claude, Gemini…): what each family is good 
 Une page qui existe déjà au même endroit avec le même titre est **mise à jour**, jamais dupliquée (`core.py` → `validate_route`).
 
 **Pour ajouter ou décrire une section, modifie simplement la page thème** : l'agent en tient compte à la prochaine exécution. Une section vide porte la classe `.planned` (affichée « Coming soon »), retirée automatiquement quand elle reçoit sa première page.
+
+---
+
+**Les quatre sections** : Inside LLMs (`llms`), Build Agents (`agents`), Measure What Matters (`evaluation`), Ship with Guardrails (`guardrails`). Les fiches Guardrails restent dans `evaluation/guardrails/` pour garder leurs URL : la correspondance est `SECTION_DIRS` dans `config.py`.
 
 ---
 
@@ -201,7 +211,8 @@ Un modèle par rôle, modifiable par variable d'environnement, sans toucher au c
 | `CARNET_MODEL_PLAN` | bibliothécaire, plan de cours | `openai:gpt-5.4-mini` |
 | `CARNET_MODEL_WRITE` | rédiger les parties | `openai:gpt-5.4-mini` |
 | `CARNET_MODEL_CHECK` | vérifier les détails | `openai:gpt-5.4-nano` |
-| `CARNET_MODEL_EDIT` | résumé, notions, Remember | `openai:gpt-5.4-mini` |
+| `CARNET_MODEL_EDIT` | In 30 seconds, notions, Remember | `openai:gpt-5.4-mini` |
+| `ILLUSTRATOR_MODEL` | dessiner le visuel de synthèse | celui de l'éditeur |
 | `CARNET_MODEL_RESEARCH` | proposer des faits web | `openai:gpt-5.4-nano` |
 
 DeepSeek fonctionne aussi (`deepseek:deepseek-flash`), avec la réflexion désactivée par le code. Avec l'ancienne architecture, il n'était pas moins cher, car il consommait plus de tokens. `CARNET_RESEARCH=0` désactive complètement la recherche web.
@@ -236,7 +247,8 @@ agent/
 │   ├── config.py        ← modèles par rôle, prix, plafond de coût, thèmes
 │   ├── state.py         ← les sorties structurées (ArticlePlan, SectionPlan, Proposal, Synthesis…)
 │   ├── prompts.py       ← une consigne courte par rôle
-│   ├── article.py       ← l'agent : bibliothécaire → recherche → ⏸ → rédaction/vérification → éditeur → assemblage
+│   ├── article.py       ← l'agent : bibliothécaire → recherche → ⏸ → rédaction/vérification → éditeur → illustrateur → assemblage
+│   ├── illustrator.py   ← le visuel de synthèse : consigne, validateur SVG, essai en local
 │   ├── course.py        ← le mode cours (map-reduce sur les leçons)
 │   ├── chunks.py        ← découpage en morceaux numérotés, empreintes
 │   ├── core.py          ← services, réponses structurées réessayées, vérification du rangement
@@ -261,5 +273,14 @@ pip install -r requirements.txt
 python tests/test_offline.py                                        # gratuit, sans clé
 python -m carnet_agent.run https://example.com/article --dry-run     # le plan s'affiche, tu réponds au clavier
 ```
+
+Pour essayer **l'illustrateur seul** sur une fiche existante (un appel payant, rien n'est modifié dans le site) :
+
+```bash
+python -m carnet_agent.illustrator agents/memory/short-term-memory.qmd --out /tmp/test.svg
+ILLUSTRATOR_MODEL=openai:gpt-5.4 python -m carnet_agent.illustrator agents/memory/short-term-memory.qmd
+```
+
+Le validateur ne voit pas les chevauchements ni les textes qui débordent d'une boîte : regarde toujours le visuel dans l'aperçu.
 
 Il faut `OPENAI_API_KEY` et `TAVILY_API_KEY` dans l'environnement ou dans un fichier `.env`. `--dry-run` écrit la page dans ton dossier sans ouvrir de Pull Request.

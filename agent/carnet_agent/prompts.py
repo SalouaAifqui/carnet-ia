@@ -64,6 +64,8 @@ First, classify the source (source_kind):
 - "mixed": teaches general concepts, using a product to show them.
 For "tool" and "mixed", fill `tool` (identity card; only facts from the source).
 - For "tool": the page is a TOOL CARD: topic `toolbox`, section `tools`, title = the product's name.
+  The card is shown in the theme of the tool: put that theme FIRST in tool.topics, judged on what the
+  tool is mainly for (e.g. skills -> agents, tracing and scoring -> evaluation, input checks -> guardrails).
 - For "mixed": plan the CONCEPT page here, written vendor-neutral (the product may appear only as an
   example). A separate tool card is planned automatically.
 
@@ -80,6 +82,11 @@ Parts (sections):
   existing part (give its exact title) over adding a new part; never exceed 4 parts in total.
 - Every important chunk must be used by at least one part. Give each part its chunk numbers.
 - For each part, name a concrete example taken from the chunks, and a visual element.
+
+Synthesis visual (visual_idea): describe, in one or two sentences, the ONE diagram that sums up the
+whole page, built on a concrete example from the chunks (names, numbers, a real case): what the
+boxes are, how they connect, which one or two elements stand out. For an update, keep `visual: keep`
+unless the page's subject changes a lot.
 
 {fixed}Site map:
 {site}"""
@@ -116,9 +123,27 @@ Rules:
   :::
 - Visual: include the planned visual element. Available: a ```{{mermaid}} diagram, a table,
   a comparison (::: {{.compare}} with ::: {{.col .bad}} / ::: {{.col .good}} columns), numbered steps
-  (::: {{.steps}} with a numbered list), a ::: {{.callout-warning}} with '## Watch out'.
+  (::: {{.steps}} with a numbered list).
+- Warnings and definitions go in the margin, at most ONE margin note per part, right after the
+  paragraph they relate to:
+  ::: {{.column-margin .watch}}
+  A pitfall, in one or two sentences.
+  :::
+  ::: {{.column-margin .define label="Term"}}
+  A short definition.
+  :::
+  Never a '## Watch out' or '### Watch out' heading. A second warning in the same part goes in a
+  ::: {{.callout-warning}} with '## Watch out' as its first line, inside the part.
+- Code over 12 lines goes in a numbered, folded step, with a short title (the last step is shown open):
+  ::: {{.code-step title="What this code does"}}
+  ```python
+  ...
+  ```
+  :::
 - Use '###' sub-parts if needed, never deeper. Code: current APIs only.
-- Do not write a summary, key concepts, a "Remember" list or a Sources section: other steps do.
+- One idea per part: do not repeat what another part says.
+- Do not write a summary, key concepts, a "Remember" list or a Sources section:
+  other steps do.
 - Facts from the approved web findings may be used; never invent facts or numbers.
 - About a product: neutral and factual. Attribute the maker's claims to them ("NVIDIA states that…"),
   no marketing words ("powerful", "seamless", "best-in-class"). Concept pages stay vendor-neutral.
@@ -135,7 +160,12 @@ wording and anything unimportant. Return an empty list if nothing important is m
 PATCH_SECTION = """Add the missing details below to this part of a study page, where they belong,
 keeping its structure, its title and everything already there. Return the whole part."""
 
-EDITOR = """You are the editor of a study page. The parts are written; you write what ties them
-together, from their titles and openings: a one-paragraph summary of the whole page, 3 to 6 key
-concepts (name + one or two sentences), and 3 to 6 short "Remember" takeaways.
+EDITOR = """You are the editor of a study page. The parts are written; from their titles and openings
+you write the blocks that frame the page. Each block says something new: never repeat a bullet in a
+card, a card in Remember, or the parts' first sentences.
+- in_30_seconds: exactly 3 bullets, 25 words max each, the three things to retain. Plain statements
+  about the subject: never "This page explains…", "This note…", "You will learn…".
+- concepts: 3 or 4 key concepts (a name, then one or two sentences defining it).
+- remember: 3 to 5 takeaways a reader can apply as they are.
+- visual_caption: one English sentence saying what the synthesis visual shows.
 {existing}"""

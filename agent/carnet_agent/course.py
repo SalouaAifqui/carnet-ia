@@ -169,13 +169,14 @@ class CourseAgent:
         return {}
 
     def write_pages(self, state: CourseRunState):
-        """Each page: parts written and checked (in parallel), editor, then merged into the site."""
+        """Each page: parts written and checked (in parallel), editor, illustrator, then merged into the site."""
         written = []
         for page in state["pages"]:
             page = dict(page) | {"approved": state.get("approved") or [],
                                  "human_feedback": state.get("human_feedback", "")}
             page |= self.article.write_parts(page)
             page |= self.article.edit(page)
+            page |= self.article.illustrate(page)
             page |= self.article.finalize(page)
             written.append(page)
         return {"pages": written, "written": [p["page_path"] for p in written]}
@@ -229,6 +230,9 @@ def describe_course_run(state: dict) -> str:
         flag = "⚠️" if page.get("check_errors") else "✅"
         lines.append(f"- {flag} **{route.action}** `{page.get('page_path')}`: {route.title}")
         lines += [f"  - {e}" for e in page.get("check_errors") or []]
+        if page.get("visual_errors"):
+            lines.append("  - ⚠️ no synthesis visual: the illustrator's SVG was rejected twice ("
+                         + "; ".join(page["visual_errors"][:2]) + ")")
     if state.get("cost") is not None:
         lines += ["", f"**Cost of this run:** ${state['cost']:.3f}"]
     return "\n".join(lines)

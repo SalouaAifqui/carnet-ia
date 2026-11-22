@@ -1,14 +1,12 @@
 ---
 title: Anthropic skills ecosystem
 subtitle: Pre-built skills, the skills repository, and the skill-creator workflow.
+image: /assets/visuals/toolbox-card.svg
 date: '2026-11-22'
 categories:
 - Agents
+tool-theme: agents
 ---
-
-::: {.lesson-meta}
-[Toolbox]{.pill .t-tools} [Tools]{.pill .muted}
-:::
 
 ::: {.tool-facts}
 | | |
@@ -20,8 +18,10 @@ categories:
 | **Documentation** | <https://github.com/anthropic/skills> |
 :::
 
-::: {.tldr}
-Anthropic skills are small, reusable task packs that extend Claude with structured workflows for documents and other repeatable jobs. The ecosystem includes built-in document skills for formats like Word, Excel, PowerPoint, and PDF, a set of optional example skills from a public repository, and a special always-on skill-creator that helps generate the folder structure and files for new skills. In practice, you enable the skills you need in Claude Desktop, optionally connect MCP servers for external data or tools, and use skills when a task is repetitive, modular, and benefits from clear instructions and prepared inputs.
+::: {.in30}
+- Anthropic's skills are reusable task packs for Claude: built-in document skills, optional example skills, and the skill-creator.
+- Enable skills in Settings > Capabilities, connect an MCP server for outside data, and use skill-creator to build or update skills.
+- Combine a custom skill, an MCP data source and a built-in document skill, for example BigQuery analysis into a branded PowerPoint.
 :::
 
 ::: {.concepts}
@@ -39,11 +39,6 @@ Anthropic also provides example skills that can be turned on or off. These can i
 `Skill-creator`
 
 This meta-skill helps programmatically create new skills by generating the required folder structure and files. It is the one built-in skill that is enabled by default.
-:::
-::: {.concept}
-`Claude Desktop settings`
-
-Skills are managed in Settings > Capabilities, where you can see which skills are enabled and where they live. This is also where pre-built skills are toggled on or off.
 :::
 ::: {.concept}
 `MCP server integration`
@@ -64,7 +59,7 @@ The skills repository lives on GitHub at `github.com/anthropic/skills`. Anthropi
 **Excel skill in use.** Claude AI used the Excel skill to create spreadsheets that displayed marketing results. The same Excel skill is one of Anthropic’s pre-built skills, and it can be used in Claude AI and Claude Desktop.
 :::
 
-```mermaid
+```{mermaid}
 flowchart TD
     A[Anthropic skills] --> B[Built-in document skills]
     A --> C[Toggled skills]
@@ -129,6 +124,10 @@ flowchart LR
 ## How to use it
 
 Use skills as a small workflow in Claude Desktop:
+
+::: {.column-margin .define label="Settings > Capabilities"}
+Skills are managed in Settings > Capabilities, where you can see which skills are enabled and where they live. This is also where pre-built skills are toggled on or off.
+:::
 
 1. Turn on the skills you need in **Settings > Capabilities**. Pre-built skills are off by default. The **skill-creator** skill is on by default. Check which skills are enabled and where they live there in Claude Desktop.
 2. If your skill needs outside data or tools, connect an **MCP server** in **Settings > Developer**. In Claude Desktop, you can see the server command, arguments, and environment variables there.

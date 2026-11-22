@@ -1,7 +1,8 @@
 ---
 title: Tools and agentic search
-subtitle: How a model calls functions, where to find ready-made tools and prompts, and why agents need search built for machines.
+subtitle: 'Let a model call functions, reuse ready-made tools, and search the web.'
 order: 3
+image: /assets/visuals/tools-and-agentic-search.svg
 date: 2026-11-15
 date-modified: 2026-11-15
 categories:
@@ -13,28 +14,15 @@ aliases:
 - /agents/langgraph/03-agentic-search.html
 ---
 
-::: {.lesson-meta}
-[Agents]{.pill .t-agents} [Foundations]{.pill .muted}
+::: {.synthesis}
+![The tool call contract, where ready-made tools come from, and search built for agents.](/assets/visuals/tools-and-agentic-search.svg){fig-alt="Tool calling: the model emits a structured call, your code runs it; tools come from packages, MCP servers and hubs; agentic search"}
 :::
 
-::: {.tldr}
-A **tool** is a function the model can ask to run. The model never executes it: it returns a structured **tool call** (name + arguments), your code runs it and sends the result back. You rarely need to write every tool yourself: **integration packages**, **MCP servers** and **prompt hubs** provide ready-made tools and prompts. The most useful tool for many agents is **search**, ideally one built for agents, which returns clean data instead of pages of links.
+::: {.in30}
+- The model never runs a tool: it returns a **tool call** (name and arguments), your code runs it and sends the result back.
+- Before writing a tool, look for one: **integration packages**, **MCP servers** and **prompt hubs** already cover a lot.
+- **Agentic search** gives an agent fresh facts and sources to cite, as clean data instead of pages of links.
 :::
-
-## How tool calling works
-
-```{mermaid}
-sequenceDiagram
-  participant Code as Your code
-  participant LLM
-  participant Tool
-  Code->>LLM: messages + list of available tools
-  LLM-->>Code: AIMessage with tool_calls [{name, args, id}]
-  Code->>Tool: run name(args)
-  Tool-->>Code: result
-  Code->>LLM: ToolMessage(result, tool_call_id=id)
-  LLM-->>Code: final answer (no tool_calls)
-```
 
 ::: {.concepts}
 ::: {.concept}
@@ -59,8 +47,24 @@ The result sent back to the model, linked to the call by `tool_call_id`.
 :::
 :::
 
+## How tool calling works
+
+```{mermaid}
+sequenceDiagram
+  participant Code as Your code
+  participant LLM
+  participant Tool
+  Code->>LLM: messages + list of available tools
+  LLM-->>Code: AIMessage with tool_calls [{name, args, id}]
+  Code->>Tool: run name(args)
+  Tool-->>Code: result
+  Code->>LLM: ToolMessage(result, tool_call_id=id)
+  LLM-->>Code: final answer (no tool_calls)
+```
+
 ### Writing a tool
 
+::: {.code-step title="A tool, its description and its arguments"}
 ```python
 from langchain_core.tools import tool
 from langchain_openai import ChatOpenAI
@@ -76,6 +80,7 @@ check_calendar_availability.args          # {'day': {'title': 'Day', 'type': 'st
 
 model = ChatOpenAI(model="gpt-5.4-mini").bind_tools([check_calendar_availability])
 ```
+:::
 
 The model only ever sees those three things: **name, description, arguments**. The docstring is the tool's user manual.
 
@@ -194,6 +199,10 @@ agent = create_agent("openai:gpt-5.4-mini", tools=tools)
 
 Prompts can be shared too. The **LangChain Hub**, now part of LangSmith, hosts prompts contributed by the community, addressed as `owner/name`.
 
+::: {.column-margin .watch}
+**Treat a pulled prompt as code.** A prompt manifest can carry model settings and references that are loaded when it is pulled. LangSmith's own documentation says pulled prompts should be treated as **executable configuration, not plain text**: only pull public prompts from authors you trust, and pin a version.
+:::
+
 ::: {.example}
 The hand-written ReAct prompt from [What is an agent](what-is-an-agent.qmd) has a well-known public equivalent, `hwchase17/react`. It starts with *"Answer the following questions as best you can"* and leaves the tools, the question and the agent's previous steps as variables to fill in:
 
@@ -209,11 +218,6 @@ prompt.input_variables          # e.g. ['agent_scratchpad', 'input', 'tool_names
 1. **Pull** a prompt with `Client().pull_prompt("owner/name")`. Public prompts need `dangerously_pull_public_prompt=True`.
 2. **Pin** a version by adding a commit after a colon, `"owner/name:abc123"`, so it can't change under you.
 3. **Fill** its variables (`prompt.invoke({...})`) or chain it with a model.
-:::
-
-::: {.callout-warning}
-## Treat a pulled prompt as code
-A prompt manifest can carry model settings and references that are loaded when it is pulled. LangSmith's own documentation says pulled prompts should be treated as **executable configuration, not plain text**: only pull public prompts from authors you trust, and pin a version.
 :::
 
 ## Agentic search
@@ -266,8 +270,7 @@ Given `TavilySearch` as a tool and asked *"What's the weather in SF?"*, an agent
 ## Remember
 - The model **requests** tools, your code **runs** them. Name, type hints and docstring are the tool's manual.
 - Loop over every `tool_calls` entry: calls can be parallel.
-- Look before you write: **integration packages**, **MCP servers** and **prompt hubs** already cover a lot.
-- `langchain-community` is retired: use dedicated packages such as `langchain-tavily`.
+- Look before you write: **integration packages** (not the retired `langchain-community`), **MCP servers** and **prompt hubs** already cover a lot.
 - Pin pulled prompts to a version and treat them as code.
 - Agentic search gives agents fresh facts and citable sources, in a format made for models.
 :::

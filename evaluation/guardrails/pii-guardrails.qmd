@@ -1,18 +1,22 @@
 ---
 title: PII guardrails
-subtitle: Detect, redact, and block personal data before it leaks through an LLM app.
+subtitle: 'Detect, redact and block personal data.'
+order: 4
+image: /assets/visuals/pii-guardrails.svg
 date: '2026-11-17'
 categories:
 - Evaluation & Guardrails
 - Guardrails
 ---
 
-::: {.lesson-meta}
-[Evaluation & Guardrails]{.pill .t-eval} [Guardrails]{.pill .muted}
+::: {.synthesis}
+![Before and after: the personal data highlighted in a message, then replaced by placeholders.](/assets/visuals/pii-guardrails.svg){fig-alt="PII guardrail: names and phone numbers are detected and replaced by placeholders, on input and on output"}
 :::
 
-::: {.tldr}
-This page explains how to keep personally identifiable information out of an LLM application by detecting it early, redacting it when needed, and blocking it when it would otherwise leak. It distinguishes between input leakage and output leakage, then shows how tools like Microsoft Presidio and custom validators can inspect text, enforce organization-specific rules, and protect both model calls and user-facing responses.
+::: {.in30}
+- PII can leak both ways: user data sent to a third-party model or written to logs, and personal data shown back to users.
+- Presidio's analyzer finds entities such as names and phone numbers; its anonymizer replaces them and keeps the text usable.
+- A custom validator blocks sensitive input before the model; a streaming guardrail redacts PII-looking output before it is displayed.
 :::
 
 ::: {.concepts}
@@ -35,11 +39,6 @@ An input validator checks user messages before they are sent to the model or sto
 `Output guardrail`
 
 A hub-based guardrail can inspect responses as they stream back from the model. This allows the app to redact or block sensitive-looking output before it becomes visible to the user.
-:::
-::: {.concept}
-`Organization-specific policy`
-
-Not every type of PII matters equally in every app. Each organization decides which entities to detect, redact, or reject, such as phone numbers, dates, or names.
 :::
 :::
 
@@ -85,6 +84,10 @@ Microsoft Presidio helps you find personal data in text and replace it before it
 - **Anonymizer**: replaces those entities with safe text, while keeping the rest of the sentence usable.
 
 Each organization chooses which entity types matter. For one app, a phone number may be sensitive. For another, a date or a person’s name may also matter. You decide what to detect and what to redact.
+
+::: {.column-margin .define label="Your PII policy"}
+Not every type of PII matters equally in every app. Each organization decides which entities to detect, redact, or reject, such as phone numbers, dates, or names.
+:::
 
 ::: {.example}
 **Turning personal details into safe text.** An input like “My name is Hank Tate and my phone number is ...” is analyzed for person and phone number, then anonymized so the private parts become safe labels like “Person” and “Phone number” while the rest of the text stays usable.
@@ -142,9 +145,13 @@ flowchart TD
 
 Use a **Hub-based guardrail** on the output side to inspect what the model is about to show the user. A **streaming validator** checks the text as it arrives, not only after the full answer is done. This lets the app **redact** sensitive-looking data or **block** the output before it reaches the screen.
 
+::: {.column-margin .watch}
+A model can invent PII-looking content during generation. Do not assume output is safe just because the user did not type sensitive data. Always validate the output stream before rendering it.
+:::
+
 This matters because a model can generate text that looks like personal data, even when it was not in the prompt. For example, it may produce phone-number-like strings. The guardrail can catch those numbers during streaming and stop them from being displayed as-is.
 
-```mermaid
+```{mermaid}
 flowchart LR
     A[User prompt] --> B[LLM generates text]
     B --> C[Streaming output validator]
@@ -160,40 +167,6 @@ flowchart LR
 ### How the output guardrail works
 
 The app does not wait for the full response if it can inspect tokens as they stream. Instead, it applies the guardrail to each chunk of generated text. If the chunk looks like personal data, the app can replace it with redaction text or stop the response entirely.
-
-You can use the same notebook and course interface tools while testing these examples:
-
-- In a notebook, open the available files by clicking **File → Open**. This shows the notebook files for the lesson, including helper functions in the left sidebar.
-- If you need to reset the workspace, use the **three-dot menu (⋮)** in the top-right of the notebook toolbar and choose **Restore Original Version**.
-- To save a copy, click **File → Download as → Notebook (.ipynb)**.
-- After **File → Open**, you can also click **Upload** to upload your own files.
-- To review your course progress, open **My Learning** in the top-right of the desktop view.
-- If you want to hide the lesson list on a smaller screen, click the **hamburger icon** beside the course title to hide or unhide the navigation menu.
-
-When watching the lesson videos, these controls are useful:
-
-- Click the **gear icon (⚙)** to change **speed**.
-- Use **Captions** to choose **English or Spanish** subtitles.
-- Use **Quality** to adjust playback if your internet connection is slow.
-- Click the small rectangle icon to enable **Picture in Picture (PiP)**.
-- Hide or unhide the lesson navigation with the **hamburger icon** beside the course title.
-
-For efficient learning, a few simple habits help:
-
-- Create a dedicated, quiet study space.
-- Keep a consistent study schedule.
-- Use a recurring calendar reminder for your study time.
-- Take regular breaks; the **Pomodoro Technique** is a good option: **25 minutes of study followed by a 5-minute break**.
-- Engage with the community in forums and discussions.
-- Practice active learning by taking notes, summarizing, teaching, or applying what you learn in projects.
-
-::: {.callout-warning}
-## Watch out
-
-A model can invent PII-looking content during generation. Do not assume output is safe just because the user did not type sensitive data. Always validate the output stream before rendering it.
-:::
-
-At the end of the course, you can also share feedback by clicking **Course Feedback** in the bottom of the lessons list menu, and you’re welcome to join the **DeepLearning.AI Forum**.
 
 ::: {.callout-tip}
 ## Remember

@@ -5,83 +5,83 @@ project:
   - '*.qmd'
   - '**/*.qmd'
   - '!agent/'
+  - '!reference/'
+  - '!docs/'
+  pre-render: _scripts/notes_index.py
 website:
   title: Carnet IA
   description: Notes on how LLMs work, how to build agents, and how to evaluate and safeguard them.
   site-url: https://salouaaifqui.github.io/carnet-ia/
   repo-url: https://github.com/SalouaAifqui/carnet-ia
   favicon: assets/logo.svg
-  search: true
+  search:
+    location: navbar
+    type: textbox
   page-navigation: true
   bread-crumbs: true
   navbar:
+    collapse-below: xl
     logo: assets/logo.svg
     title: Carnet IA
     left:
     - href: llms/index.qmd
-      text: LLMs
+      text: Inside LLMs
     - href: agents/index.qmd
-      text: Agents
+      text: Build Agents
     - href: evaluation/index.qmd
-      text: Evaluation & Guardrails
-    - href: toolbox/index.qmd
-      text: Toolbox
+      text: Measure What Matters
+    - href: guardrails/index.qmd
+      text: Ship with Guardrails
     right:
     - icon: github
       href: https://github.com/SalouaAifqui/carnet-ia
       aria-label: GitHub
   sidebar:
-  - id: agents
-    title: Agents
-    style: docked
-    contents:
-    - agents/index.qmd
-    - section: Foundations
-      contents:
-      - agents/foundations/what-is-an-agent.qmd
-      - agents/foundations/building-agents-with-langgraph.qmd
-      - agents/foundations/tools-and-agentic-search.qmd
-    - section: Memory
-      contents:
-      - agents/memory/memory-overview.qmd
-      - agents/memory/short-term-memory.qmd
-      - agents/memory/long-term-memory.qmd
-    - section: Control
-      contents:
-      - agents/control/controlling-a-running-agent.qmd
-    - section: Foundations
-      contents: agents/foundations/*.qmd
   - id: llms
-    title: LLMs
+    title: Inside LLMs
     style: docked
+    collapse-level: 1
     contents:
     - llms/index.qmd
-    - section: How LLMs work
+    - section: Architectures
       contents: llms/how-llms-work/*.qmd
-  - id: evaluation
-    title: Evaluation & Guardrails
+  - id: agents
+    title: Build Agents
     style: docked
+    collapse-level: 1
+    contents:
+    - agents/index.qmd
+    - section: Agents, tools and skills
+      contents: agents/foundations/*.qmd
+    - section: Give agents a memory
+      contents: agents/memory/*.qmd
+    - section: Stay in control
+      contents: agents/control/*.qmd
+    - section: Tools in practice
+      contents:
+      - toolbox/tools/anthropic-skills-ecosystem.qmd
+      - toolbox/tools/claude-skills-in-apis-and-sdks.qmd
+  - id: evaluation
+    title: Measure What Matters
+    style: docked
+    collapse-level: 1
     contents:
     - evaluation/index.qmd
-    - section: Evaluating agents
-      contents: evaluation/agents/*.qmd
     - section: Evaluating LLMs
       contents: evaluation/llms/*.qmd
-    - section: Guardrails
-      contents: evaluation/guardrails/*.qmd
-  - id: toolbox
-    title: Toolbox
+    - section: Evaluating agents
+      contents: evaluation/agents/*.qmd
+  - id: guardrails
+    title: Ship with Guardrails
     style: docked
+    collapse-level: 1
     contents:
-    - toolbox/index.qmd
-    - section: Tools
-      contents: toolbox/tools/*.qmd
+    - guardrails/index.qmd
+    - section: Build the right guardrails
+      contents: evaluation/guardrails/*.qmd
   page-footer:
     left: Carnet IA · notes written while learning
-    right:
-    - icon: github
-      href: https://github.com/SalouaAifqui/carnet-ia
-      aria-label: GitHub
+    right: Built with [Quarto](https://quarto.org) · [GitHub](https://github.com/SalouaAifqui/carnet-ia)
 format:
   html:
     theme:
@@ -94,6 +94,18 @@ format:
       - assets/theme-dark.scss
     toc: true
     toc-title: On this page
+    toc-location: right
+    toc-depth: 2
+    grid:
+      sidebar-width: 260px
+      body-width: 700px
+      margin-width: 240px
+      gutter-width: 2.5rem
+    filters:
+    - _filters/carnet.lua
+    include-after-body:
+    - _carnet/notes-data.html
+    - _includes/reading.html
     code-copy: true
     code-overflow: scroll
     highlight-style: dracula

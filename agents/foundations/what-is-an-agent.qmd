@@ -2,6 +2,7 @@
 title: What is an agent
 subtitle: 'An LLM in a loop with tools: it reasons, acts, observes, and repeats.'
 order: 1
+image: /assets/visuals/what-is-an-agent.svg
 date: 2026-11-15
 categories:
 - Agents
@@ -11,42 +12,15 @@ aliases:
 - /agents/langgraph/01-agent-from-scratch.html
 ---
 
-::: {.lesson-meta}
-[Agents]{.pill .t-agents} [Foundations]{.pill .muted}
+::: {.synthesis}
+![The whole note in one picture: the model decides, your code executes, and the loop repeats until there is an answer.](/assets/visuals/what-is-an-agent.svg){fig-alt="The ReAct loop: Question, then Thought, Action, Observation repeated until an Answer"}
 :::
 
-::: {.tldr}
-An agent is an LLM placed in a **loop**. At each turn the model reasons, picks an action, and your code runs it. The result goes back to the model, which decides what to do next, until it has an answer. Everything else (frameworks, memory, human approval) is built on this loop.
+::: {.in30}
+- An agent is an LLM placed in a **loop**: it reasons, picks an action, and your code runs it.
+- The result goes back to the model, which decides what to do next, until it has an answer.
+- Everything else (frameworks, memory, human approval) is built on this one loop.
 :::
-
-## The ReAct loop
-
-**ReAct** stands for *Reasoning + Acting*. The model alternates between thinking about what to do and doing it.
-
-```{mermaid}
-flowchart LR
-  Q([Question]) --> T[Thought<br/>the LLM reasons]
-  T --> A[Action<br/>picks a tool]
-  A --> O[Observation<br/>your code runs the tool]
-  O --> T
-  T --> R([Answer])
-```
-
-::: {.example}
-Asked *"What is the combined weight of a Border Collie and a Scottish Terrier?"*, the model looks up the first breed (37 lbs), then the second (20 lbs), then calls a calculator with `37 + 20`, and answers **57 lbs**. Three actions, chosen one after the other by the model.
-:::
-
-## Who does what
-
-The model never runs anything itself. It only **decides**. The surrounding code, the *runtime*, does everything else.
-
-| The LLM | The runtime (your code) |
-|---|---|
-| Reasons about the question | Reads the model's reply |
-| Chooses the next action and its input | Checks the action exists, runs it |
-| Decides when it has the final answer | Sends back the observation, keeps the history, stops runaway loops |
-
-## Key ideas
 
 ::: {.concepts}
 ::: {.concept}
@@ -71,12 +45,41 @@ A maximum number of iterations, so the loop can never run forever.
 :::
 :::
 
+## The ReAct loop
+
+**ReAct** stands for *Reasoning + Acting*. The model alternates between thinking about what to do and doing it.
+
+::: {.column-margin .define label="ReAct"}
+*ReAct: Synergizing Reasoning and Acting in Language Models*, Yao et al. (see the sources).
+:::
+
+::: {.example}
+Asked *"What is the combined weight of a Border Collie and a Scottish Terrier?"*, the model looks up the first breed (37 lbs), then the second (20 lbs), then calls a calculator with `37 + 20`, and answers **57 lbs**. Three actions, chosen one after the other by the model.
+:::
+
+## Who does what
+
+The model never runs anything itself. It only **decides**. The surrounding code, the *runtime*, does everything else.
+
+::: {.column-margin .define label="Runtime"}
+The code around the model: it reads the reply, runs the action, keeps the history.
+:::
+
+| The LLM | The runtime (your code) |
+|---|---|
+| Reasons about the question | Reads the model's reply |
+| Chooses the next action and its input | Checks the action exists, runs it |
+| Decides when it has the final answer | Sends back the observation, keeps the history, stops runaway loops |
+
 ## Building one by hand
 
 Writing the loop yourself once shows that there is no magic.
 
-**The agent keeps the conversation and calls the model:**
+::: {.column-margin .watch}
+`eval()` in a demo calculator runs any Python code: never use it on untrusted input.
+:::
 
+::: {.code-step title="The agent keeps the conversation and calls the model"}
 ```python
 from openai import OpenAI
 
@@ -93,9 +96,9 @@ class Agent:
         self.messages.append({"role": "assistant", "content": result})
         return result
 ```
+:::
 
-**The prompt teaches the format.** For example, with two tools:
-
+::: {.code-step title="The prompt teaches the format. For example, with two tools"}
 ```text
 You run in a loop of Thought, Action, PAUSE, Observation.
 At the end of the loop you output an Answer.
@@ -113,9 +116,9 @@ PAUSE
 Observation: A Bulldog weighs 51 lbs
 Answer: A Bulldog weighs 51 lbs
 ```
+:::
 
-**The runtime parses the action, runs it, and loops:**
-
+::: {.code-step title="The runtime parses the action, runs it, and loops"}
 ```python
 import re
 
@@ -136,6 +139,7 @@ def query(question, max_turns=5):
         observation = known_actions[name](action_input)
         next_prompt = f"Observation: {observation}"
 ```
+:::
 
 Parsing text with a regex is fragile. Modern models solve this with **native tool calling**: they return structured tool calls instead of text. See [Tools and agentic search](tools-and-agentic-search.qmd). Frameworks such as LangGraph then take care of the loop: see [Building agents with LangGraph](building-agents-with-langgraph.qmd).
 
@@ -149,7 +153,6 @@ Parsing text with a regex is fragile. Modern models solve this with **native too
 - Agent = LLM + loop + tools. The LLM **decides**, the code **executes**.
 - The prompt is a contract between the model and the runtime.
 - Always cap the loop and validate the action before running it.
-- `eval()` in a demo calculator runs any Python code: never use it on untrusted input.
 :::
 
 ## Sources {.sources}

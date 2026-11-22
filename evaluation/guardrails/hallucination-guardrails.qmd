@@ -1,18 +1,22 @@
 ---
 title: Hallucination guardrails
-subtitle: Use groundedness checks, especially NLI, to block unsupported model claims.
+subtitle: 'Block unsupported claims with groundedness checks.'
+order: 5
+image: /assets/visuals/hallucination-guardrails.svg
 date: '2026-11-17'
 categories:
 - Evaluation & Guardrails
 - Guardrails
 ---
 
-::: {.lesson-meta}
-[Evaluation & Guardrails]{.pill .t-eval} [Guardrails]{.pill .muted}
+::: {.synthesis}
+![Sources on the left, the answer split into claims on the right: NLI links, validates or rejects each one.](/assets/visuals/hallucination-guardrails.svg){fig-alt="Hallucination guardrail: each claim of the answer is checked by NLI against the sources; unsupported claims are blocked"}
 :::
 
-::: {.tldr}
-This page explains how to reduce hallucinations by checking whether model outputs are actually supported by trusted sources, especially in retrieval-augmented generation (RAG) systems. It introduces groundedness as the core idea, then shows how to build an NLI-based validator that compares each generated claim against retrieved source evidence. Finally, it distinguishes a validator from a full guard, showing how to wrap validation into a production-ready layer that can block unsupported claims before users see them.
+::: {.in30}
+- A grounded answer stays faithful to trusted sources; a hallucination is an unsupported claim, to stop before users see it.
+- The NLI validator splits the output into sentences, retrieves source chunks by embedding similarity, and labels each claim entailment, contradiction or neutral.
+- Test with the validator alone; in production, wrap it in a guard between the app and the LLM, with streaming, logging and errors handled.
 :::
 
 ::: {.concepts}
@@ -20,11 +24,6 @@ This page explains how to reduce hallucinations by checking whether model output
 `Groundedness`
 
 Groundedness means the model’s statements stay faithful to trusted sources instead of inventing details. In practice, it is the main test for whether an answer is safe to show to the user.
-:::
-::: {.concept}
-`Hallucination`
-
-A hallucination is an unsupported model claim. The guardrail’s purpose is to detect and stop these claims before they reach the user interface.
 :::
 ::: {.concept}
 `NLI validator`
@@ -45,7 +44,11 @@ A validator checks a single output, while a guard wraps one or more validators b
 
 ## Why groundedness matters
 
-Groundedness means the model stays faithful to trusted sources. In a RAG system, the model should use the shared data, not make things up. Hallucinations are unsupported claims. This guardrail is meant to stop those claims before they reach the user.
+Groundedness means the model stays faithful to trusted sources. In a RAG (retrieval-augmented generation) system, the model should use the shared data, not make things up. Hallucinations are unsupported claims. This guardrail is meant to stop those claims before they reach the user.
+
+::: {.column-margin .define label="Hallucination"}
+A hallucination is an unsupported model claim. The guardrail’s purpose is to detect and stop these claims before they reach the user interface.
+:::
 
 ```{mermaid}
 flowchart LR

@@ -1,18 +1,22 @@
 ---
 title: Test cases and benchmarks
-subtitle: How to turn requirements and real failures into a curated benchmark for repeated evaluation.
+subtitle: 'Turn requirements and real failures into a curated benchmark.'
+order: 1
+image: /assets/visuals/test-cases-and-benchmarks.svg
 date: '2026-11-16'
 categories:
 - Evaluation & Guardrails
 - Evaluating LLMs
 ---
 
-::: {.lesson-meta}
-[Evaluation & Guardrails]{.pill .t-eval} [Evaluating LLMs]{.pill .muted}
+::: {.synthesis}
+![A funnel: one requirement becomes several cases, filtered into a stable, versioned benchmark.](/assets/visuals/test-cases-and-benchmarks.svg){fig-alt="From requirements and failures to many test cases, filtered into a stable benchmark"}
 :::
 
-::: {.tldr}
-This page explains how to turn requirements, real failures, and operational feedback into a curated benchmark you can reuse for repeated evaluation. It starts by showing how one requirement should be expanded into multiple test cases that each combine the user request, relevant context, and expected outcome. It then shows how to identify missing or thin coverage from failures, bug reports, support notes, and reviews, how to prune redundant cases while keeping truly different checks, and how to preserve a stable benchmark with fixed cases and judgments so version-to-version comparisons stay fair and meaningful.
+::: {.in30}
+- One requirement becomes several test cases: vary safe and unsafe conditions, missing information and wording, each with request, context and expected outcome.
+- Find gaps from failures, bug reports, support tickets and real requests; keep hard cases, drop cases that test nothing new.
+- Save a stable benchmark with expected results, reviewed judgments and failure labels, so versions are compared fairly.
 :::
 
 ::: {.concepts}
@@ -20,11 +24,6 @@ This page explains how to turn requirements, real failures, and operational feed
 `Requirement-to-case translation`
 
 A single requirement usually implies many distinct test situations. Good test design varies safe vs. unsafe conditions, missing information, and wording, then packages each situation as a case with request, context, and expected outcome.
-:::
-::: {.concept}
-`Test-case structure`
-
-Each case should keep together the user request, the relevant records or context, and the expected result. This makes the case self-contained and easier to run, review, and interpret consistently.
 :::
 ::: {.concept}
 `Coverage gap finding`
@@ -47,11 +46,13 @@ A benchmark should be a curated, stable set of cases with expected results, revi
 
 A single requirement can lead to many test situations. To test it well, vary the safe and unsafe conditions, missing information, and the wording of the request. Then turn each situation into a test case with three parts:
 
+::: {.column-margin .define label="Test case"}
+Each case should keep together the user request, the relevant records or context, and the expected result. This makes the case self-contained and easier to run, review, and interpret consistently.
+:::
+
 - the user request
 - the relevant context or records
 - the expected outcome
-
-Each test case should keep together the user request, the relevant records or context, and the expected outcome.
 
 ### Step-by-step flow
 
@@ -193,16 +194,6 @@ Also make sure it did not quietly change the requirement. Only keep the case if 
 **Northwind return-policy coverage.** You want to test three related cases in Northwind: one with complete product information, one with partial information, and one with missing return-policy information. For example, one customer asks about a product with enough data to answer directly, another asks about a product where only part of the needed information is present, and another asks, “What is your return policy?” when Northwind has no return-policy information. The last case should expect the agent to say the information is not available, not invent a policy.
 :::
 
-A useful case should do at least one of these:
-
-- cover a meaningful situation
-- protect against an important regression
-- clarify a boundary in the requirement
-
-If it does none of these, revise it or remove it.
-
-Pay special attention to difficult cases. A benchmark with 98 easy cases and only 2 difficult ones can still hide weak performance on the hard situations. That does not make the benchmark wrong. It means you must read the score in context. The overall score shows performance on the benchmark you built, not the true rate in production. During development, it is often useful to include more difficult cases than you expect to see in everyday use, so you can measure whether the agent improves on the behaviors you care about.
-
 For Northwind, keep the case pieces together for later use:
 
 | What to keep | Why it matters |
@@ -212,11 +203,6 @@ For Northwind, keep the case pieces together for later use:
 | Expected outcome | What the agent should do |
 | Source of the case | Where the case came from |
 | Failure label | What went wrong in a failed run |
-
-When you review a failed run, also keep the failure label that describes the problem. For example:
-
-- **Scope violation**: the agent invents a return policy when Northwind has no return-policy information.
-- **Faithfulness drift**: the agent adds unsupported drying advice when the data only says, “Machine washable on wool cycle.”
 
 ## Keep only useful cases
 
@@ -265,7 +251,7 @@ You keep cases that reveal new failures or boundaries.
 
 Do not let easy cases hide weak spots. A benchmark can look strong even when the application struggles with hard cases.
 
-For example, if the agent passes 98 straightforward cases but fails the only 2 difficult ones, the score is still 98%. That score looks high, but both difficult cases failed.
+For example, if the agent passes 98 straightforward cases but fails the only 2 difficult ones, the score is still 98%. That score looks high, but both difficult cases failed. That does not make the benchmark wrong: it means you must read the score in context.
 
 So look at difficult cases separately. Keep enough of them to see whether changes help on the situations you care about. During development, it is often useful to include more difficult cases than you expect to see in everyday use.
 
@@ -298,14 +284,6 @@ That is why difficult cases matter. They show whether the application improves o
 When you compare versions, use the same cases and the same expected results for both versions. Otherwise, a change in the tests could make one version look better when it is not.
 
 At the end of this process, each Northwind benchmark case should keep together the pieces you need later: the customer query, the relevant product data, the expected outcome, the source of the case, and, after you have reviewed a failed run, the failure label that describes what went wrong.
-
-This is what a complete case might look like:
-
-- **Customer query**
-- **Relevant product data**
-- **Expected outcome**
-- **Source of the case**
-- **Failure label** after a failed run
 
 For example:
 

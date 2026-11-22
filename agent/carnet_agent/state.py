@@ -9,9 +9,11 @@ Two kinds of objects live here:
 import operator
 from typing import Annotated, Literal, TypedDict
 
-from pydantic import BaseModel, Field
+import re
 
-Topic = Literal["llms", "agents", "evaluation", "toolbox"]
+from pydantic import BaseModel, Field, field_validator
+
+Topic = Literal["llms", "agents", "evaluation", "guardrails", "toolbox"]
 
 
 # --- Filled by the LLM ---------------------------------------------------------
@@ -156,8 +158,9 @@ class ToolInfo(BaseModel):
     open_source: Literal["yes", "no", "partly", "unknown"] = "unknown"
     licence: str = Field(default="", description="Licence name if the source states it, else ''.")
     website: str = Field(default="", description="Official documentation or site URL, ONLY if it appears in the source.")
-    topics: list[Literal["llms", "agents", "evaluation"]] = Field(
-        description="The site topics this tool touches (one or several).")
+    topics: list[Literal["llms", "agents", "evaluation", "guardrails"]] = Field(
+        description="The site topics this tool touches, the MAIN one first: its card is shown in that theme. "
+                    "At least one.")
     implements: list[str] = Field(description="The concepts it implements, a few words each "
                                               "(e.g. 'tracing', 'LLM judges', 'input guardrails').")
     related_pages: list[str] = Field(default_factory=list, description=(
@@ -173,6 +176,14 @@ class ArticlePlan(BaseModel):
     route: Route
     summary: str = Field(description="What the article will teach, in two or three sentences.")
     sections: list[SectionPlan] = Field(description="The parts to write: at most 4.")
+    visual_idea: str = Field(default="", description=(
+        "The synthesis visual of the page, in one or two sentences: the ONE diagram that sums up the whole "
+        "page, built on a concrete example from the source (e.g. 'the ReAct loop: Question, then Thought, "
+        "Action, Observation repeated until an Answer, on the dog-weight example'). Boxes and arrows, "
+        "a few words per box."))
+    visual: Literal["keep", "new"] = Field(default="keep", description=(
+        "Updates only: 'keep' the page's existing synthesis visual (the default), or draw a 'new' one "
+        "when the page's subject changes a lot."))
 
 
 class Proposal(BaseModel):
@@ -196,8 +207,42 @@ class ConceptCard(BaseModel):
     text: str = Field(description="One or two sentences.")
 
 
+def _words(text: str) -> int:
+    return len(re.sub(r"[*`_]", "", text).split())
+
+
 class Synthesis(BaseModel):
-    """Output of the editor: the parts that tie the article together."""
-    tldr: str = Field(description="One paragraph: what the whole article teaches.")
-    concepts: list[ConceptCard] = Field(description="3 to 6 key concepts of the whole article.")
-    remember: list[str] = Field(description="3 to 6 short takeaways.")
+    """Output of the editor: the blocks that frame the article (they never repeat each other)."""
+    in_30_seconds: list[str] = Field(description=(
+        "Exactly 3 bullets, 25 words max each: the three things to retain from the whole page. Never start "
+        "with 'This page explains'."))
+    concepts: list[ConceptCard] = Field(description="3 or 4 key concepts, defined without repeating the bullets.")
+    remember: list[str] = Field(description="3 to 5 takeaways that can be applied as they are.")
+    visual_caption: str = Field(description="One English sentence under the synthesis visual: what it shows.")
+
+    # Checked in code: a wrong answer is sent back to the model (core.ask retries on ValueError).
+    @field_validator("in_30_seconds")
+    @classmethod
+    def _three_short_bullets(cls, v):
+        if len(v) != 3:
+            raise ValueError(f"in_30_seconds needs exactly 3 bullets, got {len(v)}")
+        for b in v:
+            if _words(b) > 25:
+                raise ValueError(f"in_30_seconds bullet longer than 25 words: {b!r}")
+            if b.strip().lower().startswith(("this page", "the page")):
+                raise ValueError(f"in_30_seconds must not start with 'This page…': {b!r}")
+        return v
+
+    @field_validator("concepts")
+    @classmethod
+    def _three_or_four_cards(cls, v):
+        if not 3 <= len(v) <= 4:
+            raise ValueError(f"concepts needs 3 or 4 cards, got {len(v)}")
+        return v
+
+    @field_validator("remember")
+    @classmethod
+    def _three_to_five(cls, v):
+        if not 3 <= len(v) <= 5:
+            raise ValueError(f"remember needs 3 to 5 bullets, got {len(v)}")
+        return v

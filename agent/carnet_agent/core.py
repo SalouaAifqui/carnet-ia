@@ -11,7 +11,7 @@ from langchain_core.exceptions import OutputParserException
 from langchain_core.messages import HumanMessage
 from pydantic import ValidationError
 
-from .site import list_pages, list_sections, slugify, split_front_matter, split_sources
+from .site import list_pages, list_sections, owner_of, section_dir, slugify, split_front_matter, split_sources
 from .state import Route
 
 
@@ -69,6 +69,7 @@ def validate_route(root: Path, route: Route) -> dict:
         page = existing[route.target_path]
         route.topic, route.folder = page.topic, page.folder
     route.folder = slugify(route.folder)
+    route.topic, route.folder = owner_of(route.topic, route.folder)
     sections = [s for s in list_sections(root) if s.topic == route.topic]
     match = next((s for s in sections if s.folder == route.folder), None) or \
         next((s for s in sections if slugify(s.title) in (route.folder, slugify(route.folder_title))), None)
@@ -77,7 +78,7 @@ def validate_route(root: Path, route: Route) -> dict:
     else:
         route.new_section = True
     # A "create" whose page already exists (same title, same place) is really an update: no duplicates.
-    same = f"{route.topic}/{route.folder}/{slugify(route.title)}.qmd"
+    same = f"{section_dir(route.topic, route.folder)}/{slugify(route.title)}.qmd"
     if route.action == "create" and same in existing:
         route.action, route.target_path = "update", same
     existing_body = ""

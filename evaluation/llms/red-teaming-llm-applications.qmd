@@ -1,18 +1,22 @@
 ---
 title: Red teaming LLM applications
-subtitle: How to find jailbreaks, prompt injections, and policy failures with manual probing, automated scans, and LLM-assisted red teaming.
+subtitle: 'Find jailbreaks, prompt injections and policy failures.'
+order: 4
+image: /assets/visuals/red-teaming-llm-applications.svg
 date: '2026-11-22'
 categories:
 - Evaluation & Guardrails
 - Evaluating LLMs
 ---
 
-::: {.lesson-meta}
-[Evaluation & Guardrails]{.pill .t-eval} [Evaluating LLMs]{.pill .muted}
+::: {.synthesis}
+![The app in the middle, attacked by hand on the left and automatically on the right.](/assets/visuals/red-teaming-llm-applications.svg){fig-alt="Red teaming: manual attacks and automated scans against an LLM app produce a list of weaknesses"}
 :::
 
-::: {.tldr}
-This page explains how to red team LLM applications by thinking like an attacker and deliberately trying to make the system fail. It starts with the purpose of red teaming, then shows manual attack patterns such as completion-style prompts, biased questions, direct instruction injection, and prompt-format exploitation. It then moves to automated prompt-injection testing, emphasizing repeatable scans and the role of nondeterminism, and finishes with a broader workflow that combines LLM-generated adversarial prompts, LLM-based judging, and automated scans to uncover and refine more weaknesses than rule-based testing alone.
+::: {.in30}
+- Red teaming means attacking your own LLM app on purpose, to find unsafe behaviour and weak defences before real users or attackers do.
+- By hand: completion-style prompts, biased questions, injected instructions, and attacks that exploit a known prompt format.
+- At scale: injection libraries run several times, LLM-generated attacks with an LLM judge, then Giskard scans that feed new manual tests.
 :::
 
 ::: {.concepts}
@@ -25,11 +29,6 @@ Red teaming means testing an LLM app by trying to break it on purpose, not by us
 `Manual attack patterns`
 
 Manual probing looks for failures with carefully chosen inputs. Key patterns include completion-style attacks, biased questions that push hallucinations, direct instruction injection, and exploiting prompt formats.
-:::
-::: {.concept}
-`Completion-style prompt attacks`
-
-Because LLMs are trained to continue text plausibly, they may follow a harmful continuation even when a direct harmful request would be refused. Attackers exploit this tendency by hiding the objective inside a completion task.
 :::
 ::: {.concept}
 `Automated injection testing`
@@ -76,6 +75,10 @@ Manual red teaming means trying inputs by hand to see where the model breaks. In
 
 LLMs are trained to predict the next token in a sequence. That means they often try to continue text in the most plausible way. You can use that behavior against a filter or refusal.
 
+::: {.column-margin .define label="Completion attack"}
+Because LLMs are trained to continue text plausibly, they may follow a harmful continuation even when a direct harmful request would be refused. Attackers exploit this tendency by hiding the objective inside a completion task.
+:::
+
 A plain harmful question may be refused. But if you make the question look like text the model should continue, it may follow your lead instead.
 
 ::: {.steps}
@@ -116,13 +119,11 @@ If you know the app’s prompt format, you can attack the exact place where the 
 
 The source also shows an explicit example of adding extra context with wrong facts, including the contrast “Mozart was born in 1999 and not in 1756.” If the attacker knows where the placeholder sits, they can add extra lines or markers that reshape the whole prompt. In one example, the attacker adds a wrong fact inside the user query area, and the model repeats it word for word.
 
-Knowing the prompt structure can also help reveal hidden instructions. The source says that with known prompt format, you can probe a model to learn more about its prompt format and apply that knowledge to the demo.
-
 ::: {.example}
 **Prompt structure attack.** The attacker uses the known format to insert extra context into the user question area, including a false fact like “Mozart was born in 1999 and not in 1756.” The model then follows that inserted content.
 :::
 
-Knowing the prompt structure can also help reveal hidden instructions. In the demo, the source describes a Zephyr Bank customer support bot. It shows repeated instruction injections that leak parts of the prompt, including the user query, the bot’s first answer, and a refinement instruction. The demo then fully reveals the system prompt by using end-of-prompt markers.
+Knowing the prompt structure can also help reveal hidden instructions: with a known prompt format, you can probe a model to learn more about it. In the demo, the source describes a Zephyr Bank customer support bot. It shows repeated instruction injections that leak parts of the prompt, including the user query, the bot’s first answer, and a refinement instruction. The demo then fully reveals the system prompt by using end-of-prompt markers.
 
 ::: {.compare}
 ::: {.col .bad}
@@ -284,14 +285,14 @@ The scan report is not the end of the process. Expand the failing requirements, 
 
 This works well as a loop:
 
-::: {mermaid}
+```{mermaid}
 flowchart TD
   A[Generate adversarial questions with an LLM] --> B[Evaluate answers with an LLM]
   B --> C[Run an automated scan]
   C --> D[Review failing requirements and examples]
   D --> E[Refine the prompt and manual tests]
   E --> A
-:::
+```
 
 ::: {.example}
 **Full assessment of the e-book store bot.** In the lesson’s later case study, the team assessed a chat bot for an online store that sells ebooks about technology. The bot can handle order status, policies, cancellations, returns, and payment issues. They worked in a staging replica of production and used the fictitious account **Jane Redeemer** with demo orders.

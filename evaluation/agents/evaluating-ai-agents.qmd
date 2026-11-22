@@ -1,6 +1,8 @@
 ---
 title: Evaluating AI Agents
-subtitle: How to assess, debug, and improve agents with traces, component tests, trajectory metrics, and structured experiments.
+subtitle: 'Assess, debug and improve agents with traces, component tests, trajectory metrics and experiments.'
+order: 1
+image: /assets/visuals/evaluating-ai-agents.svg
 date: '2026-11-15'
 categories:
 - Evaluation & Guardrails
@@ -10,29 +12,15 @@ aliases:
 date-modified: '2026-11-15'
 ---
 
-::: {.lesson-meta}
-[Evaluation & Guardrails]{.pill .t-eval} [Evaluating agents]{.pill .muted}
+::: {.synthesis}
+![The agent broken into parts with its trace on the left, the four-step approach on the right.](/assets/visuals/evaluating-ai-agents.svg){fig-alt="Evaluating AI agents: break the agent into parts, read traces, judge parts and trajectories, then experiment and monitor"}
 :::
 
-::: {.tldr}
-AI agents need evaluation methods that go beyond traditional software testing. Their behavior is open-ended, so you need observability: collect and visualize traces of each step, inspect component behavior, and judge both the final answer and the path taken to get there. The workflow on this page is: evaluate parts of the agent, evaluate full trajectories, turn recurring failures into a reusable test set, then run structured experiments and monitor the system over time.
+::: {.in30}
+- An agent's behaviour is open-ended: judge the path it took, not only its final answer, using traces of every step.
+- Test each part (router, skills, memory) and the whole trajectory, with the right evaluator: code, LLM judge or human.
+- Turn recurring failures into a reusable test set, run structured experiments, and keep monitoring after launch.
 :::
-
-```{mermaid}
-flowchart TD
-    U[User request] --> A[Agent run]
-    A --> T[Trace collection]
-    T --> I[Inspect steps]
-    I --> C[Component tests<br/>router, skills, memory]
-    I --> J[Trajectory evaluation]
-    C --> E[Choose evaluator<br/>code, LLM-as-a-judge, human]
-    J --> E
-    E --> X[Structured experiment]
-    X --> B[Reusable benchmark<br/>from recurring failures]
-    B --> M[Production monitoring]
-    M --> T
-```
-
 
 ::: {.concepts}
 ::: {.concept}
@@ -64,6 +52,10 @@ A trajectory is the full sequence of steps from the user request to the final re
 
 Traditional software testing checks whether a program gives the expected result for a given input. AI agents are different. The same input can lead to different valid paths.
 
+::: {.column-margin .watch}
+Do not judge an agent only by its final answer. And do not use one evaluator for every task: different judgments need different methods.
+:::
+
 That means output-only checks are not enough. You also need to ask:
 
 - Did the agent use the right tool?
@@ -92,6 +84,10 @@ AI agents are often built from parts such as:
 | Memory | Stores useful context | Did it keep and retrieve the right information? |
 
 Testing these parts separately makes debugging faster. If the final answer is wrong, you do not need to guess. You can check which component made the wrong decision.
+
+::: {.column-margin .watch}
+Do not mix component bugs with trajectory issues. Separate them when you can.
+:::
 
 ::: {.example}
 A text-to-SQL agent gets a query wrong because it chose the wrong table. That is a routing or planning issue. If it chose the right table but built the wrong SQL, that is a skill issue. Separate tests make that difference visible.
@@ -148,10 +144,8 @@ Human annotations are evaluations made by people. Use them when the task is ambi
 
 The trusted-evaluator workflow is: build a code check first, add an LLM judge where meaning matters, then validate that judge before you rely on it. The agentic-applications course recommends checking judge reliability with **precision, recall, and Cohen’s kappa**. That tells you whether the judge agrees with trusted labels often enough to use it in a benchmark or CI gate.
 
-::: {.callout-warning}
-## Watch out
-
-An unvalidated LLM judge can look confident while scoring inconsistently. Validate the judge before you rely on it, especially if you will compare versions or gate releases with its scores.
+::: {.column-margin .watch}
+An unvalidated LLM judge can look confident while scoring inconsistently. Do not trust it until you have checked how reliable it is, especially if you will compare versions or gate releases with its scores.
 :::
 
 ::: {.example}
@@ -233,6 +227,10 @@ A travel assistant gets the right hotel recommendation in both runs. In the firs
 
 Structured experiments help you improve prompts, models, or agent logic. The key idea is to change one variable at a time and measure the effect.
 
+::: {.column-margin .watch}
+Do not treat evaluation as a one-time step. Agents change, and their behavior can drift over time.
+:::
+
 The accuracy-improvement course gives a clear loop for this kind of work: evaluation, prompting, self-reflection, and fine-tuning. The course uses a text-to-SQL agent with Llama 3-8B and a custom schema as a concrete example.
 
 A simple experiment loop is:
@@ -293,7 +291,7 @@ A pull request changes a support prompt. The CI pipeline first runs rules-based 
 
 The same idea of evaluation continues after deployment. Behavior can drift, and new risks can appear.
 
-The Quality and Safety course highlights these failure modes:
+Connect agent evaluation to LLM quality and safety, and use red teaming to probe weaknesses proactively. The Quality and Safety course highlights these failure modes:
 
 | Failure mode | What it looks like |
 |---|---|
@@ -336,24 +334,11 @@ To evaluate an LLM judge, a team freezes expected verdicts for a set of attack t
 
 ::: {.callout-tip}
 ## Remember
-
 - AI systems need more than traditional software tests because their behavior is open-ended.
-- Connect agent evaluation to LLM quality and safety: hallucinations, jailbreaks, prompt injections, toxic outputs, and data leakage.
 - Collect traces so you can inspect the agent step by step, including prompt and response history.
 - Break the agent into parts like routers, skills, and memory for targeted testing.
 - Use the right evaluator for the job: code, LLM judge, or human review.
-- Reuse recurring failures as a reusable test set and rerun it after every change.
-- Keep monitoring after launch, and use red teaming to probe weaknesses proactively.
-:::
-
-::: {.callout-warning}
-## Watch out
-
-- Do not judge an agent only by its final answer.
-- Do not use one evaluator for every task. Different judgments need different methods.
-- Do not mix component bugs with trajectory issues. Separate them when you can.
-- Do not treat evaluation as a one-time step. Agents change, and their behavior can drift over time.
-- Do not trust an LLM judge until you have checked how reliable it is.
+- Reuse recurring failures as a test set, rerun it after every change, and keep monitoring and red-teaming after launch.
 :::
 
 ## Sources {.sources}

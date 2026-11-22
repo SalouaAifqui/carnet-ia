@@ -2,6 +2,7 @@
 title: Building agents with LangGraph
 subtitle: The building blocks, then five levels of agent design, from a simple tool loop to a full system.
 order: 2
+image: /assets/visuals/building-agents-with-langgraph.svg
 date: 2026-11-15
 categories:
 - Agents
@@ -16,26 +17,21 @@ aliases:
 - /agents/long-term-memory/02-baseline-email-assistant.html
 ---
 
-::: {.lesson-meta}
-[Agents]{.pill .t-agents} [Foundations]{.pill .muted}
+::: {.synthesis}
+![Five levels, one staircase: each level keeps the previous one and adds a single idea, up to the full system.](/assets/visuals/building-agents-with-langgraph.svg){fig-alt="Five levels of agent design with LangGraph, from a tool loop to a full system"}
 :::
 
-::: {.tldr}
-LangGraph describes an agent as a **graph**: **nodes** do the work, **edges** decide what runs next, and a shared **state** flows between them. With these few blocks you can build anything from a simple tool loop to a multi-step system that plans, researches, critiques itself and asks a human for approval. This page gives the blocks, then climbs the design patterns **level by level**.
+::: {.in30}
+- LangGraph describes an agent as a **graph**: nodes do the work, edges pick what runs next, a shared state flows between them.
+- The same few blocks build anything from a simple tool loop to a system that plans, researches, critiques itself and asks a human.
+- Climb the five levels only as needed: each one adds cost, latency and things that can go wrong.
 :::
-
-## The building blocks
 
 ::: {.concepts}
 ::: {.concept}
 `State`
 
 A typed dictionary shared by every node. Each node reads it and returns **only the fields it changes**.
-:::
-::: {.concept}
-`Reducer`
-
-How an update is merged into a field. `operator.add` appends to a list; without a reducer the value is replaced.
 :::
 ::: {.concept}
 `Node`
@@ -52,13 +48,13 @@ A fixed path: after node A, always run node B.
 
 A function looks at the state and picks the next node.
 :::
-::: {.concept}
-`Command`
-
-A node can return `Command(goto=…, update=…)`: update the state **and** choose the next node in one step.
-:::
 :::
 
+## The building blocks
+
+The blocks above, wired into a tool loop:
+
+::: {.code-step title="A tool loop as a graph"}
 ```python
 import operator
 from typing import TypedDict, Annotated
@@ -76,8 +72,13 @@ graph.add_conditional_edges("llm", has_tool_calls, {True: "action", False: END})
 graph.add_edge("action", "llm")
 app = graph.compile()                                     # a runnable: invoke, stream…
 ```
+:::
 
 **Reducers in one example:** a node returns `{"messages": [new_message]}`. With `operator.add`, LangGraph **appends** it to the history. Without it, the history would be replaced by that single message, and the model would lose the question as soon as a tool answered.
+
+::: {.column-margin .define label="Reducer"}
+How an update is merged into a field. `operator.add` appends to a list; without a reducer the value is replaced.
+:::
 
 | Message type | Produced by |
 |---|---|
@@ -87,14 +88,6 @@ app = graph.compile()                                     # a runnable: invoke, 
 | `ToolMessage` | The result of a tool |
 
 ## The levels
-
-```{mermaid}
-flowchart LR
-  L1["Level 1<br/>Tool loop"] --> L2["Level 2<br/>Router"]
-  L2 --> L3["Level 3<br/>Plan & reflect"]
-  L3 --> L4["Level 4<br/>Memory & human"]
-  L4 --> L5["Level 5<br/>Full system"]
-```
 
 Each level keeps everything from the previous one and adds **one idea**. Start at the lowest level that solves your problem: every level adds cost, latency and things that can go wrong.
 
@@ -116,6 +109,8 @@ flowchart LR
 
 ::: {.example}
 **A research assistant with web search.**
+
+::: {.code-step title="The agent class: model, tools and the loop"}
 ```python
 from langchain_core.messages import SystemMessage, ToolMessage, HumanMessage
 from langchain_openai import ChatOpenAI
@@ -155,7 +150,7 @@ result = bot.graph.invoke({"messages": [HumanMessage(content="What is the weathe
 result["messages"][-1].content
 ```
 :::
-
+:::
 
 **The same loop in one line.** Once you understand it, use the prebuilt version:
 
@@ -171,6 +166,10 @@ bot = create_agent("openai:gpt-5.4-mini", tools=[TavilySearch(max_results=4)],
 ### [Level 2]{.level-tag} The router
 
 **Idea:** classify first, then send the input down the right path. A cheap, structured decision before any expensive work.
+
+::: {.column-margin .define label="Command"}
+A node can return `Command(goto=…, update=…)`: update the state **and** choose the next node in one step.
+:::
 
 **Use it when:** inputs are of different kinds and need different handling, or many need no action at all.
 
@@ -199,6 +198,7 @@ llm_router = ChatOpenAI(model="gpt-5.4-mini").with_structured_output(Router)
 
 The triage node uses `Command` to route and update the state at the same time. The response agent, a full Level 1 agent, is added to the graph **as a single node**:
 
+::: {.code-step title="The triage node routes with Command; the response agent is one node"}
 ```python
 from langgraph.types import Command
 from langgraph.graph.message import add_messages
@@ -227,10 +227,10 @@ builder.add_node("response_agent", response_agent)      # an agent inside a grap
 builder.add_edge(START, "triage_router")
 email_agent = builder.compile()
 ```
+:::
 
 A sales spam is classified *ignore* and stops there. A colleague's question is classified *respond*: the agent calls `write_email` and summarises what it sent.
 :::
-
 
 ---
 
@@ -268,6 +268,7 @@ class EssayState(TypedDict):
 
 Each role is the same model with a **different system prompt**: planner, researcher, writer, teacher. The researcher uses structured output to produce search queries:
 
+::: {.code-step title="Researcher, writer and the stopping rule"}
 ```python
 class Queries(BaseModel):
     queries: List[str]
@@ -290,6 +291,7 @@ def generation_node(state: EssayState):
 def should_continue(state: EssayState):           # the stopping rule
     return END if state["revision_number"] > state["max_revisions"] else "reflect"
 ```
+:::
 
 ```python
 builder = StateGraph(EssayState)
@@ -308,7 +310,6 @@ graph = builder.compile()
 
 With `max_revisions = 2`, the agent writes a draft, critiques it, researches what the critique asks for, and rewrites: two drafts in total. `draft` and `critique` have **no reducer** on purpose, so each new version replaces the previous one.
 :::
-
 
 ---
 
@@ -364,7 +365,6 @@ flowchart LR
 
 Each part is small and simple on its own. The system becomes powerful because they work together, and because each part can be tested and improved separately.
 :::
-
 
 ::: {.callout-note .in-practice}
 ## In practice: tools

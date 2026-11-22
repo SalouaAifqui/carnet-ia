@@ -2,6 +2,7 @@
 title: "Short-term memory"
 subtitle: "Checkpointers and threads: how an agent keeps a conversation going."
 order: 5
+image: /assets/visuals/short-term-memory.svg
 date: 2026-11-15
 categories: [Agents, Memory, LangGraph]
 aliases:
@@ -9,12 +10,32 @@ aliases:
   - /agents/langgraph/04-persistence-and-streaming.html
 ---
 
-::: {.lesson-meta}
-[Agents]{.pill .t-agents} [Memory]{.pill .muted}
+::: {.synthesis}
+![A thread of checkpoints: the same thread id resumes the conversation, a new one starts from a blank page.](/assets/visuals/short-term-memory.svg){fig-alt="Short-term memory: a checkpointer saves state after every step under a thread id"}
 :::
 
-::: {.tldr}
-A **checkpointer** saves the graph's state after every step, under a **thread id**. Call the agent again with the same thread id and it picks up where it left off, with the whole conversation. A new thread id starts from scratch. This is short-term memory, and it is also what makes pausing and resuming an agent possible.
+::: {.in30}
+- A **checkpointer** saves the graph's state after every step, under a **thread id**.
+- Call again with the same thread id and the agent picks up the whole conversation; a new thread id starts from scratch.
+- The same snapshots make it possible to pause, inspect, edit and rewind an agent.
+:::
+
+::: {.concepts}
+::: {.concept}
+`Checkpointer`
+
+Saves the graph's state after every node, so a later call can pick it up again.
+:::
+::: {.concept}
+`Thread`
+
+One conversation. Its `thread_id` goes in the config of every call.
+:::
+::: {.concept}
+`Snapshot`
+
+The full state saved after a node, with an id. `get_state` reads the latest one.
+:::
 :::
 
 ## Reducer vs checkpointer

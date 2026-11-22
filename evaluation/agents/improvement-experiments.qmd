@@ -1,18 +1,22 @@
 ---
 title: Improvement experiments
-subtitle: How to test changes safely, compare versions, and choose the right intervention when an agent fails.
+subtitle: 'Test changes safely, compare versions, choose where to intervene.'
+order: 5
+image: /assets/visuals/improvement-experiments.svg
 date: '2026-11-16'
 categories:
 - Evaluation & Guardrails
 - Evaluating agents
 ---
 
-::: {.lesson-meta}
-[Evaluation & Guardrails]{.pill .t-eval} [Evaluating agents]{.pill .muted}
+::: {.synthesis}
+![Where to intervene, from data up to sampling, and the shelter example: the same overall score hides a regression.](/assets/visuals/improvement-experiments.svg){fig-alt="Improvement experiments: an intervention hierarchy and a baseline versus candidate comparison by category"}
 :::
 
-::: {.tldr}
-This page explains how to improve an agent systematically instead of guessing. It says to first identify the specific behavior you want to change, then test one intervention at a time with a fair baseline comparison, inspect tradeoffs beyond the overall score, and choose the smallest layer of the system—data, prompt, tools, model, or sampling—that best matches the failure evidence. The goal is to learn what actually caused the change and avoid fixes that create new problems or hide regressions.
+::: {.in30}
+- Pick one behaviour to change, from the pattern shared by observed failures, and decide what “good enough” means before testing.
+- Compare baseline and updated versions fairly: same model, cases and evaluators, on failure cases and known-good cases.
+- Read case-level tradeoffs and traces, and fix the lowest layer that fits the evidence: data, prompt, tools, model, then sampling.
 :::
 
 ::: {.concepts}
@@ -20,11 +24,6 @@ This page explains how to improve an agent systematically instead of guessing. I
 `Target the behavior`
 
 Before editing anything, decide exactly what failure pattern you want to change. Start from observed eval failures and evaluator notes, then infer the shared underlying issue.
-:::
-::: {.concept}
-`Failure patterns`
-
-Individual bad examples are less useful than the common theme behind them. Group similar failures so you can design an intervention that addresses the real problem rather than one symptom.
 :::
 ::: {.concept}
 `Fair comparison`
@@ -50,6 +49,10 @@ When you plan an improvement test, first decide **what behavior you want to chan
 ### Find the pattern behind the failures
 
 Start with failures you already observed in evals. Read the failed examples and the evaluator explanations, then look for a shared problem.
+
+::: {.column-margin .define label="Failure patterns"}
+Individual bad examples are less useful than the common theme behind them. Group similar failures so you can design an intervention that addresses the real problem rather than one symptom.
+:::
 
 In the shelter agent example, several failures point to the same issue:
 
@@ -210,15 +213,6 @@ When an agent fails, match the fix to the evidence. Start with the simplest laye
 
 This is not a rigid recipe. The idea is to choose the smallest change that can reasonably explain the failure.
 
-```{mermaid}
-flowchart TD
-    A[Failure in the agent] --> B[Data]
-    B --> C[Prompt]
-    C --> D[Tools and workflow]
-    D --> E[Model]
-    E --> F[Sampling settings]
-```
-
 ### Start with the data
 
 If the information is missing or inconsistent, fix the data first.
@@ -226,7 +220,7 @@ If the information is missing or inconsistent, fix the data first.
 For example, a dog record says that Atlas pulls hard on walks, but the structured field for “needs an experienced handler” is blank. If the agent matches Atlas with a first-time volunteer, the problem is probably not the prompt. The better fix is to change the data-entry or processing rule so that strong pulling fills the experienced-handler field correctly.
 
 ::: {.example}
-**Blank experienced-handler field.** Atlas has pulling notes in the record, but the structured field for experienced handler is empty. The agent matches Atlas with a first-time volunteer. The better fix is to populate that field from the notes, not to ask the prompt to compensate for missing data.
+**Blank experienced-handler field.** Atlas has pulling notes in the record, but the structured field for experienced handler is empty. The agent matches Atlas with a first-time volunteer. The better fix is to populate that field from the notes, not to ask the prompt to compensate for missing data. Changing the prompt would be less direct.
 :::
 
 If the failure disappears after you fix the record and run the same eval again, you improved the information the agent receives.
@@ -247,6 +241,10 @@ Be careful with examples. If every example uses a large dog, the agent may learn
 
 If the prompt is clear and the agent is trying to follow it, ask whether the tools and workflow make the right action easy.
 
+::: {.column-margin .watch}
+A new tool call can add latency and API cost. It can also create another failure point. For a safety-related eligibility check, that trade-off may be worth it. For an optional step, it may not.
+:::
+
 For example, if the agent calls an eligibility lookup and the tool returns **“no match”**, the tool contract should say what happens next:
 - if eligible, continue
 - if not eligible, stop
@@ -265,12 +263,6 @@ If the instructions are still not reliable enough, make the step part of the wor
 
 A stronger workflow can make an important requirement more reliable. But every extra step has a cost: more latency, more API cost, and one more place where something can go wrong.
 
-::: {.callout-warning}
-## Watch out
-
-A new tool call can add latency and API cost. It can also create another failure point. For a safety-related eligibility check, that trade-off may be worth it. For an optional step, it may not.
-:::
-
 ### Consider the model
 
 If the data is good, the instructions are clear, and the tools and workflow are correct, but the task is still too hard, then consider the model itself.
@@ -288,10 +280,6 @@ But they are usually not the right place to start if the real problem is:
 - an unreliable workflow
 
 Changing temperature does not create missing data, add a rule to the prompt, or define what “no match” means. These settings are more useful when variability itself is the problem.
-
-::: {.example}
-**Choosing the right layer.** A shelter agent has pulling notes for Atlas, but the experienced-handler field is blank. The agent then matches Atlas with a first-time volunteer. The best intervention is to fix the data-entry or processing rule so the field is filled correctly. Changing the prompt would be less direct.
-:::
 
 So when you find a failure, match the change to the evidence:
 - missing or inconsistent information → data

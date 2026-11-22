@@ -1,18 +1,22 @@
 ---
 title: Building custom guardrails
-subtitle: How to write a validator, attach it to a guard, and enforce it in an app.
+subtitle: 'Write a validator, attach it to a guard, enforce it in an app.'
+order: 2
+image: /assets/visuals/building-custom-guardrails.svg
 date: '2026-11-17'
 categories:
 - Evaluation & Guardrails
 - Guardrails
 ---
 
-::: {.lesson-meta}
-[Evaluation & Guardrails]{.pill .t-eval} [Guardrails]{.pill .muted}
+::: {.synthesis}
+![Nested like Russian dolls: validators inside a guard, inside Guardrails Server, between the app and the LLM API.](/assets/visuals/building-custom-guardrails.svg){fig-alt="Custom guardrails: validators inside a guard, inside a Guardrails Server between the app and the LLM API"}
 :::
 
-::: {.tldr}
-The page explains the basic flow for adding custom safety checks to an LLM app: first you define a validator that evaluates input or output and returns pass/fail plus an error message or optional fixed replacement; then you wrap one or more validators in a guard that names the policy and decides what to do on failure; finally, you enforce the guard by routing the app’s model calls through Guardrails Server, which sits in front of the LLM API and lets you use an OpenAI-style client while applying guardrails automatically.
+::: {.in30}
+- A **validator** checks an input or output and returns pass or fail, an error message, and optionally a fixed value.
+- A **guard** wraps one or more validators: it names them, says whether they run on input or output, and what to do on failure.
+- **Guardrails Server** enforces the guard in front of the LLM API; the app keeps an OpenAI-style client pointed at it.
 :::
 
 ::: {.concepts}
@@ -20,11 +24,6 @@ The page explains the basic flow for adding custom safety checks to an LLM app: 
 `Validator`
 
 The core rule-checking unit. It inspects text and returns a structured result: pass or fail, an error message on failure, and optionally a fixed_value to replace the original text.
-:::
-::: {.concept}
-`Validation rule`
-
-A validator encodes the exact behavior you want, such as blocking a forbidden topic by failing whenever a specific substring appears in the text.
 :::
 ::: {.concept}
 `Guard`
@@ -47,6 +46,10 @@ The enforcement layer that sits between the app and the model API. It intercepts
 
 A **validator** is the core rule-checking logic. It looks at an input or output and decides if it follows the rule you want.
 
+::: {.column-margin .define label="Validation rule"}
+A validator encodes the exact behavior you want, such as blocking a forbidden topic by failing whenever a specific substring appears in the text.
+:::
+
 A validator returns a result with:
 - **result**: **pass** or **fail**
 - **error_message** when it fails
@@ -56,7 +59,7 @@ A validator returns a result with:
 **Blocking a forbidden topic.** A validator checks the text and fails when it **mentions** **Project Colosseum** — in other words, when the text contains that substring. In that case, it returns: **“I’m sorry I can’t answer questions about Project Colosseum.”**
 :::
 
-```mermaid
+```{mermaid}
 flowchart TD
     A[Text to check] --> B{Rule matches?}
     B -->|Yes| C[Pass]
@@ -86,6 +89,10 @@ class ProjectColosseumValidator:
 
 A **guard** is the wrapper around one or more guardrails. It gives the guardrails a name and tells the system when to run them and what to do if they fail.
 
+::: {.column-margin .watch}
+The guard does not replace the validator. The validator does the check. The guard controls the name, the input or output setting, and the on-fail action such as **exception** or **fix**.
+:::
+
 ### How a guard is configured
 
 A guard can include:
@@ -109,14 +116,13 @@ flowchart LR
 **Colosseum Guard raises an exception.** A guard named **"Colosseum Guard"** wraps a validator. When the validator detects **Colosseum**, the guard is set to **raise an exception** instead of letting the result pass.
 :::
 
-::: {.callout-warning}
-## Watch out
-The guard does not replace the validator. The validator does the check. The guard controls the name, the input or output setting, and the on-fail action such as **exception** or **fix**.
-:::
-
 ## Run through Guardrails Server
 
 Guardrails Server wraps the LLM API call. Your app does not call the model directly. Instead, it sends the request to the server, and the server applies the guardrail before or during the model call.
+
+::: {.column-margin .watch}
+OpenAI-compatible does not mean you are calling OpenAI itself. It means the client speaks the same API style, but the request goes to the Guardrails Server endpoint you configure.
+:::
 
 This works because Guardrails Server is OpenAI-compatible. That means you can use an OpenAI-style client, but point it at the local Guardrails Server instead of the normal OpenAI endpoint. In practice, the chatbot can swap the usual client for a guarded client, while keeping the same kind of API call.
 
@@ -138,12 +144,6 @@ flowchart LR
 2. **Replace the client**: use a guarded client instead of the plain OpenAI client.
 3. **Point it to the local server**: the client sends requests to the Guardrails Server.
 4. **Let the server handle the guardrail**: the server wraps the LLM API call and enforces the validator through the guard.
-:::
-
-::: {.callout-warning}
-## Watch out
-
-OpenAI-compatible does not mean you are calling OpenAI itself. It means the client speaks the same API style, but the request goes to the Guardrails Server endpoint you configure.
 :::
 
 ::: {.callout-tip}

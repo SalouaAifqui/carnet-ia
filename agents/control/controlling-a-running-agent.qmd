@@ -2,6 +2,7 @@
 title: "Controlling a running agent"
 subtitle: "Watch it with streaming, pause it for approval, edit its plans, and rewind it."
 order: 7
+image: /assets/visuals/controlling-a-running-agent.svg
 date: 2026-11-15
 categories: [Agents, Control, LangGraph, Human in the loop]
 aliases:
@@ -9,15 +10,15 @@ aliases:
   - /agents/langgraph/05-human-in-the-loop.html
 ---
 
-::: {.lesson-meta}
-[Agents]{.pill .t-agents} [Control]{.pill .muted}
+::: {.synthesis}
+![Watch, pause, edit and rewind: four controls, all built on the checkpoints saved after every step.](/assets/visuals/controlling-a-running-agent.svg){fig-alt="Controlling a running agent: watch, pause, edit and rewind, on top of saved checkpoints"}
 :::
 
-::: {.tldr}
-An agent shouldn't be a black box. **Streaming** shows what it is doing while it runs. **Human in the loop** stops it before sensitive steps so a person can approve, change or reject what it is about to do. **Time travel** replays it from any earlier step. All three rely on the checkpointer: every step is saved, so it can be shown, paused, edited and resumed.
+::: {.in30}
+- **Streaming** shows what the agent is doing while it runs, step by step or token by token.
+- **Human in the loop** pauses it before sensitive steps so a person can approve, change or reject them.
+- **Time travel** replays it from any earlier step. All of it relies on the checkpointer saving every step.
 :::
-
-## Watching: streaming
 
 ::: {.concepts}
 ::: {.concept}
@@ -30,7 +31,21 @@ One event per step: the tool request, the tool result, then the final answer.
 
 One event per **token**, like a chat app typing. Asynchronous: use `async for`.
 :::
+::: {.concept}
+`interrupt()`
+
+Stops the graph wherever it is called; resuming with `Command(resume=…)` returns the person's answer.
 :::
+::: {.concept}
+`update_state()`
+
+Changes the state while the graph is paused. Each change is a new snapshot; nothing is erased.
+:::
+:::
+
+## Watching: streaming
+
+Two ways to stream: one event per step, or one event per token.
 
 ```python
 for event in app.stream({"messages": messages}, thread):
@@ -110,6 +125,7 @@ app.stream(None, thread)                                  # runs the edited sear
 
 Replacing a message requires a **reducer that replaces by id** instead of always appending:
 
+::: {.code-step title="A reducer that replaces messages by id"}
 ```python
 from uuid import uuid4
 
@@ -130,6 +146,7 @@ def reduce_messages(left: list, right: list) -> list:
 class AgentState(TypedDict):
     messages: Annotated[list[AnyMessage], reduce_messages]
 ```
+:::
 
 **Answering in the agent's place.** With `as_node`, an update counts as the output of a given node. For example, inject a tool result yourself and skip the real tool:
 
@@ -157,8 +174,7 @@ Rewind to the moment before the LA search, change the query to use AccuWeather, 
 ::: {.callout-tip}
 ## Remember
 - Stream **steps** to show progress, stream **tokens** for a responsive answer.
-- `interrupt_before=[node]` pauses before a node; `interrupt()` pauses inside one and returns the person's answer.
-- Resume with `stream(None, thread)` or `invoke(Command(resume=…), thread)`.
+- `interrupt_before=[node]` pauses before a node, `interrupt()` inside one; resume with `stream(None, thread)` or `invoke(Command(resume=…), thread)`.
 - `update_state` never erases history; keep a message's **id** to replace it.
 - `as_node` decides which node an update counts as, and therefore what runs next.
 - The agent resumes from the **saved state**: change the state, not just your variables.

@@ -2,16 +2,27 @@
 $bg: #0e1220;
 $paper: #151b2d;
 $ink: #e4e9f5;
-$muted: #9aa5bf;
+$muted: #a3adc6;
 $line: #27304a;
+$line-strong: #3a4566;
 $accent: #8aa4ff;
 $accent-soft: #1e2a52;
 $warn: #f5b25c;
 $warn-soft: #3a2a12;
 $ok: #5ad1a0;
 $ok-soft: #12352a;
+$bad: #ff8787;
+$bad-soft: #3d1717;
 $block-bg: #0a0f1d;
 $code-fg: #dbe4ff;
+$in30-bg: #1a2340;
+$in30-fg: #ffffff;
+$in30-label: #a9b8ff;
+$in30-border: #2c3963;
+// synthesis figures keep their light background: the visuals are drawn for it
+$figure-bg: #ffffff;
+$figure-fg: #586174;
+$figure-line: #3a4566;
 $t-llms: #b197fc;
 $t-llms-soft: #2a2150;
 $t-agents: #8aa4ff;
@@ -24,3 +35,9 @@ $t-eval: #f783ac;
 $t-eval-soft: #3d1426;
 $t-tools: #66d9e8;
 $t-tools-soft: #0b3a42;
+
+/*-- scss:rules --*/
+/* on dark topic colors, white text is too faint: buttons and filled circles use the page ink */
+nav.page-navigation .nav-page-next a, .path-step.first .path-n, .learning-path .lp-n, .compare > .col.solid { color: #0e1220 !important; }
+.btn-dark { background: #e4e9f5; color: #0e1220 !important; }
+.note-thumb, .quarto-grid-item .card-img-top { background: #ffffff !important; }
