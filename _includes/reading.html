@@ -155,13 +155,20 @@ function carnetReading() {
     var items = [];
     t.sections.forEach(function (s) {
       if (s.planned) items.push({ text: s.title + " — soon", soon: true });
-      s.notes.forEach(function (k) { items.push({ text: notes[k].title }); });
+      s.notes.forEach(function (k) { items.push({ text: notes[k].title, href: k + ".html" }); });
     });
     items.filter(function (x) { return !x.soon; }).length >= 3 ?
       (items = items.filter(function (x) { return !x.soon; })) : null;
     items.slice(0, 3).forEach(function (x) {
       var li = document.createElement("li");
-      li.textContent = x.text;
+      if (x.href) {
+        var link = document.createElement("a");
+        link.href = x.href;
+        link.textContent = x.text;
+        li.appendChild(link);
+      } else {
+        li.textContent = x.text;
+      }
       if (x.soon) li.className = "soon";
       ul.appendChild(li);
     });

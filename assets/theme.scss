@@ -636,5 +636,18 @@ body.home #quarto-content, body.topic.tracks #quarto-content, body.all-notes #qu
 }
 body.all-notes #quarto-content > main.content { max-width: 1240px; }
 
+/* topic cards: the whole card opens the section, each note title opens its note */
+.topic-card {
+  position: relative;
+  .tc-head { color: inherit !important; text-decoration: none !important; }
+  .tc-head::after { content: ""; position: absolute; inset: 0; border-radius: 16px; }
+  li:not(.soon) { padding: 0; }
+  li a {
+    position: relative; z-index: 1; display: flex; align-items: center; min-height: 44px;
+    color: inherit !important; text-decoration: none;
+    &:hover { color: var(--t) !important; text-decoration: underline; }
+  }
+}
+
 /* ---------- footer ---------- */
 .nav-footer { border-top: 1px solid $line; font-family: $ui; font-size: .875rem; color: $muted; min-height: 64px; }

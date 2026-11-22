@@ -90,26 +90,26 @@ listing:
 <section class="home-section" id="topics" aria-labelledby="topics-title">
   <div class="home-section-head"><h2 id="topics-title">Topics</h2></div>
   <div class="topic-cards">
-    <a class="topic-card t-llms" href="llms/index.html">
-      <span class="tc-head"><span class="tc-name">Inside LLMs</span><span class="tc-count" data-stat="count" data-topic="llms"></span></span>
+    <div class="topic-card t-llms">
+      <a class="tc-head" href="llms/index.html"><span class="tc-name">Inside LLMs</span><span class="tc-count" data-stat="count" data-topic="llms"></span></a>
       <span class="tc-desc">Architectures, comparison boards, open-source and foundation models.</span>
       <ul data-first-notes="llms"></ul>
-    </a>
-    <a class="topic-card t-agents" href="agents/index.html">
-      <span class="tc-head"><span class="tc-name">Build Agents</span><span class="tc-count" data-stat="count" data-topic="agents"></span></span>
+    </div>
+    <div class="topic-card t-agents">
+      <a class="tc-head" href="agents/index.html"><span class="tc-name">Build Agents</span><span class="tc-count" data-stat="count" data-topic="agents"></span></a>
       <span class="tc-desc">What agents are and how to build them: tools, skills, memory, and a human who stays in control.</span>
       <ul data-first-notes="agents"></ul>
-    </a>
-    <a class="topic-card t-eval" href="evaluation/index.html">
-      <span class="tc-head"><span class="tc-name">Measure What Matters</span><span class="tc-count" data-stat="count" data-topic="evaluation"></span></span>
+    </div>
+    <div class="topic-card t-eval">
+      <a class="tc-head" href="evaluation/index.html"><span class="tc-name">Measure What Matters</span><span class="tc-count" data-stat="count" data-topic="evaluation"></span></a>
       <span class="tc-desc">Evaluation frameworks, then how to evaluate LLMs and agents.</span>
       <ul data-first-notes="evaluation"></ul>
-    </a>
-    <a class="topic-card t-guardrails" href="guardrails/index.html">
-      <span class="tc-head"><span class="tc-name">Ship with Guardrails</span><span class="tc-count" data-stat="count" data-topic="guardrails"></span></span>
+    </div>
+    <div class="topic-card t-guardrails">
+      <a class="tc-head" href="guardrails/index.html"><span class="tc-name">Ship with Guardrails</span><span class="tc-count" data-stat="count" data-topic="guardrails"></span></a>
       <span class="tc-desc">Build the right guardrails, and stop bad answers before anyone sees them.</span>
       <ul data-first-notes="guardrails"></ul>
-    </a>
+    </div>
   </div>
 </section>
 

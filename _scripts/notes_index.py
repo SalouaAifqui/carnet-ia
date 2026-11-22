@@ -103,15 +103,22 @@ def build() -> dict:
     return {"topics": topics, "notes": notes}
 
 
+def write_if_changed(path: Path, text: str) -> None:
+    """Never touch an unchanged file: `quarto preview` watches these files, and rewriting them
+    on each render made it render and reload the page in an endless loop."""
+    if not path.exists() or path.read_text(encoding="utf-8") != text:
+        path.write_text(text, encoding="utf-8")
+
+
 def main() -> None:
     data = build()
     out = ROOT / "_carnet"
     out.mkdir(exist_ok=True)
     text = json.dumps(data, ensure_ascii=False, indent=1)
-    (out / "notes.json").write_text(text, encoding="utf-8")
+    write_if_changed(out / "notes.json", text)
     inline = json.dumps(data, ensure_ascii=False, separators=(",", ":")).replace("</", "<\\/")
-    (out / "notes-data.html").write_text(
-        f'<script id="carnet-data" type="application/json">{inline}</script>\n', encoding="utf-8")
+    write_if_changed(out / "notes-data.html",
+                     f'<script id="carnet-data" type="application/json">{inline}</script>\n')
 
 
 if __name__ == "__main__":
