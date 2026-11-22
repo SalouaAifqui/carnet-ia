@@ -33,14 +33,15 @@ from . import prompts
 from .chunks import chunk_text, fingerprint, numbered, remap
 from .config import MAX_QUERIES, RESEARCH, TOPICS
 from .core import Services, ask, clean_markdown, feedback_block, text_of, validate_route
-from .site import (check_page, describe_site, ensure_listed, find_block, is_self, join_front_matter,
+from .site import (add_in_practice, check_page, describe_site, ensure_listed, find_block, is_self,
+                   join_front_matter, list_pages, render_tool_facts,
                    merge_sources, remember_block, render_sources, render_synthesis_blocks, slugify,
                    split_front_matter, split_parts, split_sources, topic_pills)
 from .state import (ArticlePlan, Findings, MissingDetails, Proposal, ResearchPlan, Route, Source,
-                    Synthesis)
+                    Synthesis, ToolInfo)
 
 STATE_TYPES = [("carnet_agent.state", n) for n in [
-    "Route", "ArticlePlan", "SectionPlan", "Proposal", "Source", "Synthesis", "ConceptCard",
+    "Route", "ArticlePlan", "SectionPlan", "Proposal", "ToolInfo", "Source", "Synthesis", "ConceptCard",
     "Lesson", "LessonNotes", "PlannedPage", "CoursePlan", "Query", "Finding"]]
 
 
@@ -57,6 +58,8 @@ class ArticleState(TypedDict, total=False):
     human_feedback: str
     parts: dict                   # section index -> markdown
     synthesis: Synthesis
+    extra_pages: list[dict]       # a second page planned from the same sources (the tool card of a "mixed" source)
+    linked: list[str]             # concept pages that got an "In practice" link to a tool card
     check_errors: list[str]
     page_path: str
     pr_url: str
@@ -105,25 +108,58 @@ class ArticleAgent:
             return {}
         fresh = self.fetch(state)
         mapping = remap(state.get("fingerprints") or [], fresh["chunks"])
-        plan = state["plan"].model_copy(deep=True)
-        for section in plan.sections:
-            section.chunks = sorted({mapping[c] for c in section.chunks if c in mapping})
-        return {"chunks": fresh["chunks"], "plan": plan}
+
+        def moved(plan: ArticlePlan) -> ArticlePlan:
+            plan = plan.model_copy(deep=True)
+            for section in plan.sections:
+                section.chunks = sorted({mapping[c] for c in section.chunks if c in mapping})
+            return plan
+        update = {"chunks": fresh["chunks"], "plan": moved(state["plan"])}
+        if state.get("extra_pages"):
+            update["extra_pages"] = [e | {"plan": moved(e["plan"])} for e in state["extra_pages"]]
+        return update
 
     # ------------------------------------------------------------------ 1. librarian (LLM)
     def librarian(self, state: ArticleState, fixed_route: Route | None = None):
-        """Plan where the content goes and which parts to write. [code] then checks the plan."""
+        """Classify the source, plan where it goes and which parts to write. [code] then checks the plan.
+        concept → one page. tool → one tool card in the Toolbox. mixed → a vendor-neutral concept
+        page + a tool card (planned by a second, focused call)."""
         fixed = prompts.LIBRARIAN_FIXED.format(route=fixed_route.model_dump_json()) if fixed_route else ""
+        if fixed_route and fixed_route.topic == "toolbox":
+            fixed = prompts.TOOL_CARD + fixed
         plan = ask(self.s.m("plan"), ArticlePlan, [
             SystemMessage(prompts.LIBRARIAN.format(site=describe_site(self.s.root), fixed=fixed)),
             HumanMessage(f"Source chunks:\n\n{numbered(state['chunks'])}" + feedback_block(state)),
         ])
         if fixed_route:
             plan.route = fixed_route
+        elif plan.source_kind == "tool" and plan.tool:
+            return self.plan_tool_card(state, plan.tool)              # the whole page is a tool card
         checked = validate_route(self.s.root, plan.route)
         plan.route = checked["route"]
         self.check_sections(plan, checked["existing_body"], len(state["chunks"]))
-        return {"plan": plan, "existing_body": checked["existing_body"]}
+        if plan.route.topic == "toolbox" and plan.tool:               # [code] only real concept pages
+            concept_pages = {p.path for p in list_pages(self.s.root) if p.topic != "toolbox"}
+            plan.tool.related_pages = [p for p in plan.tool.related_pages if p in concept_pages]
+        update = {"plan": plan, "existing_body": checked["existing_body"]}
+        if not fixed_route and plan.source_kind == "mixed" and plan.tool:
+            update["extra_pages"] = [self.plan_tool_card(state, plan.tool)]
+        return update
+
+    def plan_tool_card(self, state: ArticleState, tool: ToolInfo) -> dict:
+        """[code] The card's place is fixed (toolbox/tools/<name>.qmd, updated if it exists),
+        then [LLM] the librarian plans its four standard parts."""
+        path = f"toolbox/tools/{slugify(tool.name)}.qmd"
+        exists = (self.s.root / path).exists()
+        route = Route(concept=tool.name, reasoning=f"Tool card for {tool.name} ({tool.maker}).",
+                      action="update" if exists else "create", topic="toolbox", folder="tools",
+                      folder_title="Tools", target_path=path if exists else "", title=tool.name,
+                      subtitle=tool.summary)
+        card = self.librarian(state, fixed_route=route)
+        card["plan"].source_kind = "tool"
+        if card["plan"].tool is None:
+            card["plan"].tool = tool
+        return card
 
     @staticmethod
     def check_sections(plan: ArticlePlan, existing_body: str, n_chunks: int) -> None:
@@ -223,17 +259,34 @@ class ArticleAgent:
                              f"\n\nSource chunks:\n{chunks}\n\nThe part:\n{draft}")])))
         return draft
 
-    def write_parts(self, state: ArticleState):
-        """All parts are written and checked in parallel (one thread each)."""
-        state = dict(state) | self.ensure_chunks(state)
+    @staticmethod
+    def sub(state: ArticleState, extra: dict) -> dict:
+        """An extra page shares the sources, approvals and instructions of the run."""
+        return dict(state) | extra
+
+    def _write_all(self, state: ArticleState) -> dict:
         with ThreadPoolExecutor(max_workers=4) as pool:
             futures = {i: pool.submit(contextvars.copy_context().run, self.write_part, state, i)
                        for i in range(len(state["plan"].sections))}
-            parts = {str(i): f.result() for i, f in futures.items()}
-        return {"parts": parts, "chunks": state["chunks"], "plan": state["plan"]}
+            return {str(i): f.result() for i, f in futures.items()}
+
+    def write_parts(self, state: ArticleState):
+        """All parts are written and checked in parallel (one thread each), for every page."""
+        state = dict(state) | self.ensure_chunks(state)
+        update = {"parts": self._write_all(state), "chunks": state["chunks"], "plan": state["plan"]}
+        if state.get("extra_pages"):
+            update["extra_pages"] = [e | {"parts": self._write_all(self.sub(state, e))} for e in state["extra_pages"]]
+        return update
 
     # ------------------------------------------------------------------ 4. editor (LLM) + merge (code)
     def edit(self, state: ArticleState):
+        update = {"synthesis": self._synthesis(state)}
+        if state.get("extra_pages"):
+            update["extra_pages"] = [e | {"synthesis": self._synthesis(self.sub(state, e))}
+                                     for e in state["extra_pages"]]
+        return update
+
+    def _synthesis(self, state: ArticleState) -> Synthesis:
         plan = state["plan"]
         openings = "\n\n".join(" ".join(text.split()[:90]) for text in state["parts"].values())
         existing = ""
@@ -241,11 +294,10 @@ class ArticleAgent:
             head, parts, _ = split_parts(state["existing_body"])
             existing = ("This updates an existing page. Its current parts are: "
                         + " · ".join(t for t, _ in parts) + ". Its current summary:\n" + head[-1500:])
-        synthesis = ask(self.s.m("edit"), Synthesis, [
+        return ask(self.s.m("edit"), Synthesis, [
             SystemMessage(prompts.EDITOR.format(existing=existing)),
             HumanMessage(f"Page: {plan.route.title}: {plan.route.subtitle}\n\nOpenings of the new parts:\n{openings}"),
         ])
-        return {"synthesis": synthesis}
 
     def assemble(self, state: ArticleState) -> tuple[Path, str]:
         """[code] Build the page: blocks from the editor, parts inserted at their place, sources."""
@@ -266,7 +318,10 @@ class ArticleAgent:
             head, existing_parts, tail = split_parts(old)
             body_parts = [text for _, text in existing_parts]
             titles = [t for t, _ in existing_parts]
-            for opener, block in [("::: {.tldr}", tldr), ("::: {.concepts}", concepts)]:
+            blocks = [("::: {.tldr}", tldr), ("::: {.concepts}", concepts)]
+            if plan.tool:
+                blocks.insert(0, ("::: {.tool-facts}", render_tool_facts(plan.tool)))
+            for opener, block in blocks:
                 span = find_block(head, opener)               # usually at the top, sometimes in a part
                 if span:
                     head = head[:span[0]] + block + head[span[1]:]
@@ -295,14 +350,35 @@ class ArticleAgent:
             n = 2
             while path.exists():
                 path, n = path.with_name(f"{slugify(route.title)}-{n}.qmd"), n + 1
+            categories = [TOPICS[route.topic][0], route.folder_title]
+            if plan.tool:                                   # a tool card is tagged with the topics it touches
+                categories = [TOPICS[t][0] for t in plan.tool.topics] or ["Toolbox"]
             front_matter = {"title": route.title, "subtitle": route.subtitle, "date": self.s.today,
-                            "categories": [TOPICS[route.topic][0], route.folder_title]}
+                            "categories": categories}
             old_sources = []
-            body = "\n\n".join([topic_pills(route.topic, route.folder_title), tldr, concepts, *parts, remember])
+            facts = [render_tool_facts(plan.tool)] if plan.tool else []
+            body = "\n\n".join([topic_pills(route.topic, route.folder_title), *facts, tldr, concepts, *parts, remember])
         page = join_front_matter(front_matter, f"{body}\n\n{render_sources(merge_sources(old_sources, sources))}")
         return path, page
 
     def finalize(self, state: ArticleState):
+        update = self._finalize_one(state)
+        pages = [(state, update)]
+        if state.get("extra_pages"):
+            update["extra_pages"] = []
+            for extra in state["extra_pages"]:
+                done = self._finalize_one(self.sub(state, extra))
+                update["extra_pages"].append(extra | done)
+                pages.append((extra, done))
+        linked = []
+        for page, done in pages:                                  # [code] "In practice" links to tool cards
+            tool = page["plan"].tool if page["plan"].route.topic == "toolbox" else None
+            if tool:
+                linked += add_in_practice(self.s.root, done["page_path"], tool)
+        update["linked"] = linked
+        return update
+
+    def _finalize_one(self, state: ArticleState) -> dict:
         path, page = self.assemble(state)
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text(page)
@@ -352,12 +428,23 @@ def describe_plan(state: dict) -> str:
         lines += [f"📝 **Your notes:** {state['human_feedback']}", ""]
     if route.new_section:
         lines += [f"⚠️ **New section proposed:** {route.folder_title}: {route.section_description}", ""]
+    kind = {"concept": "🧠 a concept", "tool": "🧰 a tool (tool card in the Toolbox)",
+            "mixed": "🧠 + 🧰 concepts taught through a product: a vendor-neutral concept page **and** a tool card"}
+    lines += [f"**Source type:** {kind[plan.source_kind]}", ""]
+    if plan.tool and route.topic == "toolbox":
+        t = plan.tool
+        lines += [f"**Tool:** {t.name} by {t.maker} · open source: {t.open_source} · topics: "
+                  + ", ".join(TOPICS[x][0] for x in t.topics),
+                  f"**Implements:** {', '.join(t.implements)}",
+                  "**Linked from:** " + (", ".join(f"`{p}`" for p in t.related_pages) or "(no concept page yet)"), ""]
     lines += [plan.summary, "", "### Parts"]
     for s in plan.sections:
         where = (f"extends **{s.existing_heading}**" if s.kind == "extend"
                  else f"new part{f', after {s.existing_heading}' if s.existing_heading else ''}")
         lines += [f"- **{s.heading}** ({where}, {len(s.chunks)} source chunk(s))",
                   f"  - {s.covers}", f"  - 💡 {s.example}", f"  - 🎨 {s.visual}"]
+    for extra in state.get("extra_pages") or []:
+        lines += ["", "---", "", describe_plan({**state, **extra, "extra_pages": [], "proposals": []})]
     proposals = state.get("proposals") or []
     if proposals:
         lines += ["", "### Extra facts found on the web (added only if you approve them)"]
@@ -378,6 +465,12 @@ def describe_run(state: dict) -> str:
         "### Web facts added (approved)",
         *([f"- {p.fact} — [{p.source_title}]({p.source_url})" for p in approved] or ["- (none)"]),
     ]
+    for extra in state.get("extra_pages") or []:
+        r = extra["plan"].route
+        lines += ["", f"**Also:** {r.action} `{extra.get('page_path')}` in **{TOPICS[r.topic][0]}** › {r.folder_title}"]
+        lines += [f"- ⚠️ {e}" for e in extra.get("check_errors") or []]
+    if state.get("linked"):
+        lines += ["", "**\"In practice\" links added to:** " + ", ".join(f"`{p}`" for p in state["linked"])]
     if state.get("check_errors"):
         lines += ["", "### ⚠️ To check", *[f"- {e}" for e in state["check_errors"]]]
     if state.get("cost") is not None:

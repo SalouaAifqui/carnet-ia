@@ -13,6 +13,7 @@ A learning notebook on applied AI, published at **https://salouaaifqui.github.io
 | `llms/` | **LLMs**: how LLMs work, foundation models, open-source models |
 | `agents/` | **Agents**: foundations, memory, control |
 | `evaluation/` | **Evaluation & Guardrails**: evaluating LLMs, evaluating agents, guardrails |
+| `toolbox/` | **Toolbox**: one card per tool or framework, tagged with the topics it touches |
 | `agent/` | **The Carnet IA agent**: turns web pages into notes, with your approval ([guide](agent/README.md)) |
 | `assets/` | Site design: colors, fonts, logo |
 | `.github/` | The "New source" issue form and the two automations (agent, site publishing) |

@@ -41,6 +41,9 @@ Rules:
 - Page titles name the concept ("LLM judges", "Test sets you can trust"), never a lesson or
   the course.
 - Put intros, conversations and admin lessons in `skipped` unless they carry lasting content.
+- If the course is built around a specific product or framework (e.g. a vendor's toolkit), add ONE
+  page for it in topic `toolbox`, section `tools` (title = product name), fed by the lessons that
+  show the product; keep the other pages about the concepts, vendor-neutral.
 - For each page, fill the route like this: concept, reasoning (which lessons and why), action,
   topic, folder, folder_title, new_section, section_description, target_path, title, subtitle.
 
@@ -53,6 +56,16 @@ Site map:
 LIBRARIAN = """You are the librarian of Carnet IA, a website of study notes on applied AI organised
 by CONCEPT. You receive a source cut into numbered chunks [C1], [C2]… Your only job is to plan:
 where the content goes on the site, and which parts ('##') to write. You write no content.
+
+First, classify the source (source_kind):
+- "concept": general knowledge, not tied to a product.
+- "tool": mainly presents ONE product or framework made by a company or a project
+  (e.g. "NVIDIA's NeMo Agent Toolkit: Making Agents Reliable" is about the toolkit).
+- "mixed": teaches general concepts, using a product to show them.
+For "tool" and "mixed", fill `tool` (identity card; only facts from the source).
+- For "tool": the page is a TOOL CARD: topic `toolbox`, section `tools`, title = the product's name.
+- For "mixed": plan the CONCEPT page here, written vendor-neutral (the product may appear only as an
+  example). A separate tool card is planned automatically.
 
 Placement (route), step by step:
 1. Concept: what does the source mainly teach?
@@ -70,6 +83,16 @@ Parts (sections):
 
 {fixed}Site map:
 {site}"""
+
+TOOL_CARD = """This page is a TOOL CARD in the Toolbox. Use exactly these parts, in this order
+(kind "extend" if the card already has them):
+1. "What it is": who makes it, the problem it addresses, open source or not, where it fits.
+2. "What it does": its main features, each tied to the concept it implements.
+3. "How to use it": a minimal, current example from the source.
+4. "When to use it": good fits, limits, alternatives.
+Fill `tool`, and in tool.related_pages list the existing concept pages it puts into practice.
+
+"""
 
 LIBRARIAN_FIXED = """The placement of this page is already decided (keep this route as is):
 {route}
@@ -97,6 +120,8 @@ Rules:
 - Use '###' sub-parts if needed, never deeper. Code: current APIs only.
 - Do not write a summary, key concepts, a "Remember" list or a Sources section: other steps do.
 - Facts from the approved web findings may be used; never invent facts or numbers.
+- About a product: neutral and factual. Attribute the maker's claims to them ("NVIDIA states that…"),
+  no marketing words ("powerful", "seamless", "best-in-class"). Concept pages stay vendor-neutral.
 {extend}"""
 
 WRITE_EXTEND = """- This part ALREADY EXISTS on the page (below). Return the whole part with the new material

@@ -76,6 +76,10 @@ def validate_route(root: Path, route: Route) -> dict:
         route.folder, route.folder_title, route.new_section = match.folder, match.title, False
     else:
         route.new_section = True
+    # A "create" whose page already exists (same title, same place) is really an update: no duplicates.
+    same = f"{route.topic}/{route.folder}/{slugify(route.title)}.qmd"
+    if route.action == "create" and same in existing:
+        route.action, route.target_path = "update", same
     existing_body = ""
     if route.action == "update":
         _, body = split_front_matter((root / route.target_path).read_text())

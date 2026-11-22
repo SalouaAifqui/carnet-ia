@@ -10,6 +10,7 @@ listing:
       - "agents/*/*.qmd"
       - "llms/*/*.qmd"
       - "evaluation/*/*.qmd"
+      - "toolbox/*/*.qmd"
     type: grid
     grid-columns: 3
     sort: ["date desc", "lesson desc"]
@@ -22,6 +23,14 @@ listing:
   <p class="hero-eyebrow">A learning notebook on applied AI</p>
   <h1 class="hero-title">Understand the models.<br>Build with them. Use them well.</h1>
   <p class="hero-lede">Notes, code and practical tips, written while learning: how LLMs work, how to build agents, and how to evaluate and safeguard them.</p>
+  <a class="topic-card t-tools" href="toolbox/index.html">
+    <span class="topic-icon" aria-hidden="true">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a4 4 0 0 0-5.4 5.2L3.5 17.3a1.8 1.8 0 0 0 2.5 2.5l5.8-5.8a4 4 0 0 0 5.2-5.4l-2.6 2.6-2.3-.4-.4-2.3z"/></svg>
+    </span>
+    <span class="topic-name">Toolbox</span>
+    <span class="topic-desc">The frameworks and tools that put these concepts into practice, each described the same way.</span>
+    <span class="topic-tags"><span>Frameworks</span><span>Platforms</span><span>Libraries</span></span>
+  </a>
 </section>
 
 <section class="topics" aria-label="Topics">

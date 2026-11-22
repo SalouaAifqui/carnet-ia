@@ -146,7 +146,23 @@ flowchart LR
 
 ---
 
-## 6. La carte du site et le rangement
+## 6. Concept ou outil : la Toolbox
+
+Le bibliothécaire **classe chaque source** (`ArticlePlan.source_kind`) :
+
+| Type | Exemple | Ce que l'agent produit |
+|---|---|---|
+| **concept** | un guide sur le LLM-as-a-judge | une page dans le thème concerné |
+| **tool** | la documentation de NVIDIA NeMo Agent Toolkit | une **fiche outil** dans la Toolbox, jamais dans une section concept |
+| **mixed** | un cours qui enseigne la fiabilité avec le toolkit de NVIDIA | une page concept **neutre** + une **fiche outil** (deuxième appel du bibliothécaire, dans la même exécution, la même validation et la même Pull Request) |
+
+**Une fiche outil a toujours le même format** : un tableau d'identité écrit par le code (éditeur, open source et licence, thèmes, concepts mis en œuvre, documentation), puis 4 parties fixes : *What it is*, *What it does*, *How to use it*, *When to use it*. Elle est étiquetée avec les thèmes qu'elle touche, ce qui permet de filtrer le catalogue par thème.
+
+**Les pages concepts restent neutres** (règle du guide de style). Le code ajoute sur chaque page concept qu'un outil met en œuvre un encadré **« In practice: tools »** avec un lien vers sa fiche (`site.py` → `add_in_practice`). Seules les pages qui existent vraiment sont retenues.
+
+Pour un **cours** construit autour d'un produit, le plan de cours prévoit une page pour ce produit dans la Toolbox, et garde les autres pages sur les concepts.
+
+## 7. La carte du site et le rangement
 
 Chaque page thème déclare ses sections, avec un identifiant et une description :
 
@@ -160,11 +176,13 @@ The large proprietary models (GPT, Claude, Gemini…): what each family is good 
 
 `site.py` → `describe_site` donne au bibliothécaire **toutes** les sections, vides comprises, leurs pages, **et les grandes parties de chaque page**. C'est ce qui lui permet de proposer de **compléter** une partie existante plutôt que de dupliquer.
 
+Une page qui existe déjà au même endroit avec le même titre est **mise à jour**, jamais dupliquée (`core.py` → `validate_route`).
+
 **Pour ajouter ou décrire une section, modifie simplement la page thème** : l'agent en tient compte à la prochaine exécution. Une section vide porte la classe `.planned` (affichée « Coming soon »), retirée automatiquement quand elle reçoit sa première page.
 
 ---
 
-## 7. Les sources : garanties par le code
+## 8. Les sources : garanties par le code
 
 - Chaque URL donnée devient une source principale.
 - Les faits web ne sont utilisés **que s'ils sont approuvés**, et leur URL est alors ajoutée aux sources.
@@ -173,7 +191,7 @@ The large proprietary models (GPT, Claude, Gemini…): what each family is good 
 
 ---
 
-## 8. Les choix de modèles
+## 9. Les choix de modèles
 
 Un modèle par rôle, modifiable par variable d'environnement, sans toucher au code (`config.py`) :
 
@@ -190,7 +208,7 @@ DeepSeek fonctionne aussi (`deepseek:deepseek-flash`), avec la réflexion désac
 
 ---
 
-## 9. Ce que tu reconnaîtras des cours
+## 10. Ce que tu reconnaîtras des cours
 
 | Concept | Où dans l'agent |
 |---|---|
@@ -207,7 +225,7 @@ DeepSeek fonctionne aussi (`deepseek:deepseek-flash`), avec la réflexion désac
 
 ---
 
-## 10. Les fichiers
+## 11. Les fichiers
 
 ```
 agent/
@@ -235,7 +253,7 @@ agent/
 
 ---
 
-## 11. Lancer l'agent sur ton ordinateur (facultatif)
+## 12. Lancer l'agent sur ton ordinateur (facultatif)
 
 ```bash
 cd agent

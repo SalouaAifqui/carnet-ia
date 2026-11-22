@@ -58,7 +58,8 @@ def make_publisher(root: Path, issue: int | None = None, cost: Callable[[], floa
         route = state["plan"].route
         verb = "Update" if route.action == "update" else "Add"
         body = describe_run(state | {"cost": cost() if cost else None})
-        return _open_pr(root, route.title, f"{verb} note: {route.title}", body, issue, [state["page_path"]])
+        pages = [state["page_path"]] + [e["page_path"] for e in state.get("extra_pages") or []]
+        return _open_pr(root, route.title, f"{verb} note: {route.title}", body, issue, pages)
     return publish
 
 

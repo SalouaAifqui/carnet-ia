@@ -179,7 +179,10 @@ def test_routing():
     assert (r.folder, r.new_section) == ("llms", False), "section title mapped to its id"
     r = validate_route(root, Route(topic="evaluation", folder="agent-eval", folder_title="Agent eval", **base))["route"]
     assert r.new_section
-    print("✓ routing: titles mapped to ids, unknown sections flagged")
+    dup = dict(base, title="What is an agent")
+    r = validate_route(root, Route(topic="agents", folder="foundations", folder_title="Foundations", **dup))["route"]
+    assert (r.action, r.target_path) == ("update", "agents/foundations/what-is-an-agent.qmd"), "no duplicate page"
+    print("✓ routing: titles mapped to ids, unknown sections flagged, existing page updated not duplicated")
 
 
 # --------------------------------------------------------------------------- whole runs
@@ -204,7 +207,7 @@ def test_article_create_with_pause_and_research():
     budget = Budget(limit=10)
     graph = ArticleAgent(services(root, {"plan": planner, "research": planner}, budget=budget)).build()
     state, paused = run(graph, {"url": SOURCE, "urls": [SOURCE]}, budget)
-    assert paused and not list((root / "evaluation").glob("guardrails/*.qmd")), "nothing written before approval"
+    assert paused and not (root / "evaluation/guardrails/validating-inputs.qmd").exists(), "nothing written before approval"
     assert 99 not in state["plan"].sections[1].chunks
     used = sorted(c for s in state["plan"].sections for c in s.chunks)
     assert used == list(range(1, len(state["chunks"]) + 1)), "every chunk is used by some part"
@@ -324,8 +327,88 @@ def test_course_mode():
     print("✓ course: lessons read in parallel, grouped by concept, parts planned, approved, written")
 
 
+def test_mixed_source_gives_concept_page_and_tool_card():
+    import carnet_agent.article as article_module
+    from carnet_agent.state import ToolInfo
+    root = site_copy()
+    tool = ToolInfo(name="NeMo Agent Toolkit", maker="NVIDIA", summary="A toolkit to profile and evaluate agents.",
+                    open_source="yes", licence="Apache 2.0", website="https://docs.nvidia.com/nemo/agent-toolkit",
+                    topics=["agents", "evaluation"], implements=["tracing", "evaluation"],
+                    related_pages=["agents/foundations/what-is-an-agent.qmd", "not/a/page.qmd"])
+    concept = Route(concept="agent reliability", reasoning="r", action="create", topic="evaluation", folder="agents",
+                    folder_title="Evaluating agents", target_path="", title="Making agents reliable", subtitle="s")
+
+    def librarian(messages):
+        if "This page is a TOOL CARD" in messages[0].content:     # the second, focused call: the card
+            return ArticlePlan(source_kind="tool", tool=tool, route=concept, summary="Card.", sections=[
+                SectionPlan(heading=h, covers="c", chunks=[i + 1], example="e", visual="v")
+                for i, h in enumerate(["What it is", "What it does", "How to use it", "When to use it"])])
+        return ArticlePlan(source_kind="mixed", tool=tool, route=concept, summary="Concepts.", sections=[
+            SectionPlan(heading="Why reliability", covers="c", chunks=[1, 2], example="e", visual="v")])
+
+    planner = Fake(structured={ArticlePlan: librarian})
+    models = {"plan": planner, "write": Fake(text=writer_text),
+              "check": Fake(structured={MissingDetails: MissingDetails()}), "edit": Fake(structured={Synthesis: SYNTHESIS})}
+    article_module.RESEARCH = False
+    try:
+        agent = ArticleAgent(services(root, models))
+        state = {"url": SOURCE, "urls": [SOURCE]} | agent.fetch({"url": SOURCE, "urls": [SOURCE]})
+        state |= agent.librarian(state)
+        comment = hitl.plan_comment(state)
+        assert "concept page **and** a tool card" in comment and "NeMo Agent Toolkit by NVIDIA" in comment
+        saved = hitl.load_state(comment.split(f"<!-- {hitl.MARKER}\n", 1)[1].split("-->", 1)[0].strip())
+        assert saved["extra_pages"][0]["plan"].route.topic == "toolbox", "the tool card survives the pause"
+        final = agent.build(pause_for_approval=False).invoke({"url": SOURCE, "urls": [SOURCE]})
+    finally:
+        article_module.RESEARCH = True
+
+    card_path = "toolbox/tools/nemo-agent-toolkit.qmd"
+    assert final["page_path"] == "evaluation/agents/making-agents-reliable.qmd"
+    assert final["extra_pages"][0]["page_path"] == card_path
+    card = (root / card_path).read_text()
+    fm, body = split_front_matter(card)
+    assert fm["categories"] == ["Agents", "Evaluation & Guardrails"], "the card is tagged with the topics it touches"
+    assert "| **Made by** | NVIDIA |" in body and "Yes (Apache 2.0)" in body, "fact sheet written by code"
+    assert [t for t, _ in split_parts(split_sources(body)[0])[1]] == ["What it is", "What it does", "How to use it",
+                                                                     "When to use it"]
+    assert final["linked"] == ["agents/foundations/what-is-an-agent.qmd"], "invented page paths are dropped"
+    concept_page = (root / "agents/foundations/what-is-an-agent.qmd").read_text()
+    assert "## In practice: tools" in concept_page and "](../../toolbox/tools/nemo-agent-toolkit.qmd)" in concept_page
+    assert concept_page.index("## In practice: tools") < concept_page.index("## Remember"), "placed before Remember"
+    index = (root / "toolbox/index.qmd").read_text()
+    assert '## Tools {.group-title data-folder="tools"}' in index and "categories: true" in index
+    print("✓ mixed source: vendor-neutral concept page + tool card (fact sheet, tags) + 'In practice' link")
+
+
+def test_tool_source_gives_only_a_tool_card():
+    import carnet_agent.article as article_module
+    from carnet_agent.state import ToolInfo
+    root = site_copy()
+    tool = ToolInfo(name="Phoenix", maker="Arize AI", summary="An open-source tracing and evaluation platform.",
+                    topics=["evaluation"], implements=["tracing", "LLM judges"])
+    wrong = Route(concept="x", reasoning="r", action="create", topic="evaluation", folder="agents",
+                  folder_title="Evaluating agents", target_path="", title="Phoenix", subtitle="s")
+
+    def librarian(messages):
+        kind = "tool"
+        return ArticlePlan(source_kind=kind, tool=tool, route=wrong, summary="Card.", sections=[
+            SectionPlan(heading="What it is", covers="c", chunks=[1], example="e", visual="v")])
+
+    models = {"plan": Fake(structured={ArticlePlan: librarian}), "write": Fake(text=writer_text),
+              "check": Fake(structured={MissingDetails: MissingDetails()}), "edit": Fake(structured={Synthesis: SYNTHESIS})}
+    article_module.RESEARCH = False
+    try:
+        final = ArticleAgent(services(root, models)).build(pause_for_approval=False).invoke({"url": SOURCE, "urls": [SOURCE]})
+    finally:
+        article_module.RESEARCH = True
+    assert final["page_path"] == "toolbox/tools/phoenix.qmd" and not final.get("extra_pages")
+    assert not (root / "evaluation/agents/phoenix.qmd").exists(), "a tool never lands in a concept section"
+    print("✓ tool source: one card in the Toolbox, never in a concept section")
+
+
 if __name__ == "__main__":
     for test in [test_chunks, test_page_blocks, test_checks, test_commands, test_retry_and_budget, test_routing,
                  test_article_create_with_pause_and_research, test_article_update_keeps_existing_content,
-                 test_course_mode]:
+                 test_course_mode, test_mixed_source_gives_concept_page_and_tool_card,
+                 test_tool_source_gives_only_a_tool_card]:
         test()

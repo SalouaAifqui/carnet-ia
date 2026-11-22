@@ -38,12 +38,16 @@ _PLAIN = ["url", "urls", "titles", "fingerprints", "human_feedback", "existing_b
 def _dump(state: dict) -> dict:
     data = {k: state[k].model_dump() for k in _MODELS if state.get(k)}
     data |= {k: [x.model_dump() for x in state.get(k) or []] for k in _LISTS}
+    if state.get("extra_pages"):
+        data["extra_pages"] = [_dump(e) for e in state["extra_pages"]]
     return data | {k: state[k] for k in _PLAIN if state.get(k)}
 
 
 def _load(data: dict) -> dict:
     state = {k: model.model_validate(data[k]) for k, model in _MODELS.items() if k in data}
     state |= {k: [model.model_validate(x) for x in data.get(k, [])] for k, model in _LISTS.items()}
+    if data.get("extra_pages"):
+        state["extra_pages"] = [_load(e) for e in data["extra_pages"]]
     return state | {k: data[k] for k in _PLAIN if k in data}
 
 

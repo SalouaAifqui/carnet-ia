@@ -11,7 +11,7 @@ from typing import Annotated, Literal, TypedDict
 
 from pydantic import BaseModel, Field
 
-Topic = Literal["llms", "agents", "evaluation"]
+Topic = Literal["llms", "agents", "evaluation", "toolbox"]
 
 
 # --- Filled by the LLM ---------------------------------------------------------
@@ -148,8 +148,28 @@ class SectionPlan(BaseModel):
     visual: str = Field(description="Its visual element: diagram, table, comparison, steps, example box…")
 
 
+class ToolInfo(BaseModel):
+    """Identity card of a tool or framework made by a company or a project."""
+    name: str = Field(description="The product's name, e.g. 'NeMo Agent Toolkit'.")
+    maker: str = Field(description="Company or project that makes it, e.g. 'NVIDIA'.")
+    summary: str = Field(description="What it is, in one neutral sentence (no marketing words).")
+    open_source: Literal["yes", "no", "partly", "unknown"] = "unknown"
+    licence: str = Field(default="", description="Licence name if the source states it, else ''.")
+    website: str = Field(default="", description="Official documentation or site URL, ONLY if it appears in the source.")
+    topics: list[Literal["llms", "agents", "evaluation"]] = Field(
+        description="The site topics this tool touches (one or several).")
+    implements: list[str] = Field(description="The concepts it implements, a few words each "
+                                              "(e.g. 'tracing', 'LLM judges', 'input guardrails').")
+    related_pages: list[str] = Field(default_factory=list, description=(
+        "Paths of existing CONCEPT pages of the site this tool puts into practice, exactly as listed."))
+
+
 class ArticlePlan(BaseModel):
     """Output of the librarian: where the content goes, and the parts to write."""
+    source_kind: Literal["concept", "tool", "mixed"] = Field(
+        default="concept", description="'concept': general knowledge. 'tool': mainly presents one product or "
+        "framework made by a company or project. 'mixed': teaches general concepts through a product.")
+    tool: ToolInfo | None = Field(default=None, description="Fill it for 'tool' and 'mixed' sources.")
     route: Route
     summary: str = Field(description="What the article will teach, in two or three sentences.")
     sections: list[SectionPlan] = Field(description="The parts to write: at most 4.")

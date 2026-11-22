@@ -24,6 +24,8 @@ website:
       text: Agents
     - href: evaluation/index.qmd
       text: Evaluation & Guardrails
+    - href: toolbox/index.qmd
+      text: Toolbox
     right:
     - icon: github
       href: https://github.com/SalouaAifqui/carnet-ia
@@ -65,6 +67,11 @@ website:
       contents: evaluation/llms/*.qmd
     - section: Guardrails
       contents: evaluation/guardrails/*.qmd
+  - id: toolbox
+    title: Toolbox
+    style: docked
+    contents:
+    - toolbox/index.qmd
   page-footer:
     left: Carnet IA · notes written while learning
     right:

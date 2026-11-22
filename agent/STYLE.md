@@ -60,3 +60,9 @@ Steps:
 Diagram: a ```` ```{mermaid} ```` block (flowchart or sequenceDiagram; avoid subgraphs).
 
 Warning: `::: {.callout-warning}` with `## Watch out` as its first line.
+
+## Products and vendors
+- Concept pages are **vendor-neutral**: explain the idea, not one product. A product may appear in an
+  example box, named as an example.
+- Tool cards (Toolbox) describe a product factually: who makes it, what it does, how to use it, its limits.
+  Attribute the maker's claims ("NVIDIA states that…"); no marketing words.

@@ -271,8 +271,12 @@ def _add_listing_to_topic_page(index_file: Path, folder: str, folder_title: str,
         listings = [listings]
     if any(lst.get("id") == folder for lst in listings):
         return
-    listings.append({"id": folder, "contents": f"{folder}/*.qmd", "type": "grid",
-                     "grid-columns": 2, "sort": "date desc", "fields": ["title", "subtitle"]})
+    listing = {"id": folder, "contents": f"{folder}/*.qmd", "type": "grid",
+               "grid-columns": 2, "sort": "date desc", "fields": ["title", "subtitle"]}
+    if index_file.parent.name == "toolbox":            # the catalogue: tags shown and filterable by topic
+        listing |= {"grid-columns": 3, "sort": "title", "fields": ["title", "subtitle", "categories"],
+                    "categories": True}
+    listings.append(listing)
     fm["listing"] = listings
 
     placeholder = f"::: {{#{folder}}}\n:::"
@@ -381,3 +385,50 @@ def render_synthesis_blocks(tldr: str, concepts: list, remember: list[str]) -> t
     concepts_md = f"::: {{.concepts}}\n{cards}\n:::"
     remember_md = "::: {.callout-tip}\n## Remember\n" + "\n".join(f"- {r.strip()}" for r in remember) + "\n:::"
     return tldr_md, concepts_md, remember_md
+
+
+# --- Toolbox: identity card of a tool, and links from concept pages ---------------------
+
+def render_tool_facts(tool) -> str:
+    """[code] The fact sheet at the top of a tool card, always in the same format."""
+    rows = [("Made by", tool.maker),
+            ("Open source", {"yes": "Yes", "no": "No", "partly": "Partly", "unknown": "Not stated"}[tool.open_source]
+             + (f" ({tool.licence})" if tool.licence else "")),
+            ("Topics", ", ".join(TOPICS[t][0] for t in tool.topics)),
+            ("Implements", ", ".join(tool.implements))]
+    if tool.website:
+        rows.append(("Documentation", f"<{tool.website}>"))
+    table = "\n".join(f"| **{k}** | {v} |" for k, v in rows)
+    return f"::: {{.tool-facts}}\n| | |\n|---|---|\n{table}\n:::"
+
+
+IN_PRACTICE = "::: {.callout-note .in-practice}"
+
+
+def add_in_practice(root: Path, tool_page: str, tool) -> list[str]:
+    """[code] Add (or complete) an "In practice: tools" box on each concept page the tool puts into
+    practice, linking to its card. Returns the pages that changed."""
+    import os
+    changed = []
+    for page in tool.related_pages:
+        path = root / page
+        if not path.exists():
+            continue
+        front_matter, body = split_front_matter(path.read_text())
+        body, sources = split_sources(body)
+        link = os.path.relpath(root / tool_page, path.parent)
+        line = f"- [{tool.name}]({link}) ({tool.maker}): {tool.summary}"
+        span = find_block(body, IN_PRACTICE)
+        if span:
+            block = body[span[0]:span[1]]
+            if f"]({link})" in block:
+                continue
+            block = block[:block.rfind("\n:::")] + f"\n{line}\n:::"
+            body = body[:span[0]] + block + body[span[1]:]
+        else:
+            block = f"{IN_PRACTICE}\n## In practice: tools\n{line}\n:::"
+            remember = remember_block(body)
+            body = (body[:remember[0]] + block + "\n\n" + body[remember[0]:]) if remember else f"{body.rstrip()}\n\n{block}"
+        path.write_text(join_front_matter(front_matter, f"{body.rstrip()}\n\n{render_sources(sources)}"))
+        changed.append(page)
+    return changed

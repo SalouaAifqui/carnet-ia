@@ -43,6 +43,7 @@ TOPICS = {
     "llms": ("LLMs", "t-llms"),
     "agents": ("Agents", "t-agents"),
     "evaluation": ("Evaluation & Guardrails", "t-eval"),
+    "toolbox": ("Toolbox", "t-tools"),
 }
 
 # The site never cites itself: these URLs are dropped from search results and sources.
