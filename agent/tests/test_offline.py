@@ -116,8 +116,9 @@ def test_chunks():
 def test_page_blocks():
     body = split_sources(split_front_matter((REPO / "agents/foundations/what-is-an-agent.qmd").read_text())[1])[0]
     head, parts, tail = split_parts(body)
-    assert [t for t, _ in parts] == ["The ReAct loop", "Who does what", "Key ideas", "Building one by hand"]
-    assert tail.startswith("::: {.callout-tip}\n## Remember") and find_block(head, "::: {.tldr}")
+    assert [t for t, _ in parts] == ["The ReAct loop", "Who does what", "Building one by hand"]
+    assert tail.startswith("::: {.callout-tip}\n## Remember") and find_block(head, "::: {.in30}")
+    assert find_block(head, "::: {.concepts}"), "concept cards sit right after In 30 seconds"
     print("✓ page blocks: summary, parts and Remember found in an existing page")
 
 
@@ -266,10 +267,10 @@ def test_article_update_keeps_existing_content():
     finally:
         article_module.RESEARCH = True
     fm, body = split_front_matter((root / target).read_text())
-    _, parts, _ = split_parts(split_sources(body)[0])
-    titles = [t for t, _ in parts if t != "Key ideas"]
+    head, parts, _ = split_parts(split_sources(body)[0])
+    titles = [t for t, _ in parts]
     assert len(titles) == 4, "existing 3 parts + 1 new part (the plan respected the 4-part limit)"
-    assert "`Guardrail`" in dict(parts)["Key ideas"], "the concept cards are replaced where they are"
+    assert "`Guardrail`" in head, "the concept cards are replaced where they are, under In 30 seconds"
     assert titles[:2] == ["The ReAct loop", "Inputs"], "new part inserted after the part named by the librarian"
     assert dict(parts)["The ReAct loop"] == old_parts["The ReAct loop"], "untouched parts stay byte for byte"
     assert dict(parts)["Building one by hand"] == old_parts["Building one by hand"]

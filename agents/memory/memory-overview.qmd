@@ -9,12 +9,32 @@ aliases:
   - /agents/long-term-memory/01-agent-memory.html
 ---
 
-::: {.lesson-meta}
-[Agents]{.pill .t-agents} [Memory]{.pill .muted}
+::: {.synthesis}
+![Agent memory at a glance: two time scales, two LangGraph mechanisms, three kinds of long-term memory.](/assets/visuals/memory-overview.svg){fig-alt="Agent memory: short-term with the checkpointer, long-term with the store, split into semantic, episodic and procedural"}
 :::
 
-::: {.tldr}
-An agent can remember at two time scales. **Short-term memory** keeps one conversation going; in LangGraph it is the **checkpointer**. **Long-term memory** keeps what the agent learned across all conversations; in LangGraph it is the **store**. What the agent remembers long-term comes in three kinds: **semantic** (facts), **episodic** (past experiences) and **procedural** (how to behave).
+::: {.in30}
+- **Short-term memory** keeps one conversation going: in LangGraph, the **checkpointer**, organised by `thread_id`.
+- **Long-term memory** keeps what the agent learned across conversations: the **store**, organised by namespace.
+- Long-term memories come in three kinds: **semantic** (facts), **episodic** (examples), **procedural** (instructions).
+:::
+
+::: {.concepts}
+::: {.concept}
+`Semantic`: facts
+
+What the agent knows about people, places and things. *"Jim is John's friend."*
+:::
+::: {.concept}
+`Episodic`: experiences
+
+Past events and decisions, fed back as **few-shot examples**. *"An email like this one was ignored last time."*
+:::
+::: {.concept}
+`Procedural`: skills
+
+How to behave: for an agent, mostly **its prompt**. *"Always sign emails John Doe."*
+:::
 :::
 
 ## Two time scales, two mechanisms
@@ -48,24 +68,6 @@ A real agent usually has **both**: the checkpointer for the conversation in prog
 
 The categories come from how human memory works.
 
-::: {.concepts}
-::: {.concept}
-`Semantic`: facts
-
-What the agent knows about people, places and things. *"Jim is John's friend."*
-:::
-::: {.concept}
-`Episodic`: experiences
-
-Past events and decisions, fed back as **few-shot examples**. *"An email like this one was ignored last time."*
-:::
-::: {.concept}
-`Procedural`: skills
-
-How to behave: for an agent, mostly **its prompt**. *"Always sign emails John Doe."*
-:::
-:::
-
 | The agent needs… | Use |
 |---|---|
 | Facts about people, places or things | Semantic memory |
@@ -94,6 +96,27 @@ All three live in the store. They differ in **what** is saved and **where it is 
 - Hot path = simple and immediate. Background = fast replies, delayed memories.
 - These patterns apply to any agent, not just email.
 :::
+
+<details class="quiz">
+<summary>An agent should remember a week later that *"Jim is my friend"*. Checkpointer or store?</summary>
+
+The **store**: it holds long-term memories across threads. The checkpointer only keeps one conversation, per `thread_id`.
+
+</details>
+
+<details class="quiz">
+<summary>Facts, examples, instructions: where does each kind of memory end up being used?</summary>
+
+Facts (semantic) are searched by a tool, examples (episodic) are inserted into a prompt as few-shot examples, and instructions (procedural) *become* the prompt.
+
+</details>
+
+<details class="quiz">
+<summary>What does writing memories in the background cost, compared with the hot path?</summary>
+
+Two components to run, and memories arrive later. In exchange, replies are faster and concerns are separated.
+
+</details>
 
 ## Sources {.sources}
 

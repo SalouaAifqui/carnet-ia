@@ -2,18 +2,21 @@
 title: Designing custom skills
 subtitle: How to structure, constrain, and test skills so they behave predictably.
 order: 9
+image: /assets/visuals/designing-custom-skills.svg
 date: '2026-11-22'
 categories:
 - Agents
 - Foundations
 ---
 
-::: {.lesson-meta}
-[Agents]{.pill .t-agents} [Foundations]{.pill .muted}
+::: {.synthesis}
+![Write it, then check it: a short SKILL.md with ordered steps and side files, reviewed, tested and tried on every model.](/assets/visuals/designing-custom-skills.svg){fig-alt="Designing a custom skill: a short SKILL.md with name, description and ordered steps, extra files on the side, then review, test harness and checks across models"}
 :::
 
-::: {.tldr}
-This page explains how to design custom skills so they are reliable and easy for an agent to use. It emphasizes a clear `SKILL.md` structure, a deterministic step-by-step workflow, the selective use of supporting files for large or optional material, and a review process to test that the skill behaves as intended before release.
+::: {.in30}
+- A skill is a `SKILL.md` with YAML frontmatter (name and description, used to trigger it), a body, and optional files.
+- Write the body as a deterministic, numbered workflow with edge cases and skip conditions; move long material to scripts, references and assets.
+- Before release, review the skill (for example with `skill-creator`), test it with a harness, and check it across models.
 :::
 
 ::: {.concepts}
@@ -33,11 +36,6 @@ The body of the skill should read like a deterministic sequence with explicit st
 Use references and assets for long or specialized content instead of loading everything into the main file. This keeps `SKILL.md` focused on inputs, workflow, and outputs while loading extra material only when needed.
 :::
 ::: {.concept}
-`Supporting files`
-
-Large templates, examples, code, and other domain-specific resources belong in separate files. These can be pulled in selectively, which makes skills easier to maintain and faster to read.
-:::
-::: {.concept}
 `Skill evaluation`
 
 Before production, test the skill for step order, output locations, and conventions like naming and formatting. Reviewing it with a dedicated review skill such as `skill-creator` helps catch problems early.
@@ -54,6 +52,10 @@ A skill lives in a `SKILL.md` file. It has three main parts:
 
 The frontmatter must include a **name** and a **description**. The body is where you write the skill instructions. If you need more material, you can keep it in other files and load it only when needed.
 
+::: {.column-margin .watch}
+Some skills, including ones built by Anthropic, do not follow the current specification exactly: the standard and the skill format are still evolving across providers and tooling. You may see different folder names or metadata in older or custom skills.
+:::
+
 ### Name and description rules
 
 The name and description help the agent decide **what the skill does** and **when to use it**.
@@ -64,17 +66,6 @@ The name and description help the agent decide **what the skill does** and **whe
 - If certain keywords should trigger the skill, include them in the description.
 - The name and description have character limits, so keep them short and clear.
 - YAML frontmatter requires a name and a description, and these are mission-critical for both analysis and triggering: Claude uses them to detect when to use the skill.
-
-### Writing the body
-
-The body has no strict format, but predictable skills work better when they have:
-
-- step-by-step instructions
-- edge cases
-- clear reasons when a step should be skipped
-- a low degree of freedom when you want consistent output
-
-For larger workflows, split the work into sequential steps instead of one very large skill. Best practice is also to keep the skill body under 500 lines when possible, because we can always reference external files, assets, scripts, when necessary. Use forward slashes in paths, and this is mission critical even when on Windows. Skills can handle 100+ skills, so naming should stay clear, predictable, and non-confusing for multi-skill systems.
 
 ### Optional files and folders
 
@@ -102,19 +93,11 @@ flowchart TD
     D --> I[assets/]
 ```
 
-::: {.callout-warning}
-## Watch out
-
-Some skills do not follow the current specification exactly, because the skills standard is still evolving. You may see different folder names or metadata in older or custom skills.
-:::
-
 ## Write predictable workflows
 
 A skill body should read like a deterministic sequence. It should tell the model what to do, in order, with as little guesswork as possible. Use step-by-step instructions, name edge cases, and say clearly when a step can be skipped and why.
 
 There are no underlying restrictions on the skill body format once you move past the YAML frontmatter; the guidance here is about making the workflow predictable, not imposing a strict format. Keep the main skill concise. A skill under 500 lines is a good practice, because you can put extra material in external files, scripts, references, or assets. For larger workflows, break the task into smaller sequential steps instead of one very large skill. That can include breaking complex workflows across multiple skills, not just within a single one.
-
-Keep in mind that some skills, including ones built by Anthropic and others, may not fully follow the agent skill specification yet. The specification and related skill format are actively evolving across providers and tooling ecosystems, so the exact conventions may vary.
 
 ### What makes a workflow predictable
 
@@ -162,17 +145,13 @@ If the skill uses scripts, any Python dependencies should be called out explicit
 
 These systems can handle 100+ skills. Skills should be named appropriately, avoid confusion, and follow a predictable naming pattern so they are easy to find and use.
 
-In the specification, there is room for optional directories, and the standard agent-skill layout includes subfolders such as:
-
-- `scripts/`: code that needs to be read and executed
-- `references/`: additional documentation or reference files
-- `assets/`: templates, images, logos, data files, schemas, and similar resources
-
-These directories follow the standard for agent skills, but you may encounter existing skills that use different folder names or conventions because the standard is still rapidly evolving.
-
 ## Use references and assets
 
 Use references and assets when a skill needs long supporting material, but you do not want to load it all into `SKILL.md` at once. This is progressive disclosure: keep the main skill file focused on the input, the workflow, and the output, then store large templates, domain examples, code, and other supporting material in separate files. The agent loads those files only when it needs them, only when necessary.
+
+::: {.column-margin .define label="Supporting files"}
+Large templates, examples, code, and other domain-specific resources belong in separate files. These can be pulled in selectively, which makes skills easier to maintain and faster to read.
+:::
 
 This is useful when you need:
 - output templates for different formats, such as Markdown or LaTeX,
@@ -245,6 +224,10 @@ flowchart TD
 
 Before a skill goes into production, check that it behaves the way you expect. A good review looks at three things:
 
+::: {.column-margin .watch}
+A skill can look correct in one model and fail in another. Always check the output order, file paths, templates, and conventions, and test it across all the different models you’re planning to use before release.
+:::
+
 - the **order** of steps
 - the **outputs** and file locations
 - the **conventions** it follows, such as naming, formatting, and flags
@@ -311,12 +294,6 @@ You can score the skill, inspect its outputs, check file formats and order, and 
 :::
 ::: 
 
-::: {.callout-warning}
-## Watch out
-
-A skill can look correct in one model and fail in another. Always check the output order, file paths, templates, and conventions, and test it across all the different models you’re planning to use before release.
-:::
-
 ::: {.callout-tip}
 ## Remember
 - Keep `SKILL.md` focused and structured.
@@ -325,6 +302,27 @@ A skill can look correct in one model and fail in another. Always check the outp
 - Make skip conditions and edge cases explicit.
 - Test the skill before shipping it.
 :::
+
+<details class="quiz">
+<summary>Why do the name and description matter so much?</summary>
+
+The agent uses them to decide what the skill does and when to use it: they trigger the skill. Include the keywords that should trigger it, and stay within the character limits.
+
+</details>
+
+<details class="quiz">
+<summary>Your skill's interpretation guide is long. Where does it go?</summary>
+
+In `references/` (for example `interpretation.md`), linked from `SKILL.md`, so it is loaded only when needed. Templates go in `assets/`, repeatable logic in `scripts/`.
+
+</details>
+
+<details class="quiz">
+<summary>Name three things a review of a skill should check.</summary>
+
+The **order** of the steps, the **outputs** and file locations, and the **conventions** (naming, formatting, flags), then behaviour across models.
+
+</details>
 
 ## Sources {.sources}
 

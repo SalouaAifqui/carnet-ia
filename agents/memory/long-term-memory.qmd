@@ -11,30 +11,15 @@ aliases:
   - /agents/long-term-memory/05-procedural-memory.html
 ---
 
-::: {.lesson-meta}
-[Agents]{.pill .t-agents} [Memory]{.pill .muted}
+::: {.synthesis}
+![One store, three drawers: facts searched by tools, examples shown as few-shot, instructions kept as prompts.](/assets/visuals/long-term-memory.svg){fig-alt="Long-term memory: one store holding facts, examples and instructions"}
 :::
 
-::: {.tldr}
-Long-term memory lives in a **store**: a database of memories organised in **namespaces** and searchable by meaning. The same store holds the three kinds of memory. **Facts** are saved and searched through tools, **examples** of past decisions are inserted into prompts, and **instructions** are kept as prompts that can be rewritten from feedback. The running example is an email assistant that gets better at its job over time.
+::: {.in30}
+- Long-term memory lives in a **store**: memories organised in **namespaces** that include the user id, searchable by meaning.
+- **Facts** go through memory tools, **examples** of past decisions go into prompts, **instructions** are prompts rewritten from feedback.
+- The agent's behaviour changes by adding data to the store, not by changing code.
 :::
-
-## The store
-
-```{mermaid}
-flowchart TB
-  subgraph Store
-    direction LR
-    N1["('email_assistant', 'lance', 'collection')<br/>facts"]
-    N2["('email_assistant', 'lance', 'examples')<br/>past decisions"]
-    N3["('lance',)<br/>prompts"]
-  end
-  T[response agent] <-->|"memory tools"| N1
-  R[triage step] -->|"similar examples"| N2
-  N3 -->|"read at every run"| T
-  N3 -->|"read at every run"| R
-  O[prompt optimizer] -->|"rewrites"| N3
-```
 
 ::: {.concepts}
 ::: {.concept}
@@ -58,6 +43,23 @@ With an embedding model, memories become **searchable by meaning** with `search(
 A library on top of LangGraph with ready-made memory tools and prompt optimizers.
 :::
 :::
+
+## The store
+
+```{mermaid}
+flowchart TB
+  subgraph Store
+    direction LR
+    N1["('email_assistant', 'lance', 'collection')<br/>facts"]
+    N2["('email_assistant', 'lance', 'examples')<br/>past decisions"]
+    N3["('lance',)<br/>prompts"]
+  end
+  T[response agent] <-->|"memory tools"| N1
+  R[triage step] -->|"similar examples"| N2
+  N3 -->|"read at every run"| T
+  N3 -->|"read at every run"| R
+  O[prompt optimizer] -->|"rewrites"| N3
+```
 
 ```python
 from langgraph.store.memory import InMemoryStore
@@ -84,6 +86,7 @@ def triage_router(state: State, config: RunnableConfig, store: BaseStore):
 
 **Idea:** give the agent two tools, one to **save** facts and one to **search** them. The agent decides itself when to use them, so memory is written **in the hot path**.
 
+::: {.code-step title="Memory tools for the response agent"}
 ```python
 from langmem import create_manage_memory_tool, create_search_memory_tool
 from langchain.agents import create_agent
@@ -99,6 +102,7 @@ response_agent = create_agent(
     store=store,
 )
 ```
+:::
 
 ::: {.example}
 The user says *"Jim is my friend"*: the agent calls `manage_memory(content="Jim is John Doe's friend")`. In a **new conversation**, *"Who is Jim?"* makes it call `search_memory(query="Jim")` and answer from the stored fact.
@@ -178,6 +182,7 @@ response_agent = create_agent("openai:gpt-5.4-mini", tools=[…], middleware=[ag
 
 **Rewriting prompts from feedback**, in the background:
 
+::: {.code-step title="Rewriting prompts from feedback, in the background"}
 ```python
 from langmem import create_multi_prompt_optimizer
 
@@ -197,6 +202,7 @@ updated = optimizer.invoke({
     "prompts": prompts,
 })
 ```
+:::
 
 The optimizer reads each `when_to_update` to decide **which** prompts the feedback concerns, then applies `update_instructions` to rewrite only those. Write the changed ones back to the store, and the next run uses them.
 
@@ -213,6 +219,27 @@ The optimizer reads each `when_to_update` to decide **which** prompts the feedba
 - Always give stored prompts a **default**, so new users work with no setup.
 - Behaviour changes by **adding data**, not by changing code.
 :::
+
+<details class="quiz">
+<summary>Why put the user id in the namespace?</summary>
+
+So users never see each other's memories: the namespace works like a folder path, one per user.
+
+</details>
+
+<details class="quiz">
+<summary>Tom's email is stored once with the label *ignore*. What happens to a similar email from another user?</summary>
+
+It is still answered (**respond**): episodic examples are stored per user, so they only change that user's triage.
+
+</details>
+
+<details class="quiz">
+<summary>What does the prompt optimizer read to decide which prompts a piece of feedback concerns?</summary>
+
+Each prompt's `when_to_update`. It then applies `update_instructions` to rewrite only those prompts.
+
+</details>
 
 ## Sources {.sources}
 

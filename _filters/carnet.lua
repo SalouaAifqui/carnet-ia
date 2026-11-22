@@ -173,5 +173,10 @@ function Pandoc(doc)
     table.insert(blocks, 1, meta_line(note))
   end
   doc.blocks = blocks
-  return doc
+  -- code steps nested in another block (e.g. inside an example): numbered 1, open
+  return doc:walk({
+    Div = function(div)
+      if div.classes:includes("code-step") then return code_step_blocks(div, 1, true) end
+    end
+  })
 end
