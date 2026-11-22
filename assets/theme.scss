@@ -361,7 +361,7 @@ nav.page-navigation {
     border: 2px solid $line-strong; background: $paper;
   }
   a.nav-link.read::before { background: var(--t, #{$accent}); border-color: var(--t, #{$accent}); }
-  a.nav-link.active { color: $ink; font-weight: 600; }
+  a.nav-link.active { color: var(--t, #{$accent}) !important; font-weight: 600; }
   a.nav-link.active::before { border-color: var(--t, #{$accent}); }
 }
 #quarto-sidebar #TOC, #quarto-sidebar nav[role="doc-toc"] {

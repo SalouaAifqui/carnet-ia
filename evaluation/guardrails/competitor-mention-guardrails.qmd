@@ -9,12 +9,14 @@ categories:
 - Guardrails
 ---
 
-::: {.lesson-meta}
-[Evaluation & Guardrails]{.pill .t-eval} [Guardrails]{.pill .muted}
+::: {.synthesis}
+![The note's JPMC example, followed through the three-stage cascade: exact match, NER, similarity.](/assets/visuals/competitor-mention-guardrails.svg){fig-alt="Competitor-mention guardrail: exact match, then NER, then embedding similarity catch JPMC as JPMorgan"}
 :::
 
-::: {.tldr}
-This page explains how to prevent a chatbot from mentioning competitor or otherwise disallowed entities in its responses. It starts with the motivating failure mode in a branded customer-facing assistant, then shows how to detect prohibited names with a cascading validator that checks for exact matches first, then named entities, and finally semantic similarity. The page also describes how to package that logic into a custom validator and deploy it through a Guardrails-based guarded client so model outputs are filtered before reaching the user.
+::: {.in30}
+- In a branded, customer-facing chatbot, naming a competitor is a failure; listing every name variant up front is not realistic.
+- A cascading validator checks exact names first, then extracts entities with NER, then compares them to competitors by embedding similarity.
+- Served through a guardrail server and a guarded OpenAI client, it fails a reply that mentions a competitor before it reaches the user.
 :::
 
 ::: {.concepts}
@@ -37,11 +39,6 @@ The fastest and most reliable first pass is to compare the output directly again
 `NER plus similarity`
 
 If no exact match exists, named entity recognition identifies candidate entities in the text, and vector similarity compares them to known competitor names to catch variations or paraphrases.
-:::
-::: {.concept}
-`Guarded client deployment`
-
-The validator is run through a guardrail server and exposed through a guarded OpenAI client. This inserts validation between the app and the model so unsafe outputs are intercepted before delivery.
 :::
 :::
 
@@ -76,6 +73,10 @@ And if you want, you can ignore the specific validation error message and instea
 
 The validator uses a cascade, or step-by-step pipeline. It checks the easiest cases first.
 
+::: {.column-margin .watch}
+A shorthand may not match by exact string. That is why the pipeline continues to NER and then similarity scoring.
+:::
+
 ```{mermaid}
 flowchart TD
     A[Text output] --> B[Exact string match]
@@ -100,22 +101,9 @@ flowchart TD
 **“JPMC” after exact matching fails.** The text does not contain the full competitor name “JPMorgan”, so exact matching does not trigger. NER extracts “JPMC”, and the extracted entity is then compared by embedding similarity against known competitors. Since “JPMC” has a very close embedding to “JPMorgan”, and the similarity is above the threshold, the validator fails.
 :::
 
-### Watch out
-
-::: {.callout-warning}
-## Watch out
-A shorthand may not match by exact string. That is why the pipeline continues to NER and then similarity scoring.
-:::
-
 ## Build the validator
 
-This validator uses a cascading check:
-
-1. First, it looks for an exact match with a competitor name.
-2. If there is no exact match, it extracts named entities with NER (Named Entity Recognition).
-3. Then it compares those entities with competitor names using vector similarity.
-4. If a match passes the threshold, it fails the validator.
-5. If nothing matches, it passes.
+The cascade above, as a custom validator.
 
 ### Validator structure
 
@@ -173,11 +161,13 @@ The validator uses the same pattern in both stages:
 - if any competitor is detected, it raises a fail result with the list of entities that were detected
 - if no competitor is detected, only then does it return a pass result
 
-It also includes the deployment pattern where a comparator check validator is downloaded from Guardrails Hub, an OpenAI client is swapped for a guarded OpenAI client that points to a guardrail server base URL, a RAG chatbot is created with that guarded client, and validation fails when `Pizza by Alfredo` is detected.
-
 ## Run it in a guarded client
 
 Use Guardrails Hub to download the competitor-check validator. Then run it through a guardrail server. After that, swap your normal OpenAI client for a guarded OpenAI client. The guarded client uses a base URL that points to the guardrail server.
+
+::: {.column-margin .define label="Guarded client"}
+The validator is run through a guardrail server and exposed through a guarded OpenAI client. This inserts validation between the app and the model so unsafe outputs are intercepted before delivery.
+:::
 
 This changes the flow:
 
@@ -206,8 +196,6 @@ When the same prompt is sent through this guarded client, the validator checks t
 5. **Handle failure if needed**: you can catch the exception and show a more graceful message, such as telling the user you will not respond to the request.
 :::
 
-The validator logic should match the earlier detection step: it calls the vector similarity match function with the extracted entities. That match logic iterates over the entities, computes similarity with any of our known competitors, and adds a match only when the similarity is greater than a threshold. If any competitors are detected, it returns a fail result with the list of detected entities. If no entities are detected, it returns a pass result.
-
 ::: {.callout-tip}
 ## Remember
 - Start with exact matches; they are the cheapest and most precise filter.
@@ -216,6 +204,27 @@ The validator logic should match the earlier detection step: it calls the vector
 - Guardrails can be inserted transparently by pointing the client to a guardrail server.
 - This pattern applies to competitor names and any other disallowed entities.
 :::
+
+<details class="quiz">
+<summary>Why not just check for the competitor's exact name?</summary>
+
+Companies have several names and variants (JPMorgan, JPMC…) and listing them all is hard. Exact matching is the cheap first stage; NER and similarity catch the rest.
+
+</details>
+
+<details class="quiz">
+<summary>The text says “JPMC”. Which stage of the cascade catches it?</summary>
+
+Not exact matching: NER extracts “JPMC”, and its embedding is close enough to “JPMorgan” to pass the threshold, so the validator fails.
+
+</details>
+
+<details class="quiz">
+<summary>What does the validator return when it finds a competitor?</summary>
+
+A fail result with the list of entities detected; it returns pass only when no competitor is found.
+
+</details>
 
 ## Sources {.sources}
 
