@@ -1,13 +1,16 @@
 ---
-title: "Tools and agentic search"
-subtitle: "How a model calls functions, where to find ready-made tools and prompts, and why agents need search built for machines."
+title: Tools and agentic search
+subtitle: How a model calls functions, where to find ready-made tools and prompts, and why agents need search built for machines.
 order: 3
 date: 2026-11-15
 date-modified: 2026-11-15
-categories: [Agents, Foundations, Tools]
+categories:
+- Agents
+- Foundations
+- Tools
 aliases:
-  - /notes/langgraph/03-agentic-search.html
-  - /agents/langgraph/03-agentic-search.html
+- /notes/langgraph/03-agentic-search.html
+- /agents/langgraph/03-agentic-search.html
 ---
 
 ::: {.lesson-meta}
@@ -253,6 +256,12 @@ result["answer"]                         # a short answer
 Given `TavilySearch` as a tool and asked *"What's the weather in SF?"*, an agent calls `tavily_search` with `{"query": "current weather San Francisco"}`, receives temperature, conditions and sources as JSON, and answers in one sentence, citing where the numbers come from.
 :::
 
+::: {.callout-note .in-practice}
+## In practice: tools
+- [Anthropic skills ecosystem](../../toolbox/tools/anthropic-skills-ecosystem.qmd) (Anthropic): A set of pre-built skills for Claude, plus the public skills repository and the skill-creator workflow for creating or modifying skills.
+- [Claude skills in APIs and SDKs](../../toolbox/tools/claude-skills-in-apis-and-sdks.qmd) (Anthropic / DeepLearning.AI course): A workflow for using Claude skills in the Messages API and the Claude Agent SDK, with file execution, file transfer, subagents, and MCP-backed writing.
+:::
+
 ::: {.callout-tip}
 ## Remember
 - The model **requests** tools, your code **runs** them. Name, type hints and docstring are the tool's manual.
@@ -265,10 +274,13 @@ Given `TavilySearch` as a tool and asked *"What's the weather in SF?"*, an agent
 
 ## Sources {.sources}
 
-- [AI Agents in LangGraph](https://learn.deeplearning.ai/courses/ai-agents-in-langgraph/), DeepLearning.AI × LangChain: lessons [LangGraph Components](https://learn.deeplearning.ai/courses/ai-agents-in-langgraph/lesson/l7rgk/langgraph-components) and [Agentic Search Tools](https://learn.deeplearning.ai/courses/ai-agents-in-langgraph/lesson/oj6p9/agentic-search-tools)
-- [Long-Term Agentic Memory with LangGraph](https://www.deeplearning.ai/courses/long-term-agentic-memory-with-langgraph), DeepLearning.AI × LangChain: lesson [Baseline Email Assistant](https://learn.deeplearning.ai/courses/long-term-agentic-memory-with-langgraph/lesson/a0k5a/baseline-email-assistant)
-- [Tools and toolkits: integrations](https://docs.langchain.com/oss/python/integrations/tools), LangChain documentation
-- [Sunsetting langchain-community](https://github.com/langchain-ai/langchain-community/issues/674), LangChain, May 2026
-- [Manage prompts programmatically](https://docs.langchain.com/langsmith/manage-prompts-programmatically), LangSmith documentation
+- [AI Agents in LangGraph](https://learn.deeplearning.ai/courses/ai-agents-in-langgraph/)
+- [LangGraph Components](https://learn.deeplearning.ai/courses/ai-agents-in-langgraph/lesson/l7rgk/langgraph-components)
+- [Agentic Search Tools](https://learn.deeplearning.ai/courses/ai-agents-in-langgraph/lesson/oj6p9/agentic-search-tools)
+- [Long-Term Agentic Memory with LangGraph](https://www.deeplearning.ai/courses/long-term-agentic-memory-with-langgraph)
+- [Baseline Email Assistant](https://learn.deeplearning.ai/courses/long-term-agentic-memory-with-langgraph/lesson/a0k5a/baseline-email-assistant)
+- [Tools and toolkits: integrations](https://docs.langchain.com/oss/python/integrations/tools)
+- [Sunsetting langchain-community](https://github.com/langchain-ai/langchain-community/issues/674)
+- [Manage prompts programmatically](https://docs.langchain.com/langsmith/manage-prompts-programmatically)
 - [LangChain MCP adapters](https://github.com/langchain-ai/langchain-mcp-adapters)
 - [Tavily documentation](https://docs.tavily.com)

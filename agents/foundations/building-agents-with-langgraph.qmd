@@ -1,15 +1,19 @@
 ---
-title: "Building agents with LangGraph"
-subtitle: "The building blocks, then five levels of agent design, from a simple tool loop to a full system."
+title: Building agents with LangGraph
+subtitle: The building blocks, then five levels of agent design, from a simple tool loop to a full system.
 order: 2
 date: 2026-11-15
-categories: [Agents, Foundations, LangGraph, Design patterns]
+categories:
+- Agents
+- Foundations
+- LangGraph
+- Design patterns
 aliases:
-  - /notes/langgraph/02-langgraph-components.html
-  - /agents/langgraph/02-langgraph-components.html
-  - /notes/langgraph/06-essay-writer.html
-  - /agents/langgraph/06-essay-writer.html
-  - /agents/long-term-memory/02-baseline-email-assistant.html
+- /notes/langgraph/02-langgraph-components.html
+- /agents/langgraph/02-langgraph-components.html
+- /notes/langgraph/06-essay-writer.html
+- /agents/langgraph/06-essay-writer.html
+- /agents/long-term-memory/02-baseline-email-assistant.html
 ---
 
 ::: {.lesson-meta}
@@ -362,6 +366,11 @@ Each part is small and simple on its own. The system becomes powerful because th
 :::
 
 
+::: {.callout-note .in-practice}
+## In practice: tools
+- [Claude skills in APIs and SDKs](../../toolbox/tools/claude-skills-in-apis-and-sdks.qmd) (Anthropic / DeepLearning.AI course): A workflow for using Claude skills in the Messages API and the Claude Agent SDK, with file execution, file transfer, subagents, and MCP-backed writing.
+:::
+
 ::: {.callout-tip}
 ## Remember
 - Three blocks do everything: **state** (with reducers), **nodes**, **edges** (fixed, conditional, or `Command`).
@@ -373,5 +382,9 @@ Each part is small and simple on its own. The system becomes powerful because th
 
 ## Sources {.sources}
 
-- [AI Agents in LangGraph](https://learn.deeplearning.ai/courses/ai-agents-in-langgraph/), DeepLearning.AI × LangChain: lessons [LangGraph Components](https://learn.deeplearning.ai/courses/ai-agents-in-langgraph/lesson/l7rgk/langgraph-components) and [Essay Writer](https://learn.deeplearning.ai/courses/ai-agents-in-langgraph/lesson/m0x4m/essay-writer)
-- [Long-Term Agentic Memory with LangGraph](https://www.deeplearning.ai/courses/long-term-agentic-memory-with-langgraph), DeepLearning.AI × LangChain: lessons [Baseline Email Assistant](https://learn.deeplearning.ai/courses/long-term-agentic-memory-with-langgraph/lesson/a0k5a/baseline-email-assistant) and [Semantic + Episodic + Procedural Memory](https://learn.deeplearning.ai/courses/long-term-agentic-memory-with-langgraph/lesson/uubkz/email-assistant-with-semantic-%2B-episodic-%2B-procedural-memory)
+- [AI Agents in LangGraph](https://learn.deeplearning.ai/courses/ai-agents-in-langgraph/)
+- [LangGraph Components](https://learn.deeplearning.ai/courses/ai-agents-in-langgraph/lesson/l7rgk/langgraph-components)
+- [Essay Writer](https://learn.deeplearning.ai/courses/ai-agents-in-langgraph/lesson/m0x4m/essay-writer)
+- [Long-Term Agentic Memory with LangGraph](https://www.deeplearning.ai/courses/long-term-agentic-memory-with-langgraph)
+- [Baseline Email Assistant](https://learn.deeplearning.ai/courses/long-term-agentic-memory-with-langgraph/lesson/a0k5a/baseline-email-assistant)
+- [Semantic + Episodic + Procedural Memory](https://learn.deeplearning.ai/courses/long-term-agentic-memory-with-langgraph/lesson/uubkz/email-assistant-with-semantic-%2B-episodic-%2B-procedural-memory)
