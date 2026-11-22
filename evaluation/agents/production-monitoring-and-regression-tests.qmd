@@ -46,7 +46,7 @@ Explicit feedback like thumbs down, and behavioral signals like repeated rephras
 
 Offline evaluation is useful before release. It gives you a fixed set of cases, so you can change the agent and run the same cases again to see what improved and what regressed.
 
-But once the agent is live, production shows things your benchmark missed. People ask new questions. They use familiar requests in unfamiliar words. They leave out context. They combine several needs in one message, and sometimes behave in ways that are hard to anticipate in advance.
+But once the agent is live, production shows things your benchmark missed. People ask new questions. They use familiar requests in unfamiliar or ambiguous words. They leave out context. They combine several needs in one message, and sometimes behave in ways that are hard to anticipate in advance.
 
 ::: {.column-margin .watch}
 Do not treat offline evals as enough once the agent is live. A good benchmark only tests the situations you put into it. Production is where you discover what you did not think to test, and it becomes another source of evidence for improvement. Monitoring, manual review, user feedback, and A/B testing can help you find where the next optimization work should focus.

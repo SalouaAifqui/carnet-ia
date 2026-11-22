@@ -50,7 +50,7 @@ Guardrails are **secondary checks** in an LLM app. They do not replace the model
 Guardrails do not remove all variability from LLMs. They add checks that improve safety and reliability, but they are not a full replacement for good prompting, fine-tuning, RLHF, or RAG.
 :::
 
-A guardrail acts like a **validator**. A validator is a function that takes a user prompt, an LLM response, or both, then checks whether it matches a predefined rule. If it does not, the app can block it, raise an exception, or send it back for more checking.
+A guardrail acts like a **validator**. A validator is a function that takes a user prompt, an LLM response, or both, then checks whether it matches a predefined rule. If it does not, the app can block it, reroute it, raise an exception, or send it back for more checking.
 
 Guardrails are built into AI applications as a **protective framework**: they add a layer of control and oversight that helps align runtime behavior with developer expectations. They support building safe and responsible AI.
 
@@ -128,6 +128,8 @@ Output checks can stop a response that mentions a competitor or gives an off-top
 **Blocking sensitive input and a competitor mention.** A customer sends a message that includes a name and phone number. An input validator blocks it before it reaches the model. Later, the chatbot tries to answer a question by comparing **Alfredo’s Pizza Cafe** with a competing pizza chain. An output validator stops that response because competitor mentions are not allowed.
 :::
 
+Validators can also block trademark terms or competitive names.
+
 ### Input checks vs output checks
 
 | Failure mode | Input check | Output check |
@@ -163,6 +165,8 @@ Validators can check that an output or input follows a set of rules or guideline
 - sensitive information
 
 They are useful in production settings where teams need stricter reliability and compliance than prompting, fine-tuning, RLHF, or RAG can provide on their own. The source explicitly ties guardrails and validators to moving beyond the proof-of-concept stage and making applications production-ready.
+
+GuardrailsAI uses validators in sectors such as healthcare, government, and finance, where strict reliability and compliance are required.
 
 ### Why guardrails matter
 

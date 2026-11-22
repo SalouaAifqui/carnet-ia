@@ -165,6 +165,8 @@ You also need to define correct behavior before you evaluate it. If the policy s
 **Refund tool should not appear.** A customer asks for a refund, but the order is outside the refund window. The evaluator should check that `process_refund` does not appear in the trace at all.
 :::
 
+Do not check only whether a tool call succeeded, or whether a different tool ran successfully. Check whether the trace contains the right actions, in the right places, according to the policy. Also compare the tool choice and the arguments against the information the tool is supposed to act on.
+
 ::: {.steps}
 1. **Define correct behavior first**: decide what the agent must do, or must not do, for this case.
 2. **Check the trace against that expectation**: use the trace as evidence after the rule is clear.

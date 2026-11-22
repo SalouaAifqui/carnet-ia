@@ -44,7 +44,7 @@ A validator checks a single output, while a guard wraps one or more validators b
 
 ## Why groundedness matters
 
-Groundedness means the model stays faithful to trusted sources. In a RAG system, the model should use the shared data, not make things up. Hallucinations are unsupported claims. This guardrail is meant to stop those claims before they reach the user.
+Groundedness means the model stays faithful to trusted sources. In a RAG (retrieval-augmented generation) system, the model should use the shared data, not make things up. Hallucinations are unsupported claims. This guardrail is meant to stop those claims before they reach the user.
 
 ::: {.column-margin .define label="Hallucination"}
 A hallucination is an unsupported model claim. The guardrail’s purpose is to detect and stop these claims before they reach the user interface.

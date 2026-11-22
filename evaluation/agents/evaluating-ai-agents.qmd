@@ -291,7 +291,7 @@ A pull request changes a support prompt. The CI pipeline first runs rules-based 
 
 The same idea of evaluation continues after deployment. Behavior can drift, and new risks can appear.
 
-The Quality and Safety course highlights these failure modes:
+Connect agent evaluation to LLM quality and safety, and use red teaming to probe weaknesses proactively. The Quality and Safety course highlights these failure modes:
 
 | Failure mode | What it looks like |
 |---|---|

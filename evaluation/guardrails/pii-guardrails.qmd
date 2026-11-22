@@ -168,6 +168,39 @@ flowchart LR
 
 The app does not wait for the full response if it can inspect tokens as they stream. Instead, it applies the guardrail to each chunk of generated text. If the chunk looks like personal data, the app can replace it with redaction text or stop the response entirely.
 
+<details class="course-notes">
+<summary>About the course platform</summary>
+
+You can use the same notebook and course interface tools while testing these examples:
+
+- In a notebook, open the available files by clicking **File → Open**. This shows the notebook files for the lesson, including helper functions in the left sidebar.
+- If you need to reset the workspace, use the **three-dot menu (⋮)** in the top-right of the notebook toolbar and choose **Restore Original Version**.
+- To save a copy, click **File → Download as → Notebook (.ipynb)**.
+- After **File → Open**, you can also click **Upload** to upload your own files.
+- To review your course progress, open **My Learning** in the top-right of the desktop view.
+- If you want to hide the lesson list on a smaller screen, click the **hamburger icon** beside the course title to hide or unhide the navigation menu.
+
+When watching the lesson videos, these controls are useful:
+
+- Click the **gear icon (⚙)** to change **speed**.
+- Use **Captions** to choose **English or Spanish** subtitles.
+- Use **Quality** to adjust playback if your internet connection is slow.
+- Click the small rectangle icon to enable **Picture in Picture (PiP)**.
+- Hide or unhide the lesson navigation with the **hamburger icon** beside the course title.
+
+For efficient learning, a few simple habits help:
+
+- Create a dedicated, quiet study space.
+- Keep a consistent study schedule.
+- Use a recurring calendar reminder for your study time.
+- Take regular breaks; the **Pomodoro Technique** is a good option: **25 minutes of study followed by a 5-minute break**.
+- Engage with the community in forums and discussions.
+- Practice active learning by taking notes, summarizing, teaching, or applying what you learn in projects.
+
+At the end of the course, you can also share feedback by clicking **Course Feedback** in the bottom of the lessons list menu, and you’re welcome to join the **DeepLearning.AI Forum**.
+
+</details>
+
 ::: {.callout-tip}
 ## Remember
 - PII can leak in both directions: into the model and back out to the user.

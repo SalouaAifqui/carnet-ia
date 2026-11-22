@@ -67,6 +67,23 @@ The usual workflow is:
 4. Send the sequence through stacked transformer layers.
 5. Use a final linear layer and softmax to produce next-token probabilities.
 
+```{mermaid}
+flowchart LR
+  A[Text input] --> B[Tokenization]
+  B --> C[Token IDs]
+  C --> D[Embeddings]
+  D --> E[Add positional information]
+  E --> F[Stacked transformer blocks]
+  F --> G[Language model head]
+  G --> H[Softmax]
+  H --> I[Next-token probabilities]
+
+  F --> J[Self-attention]
+  F --> K[Feed-forward network]
+  J --> L[Context mixing]
+  K --> M[Feature transformation]
+```
+
 Positional information matters because attention alone does not know token order. It tells the model where each token appears in the sequence.
 
 Most modern large language models use only the **decoder** side of the original transformer design. They are built for text generation, so they predict one next token at a time.

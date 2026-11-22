@@ -53,7 +53,7 @@ A skill lives in a `SKILL.md` file. It has three main parts:
 The frontmatter must include a **name** and a **description**. The body is where you write the skill instructions. If you need more material, you can keep it in other files and load it only when needed.
 
 ::: {.column-margin .watch}
-Some skills, including ones built by Anthropic, do not follow the current specification exactly: the standard and the skill format are still evolving across providers and tooling. You may see different folder names or metadata in older or custom skills.
+Some skills, including ones built by Anthropic and others, do not follow the current specification exactly: the standard and the skill format are still evolving across providers and tooling. You may see different folder names or metadata in older or custom skills.
 :::
 
 ### Name and description rules

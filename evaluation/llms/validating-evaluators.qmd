@@ -118,6 +118,8 @@ Then decide what went wrong:
 - if the reviewed label is right, the judge may have misapplied the rubric
 - if the case could reasonably go either way, the rubric boundary may be unclear
 
+A disagreement does not automatically mean “fix the judge.” It tells you where the evaluation needs investigation.
+
 Look for repeated patterns in the mistakes. Some errors are not random. A judge may do fine on obvious behavior-risk cases but fail on numeric-constraint cases. Or it may trust the agent’s “thoughtful” or calm explanation too much and ignore the evidence in the input, which can hurt recall on unsafe matches.
 
 ::: {.steps}

@@ -154,6 +154,8 @@ flowchart TD
     G -->|No match| H[Pass result]
 ```
 
+The validator logic should match the earlier detection step: it calls the vector similarity match function with the extracted entities. That match logic iterates over the entities, computes similarity with any of our known competitors, and adds a match only when the similarity is greater than a threshold. If any competitors are detected, it returns a fail result with the list of detected entities. If no entities are detected, it returns a pass result.
+
 ### What the validator returns
 
 The validator uses the same pattern in both stages:
