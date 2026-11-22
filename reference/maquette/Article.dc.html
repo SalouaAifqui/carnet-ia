@@ -1,0 +1,201 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Carnet IA — reading a note</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=Space+Grotesk:wght@500;600;700&amp;family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&amp;family=JetBrains+Mono:wght@400;600&amp;display=swap">
+<style>
+body{margin:0;background:#f6f7f9}
+a{color:#2f54d6}a:hover{color:#1d3aa8}
+details>summary{cursor:pointer}
+details>summary::-webkit-details-marker{color:#586174}
+</style>
+</helmet>
+<div style="font-family: {{bodyFont}}; color: #16202e; background: #f6f7f9">
+<header style="position: sticky; top: 0; z-index: 5; background: rgba(255,255,255,0.92); border-bottom: 1px solid #e3e7ee">
+<div style="max-width: 1240px; margin: 0 auto; padding: 10px 24px; display: flex; flex-wrap: wrap; align-items: center; gap: 12px 20px">
+<a href="Main.dc.html" style="display: inline-flex; align-items: center; gap: 10px; text-decoration: none; color: #16202e; font-family: 'Space Grotesk', 'Segoe UI', sans-serif; font-weight: 700; font-size: 19px; min-height: 44px"><svg width="28" height="28" viewBox="0 0 28 28" aria-hidden="true"><rect x="1" y="1" width="26" height="26" rx="8" fill="#2f54d6"></rect><path d="M8 9 L8 19 M8 14 L14 9 M8 14 L14 19" stroke="#fff" stroke-width="2.2" stroke-linecap="round" fill="none"></path><circle cx="19.5" cy="14" r="2.6" fill="#fff"></circle></svg>Carnet IA</a>
+<nav aria-label="Topics" style="display: flex; flex-wrap: wrap; gap: 2px; flex: 1 1 auto"><a href="#" style="display: inline-flex; align-items: center; gap: 8px; min-height: 44px; padding: 0 12px; border-radius: 10px; text-decoration: none; font-weight: 500; font-size: 15px; color: #16202e; background: transparent"><span style="width: 8px; height: 8px; border-radius: 50%; background: #6741d9"></span>LLMs</a><a href="#" style="display: inline-flex; align-items: center; gap: 8px; min-height: 44px; padding: 0 12px; border-radius: 10px; text-decoration: none; font-weight: 500; font-size: 15px; color: #2f54d6; background: #eef2ff"><span style="width: 8px; height: 8px; border-radius: 50%; background: #2f54d6"></span>Agents</a><a href="#" style="display: inline-flex; align-items: center; gap: 8px; min-height: 44px; padding: 0 12px; border-radius: 10px; text-decoration: none; font-weight: 500; font-size: 15px; color: #16202e; background: transparent"><span style="width: 8px; height: 8px; border-radius: 50%; background: #c2255c"></span>Evaluation &amp; Guardrails</a><a href="#" style="display: inline-flex; align-items: center; gap: 8px; min-height: 44px; padding: 0 12px; border-radius: 10px; text-decoration: none; font-weight: 500; font-size: 15px; color: #16202e; background: transparent"><span style="width: 8px; height: 8px; border-radius: 50%; background: #0b7285"></span>Toolbox</a></nav>
+<div style="display: flex; align-items: center; gap: 8px">
+<label for="q-agents" style="position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0)">Search the notes</label>
+<input id="q-agents" type="search" placeholder="Search notes…  ⌘K" style="width: 210px; height: 40px; box-sizing: border-box; border: 1px solid #e3e7ee; border-radius: 10px; padding: 0 12px; font: 14px Inter, system-ui, sans-serif; background: #f6f7f9; color: #16202e">
+<button type="button" aria-label="Switch to dark theme" style="width: 44px; height: 44px; border-radius: 10px; border: 1px solid #e3e7ee; background: #fff; color: #16202e; display: grid; place-items: center; cursor: pointer"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5z"></path></svg></button>
+<a href="https://github.com/SalouaAifqui/carnet-ia" aria-label="GitHub repository" style="width: 44px; height: 44px; border-radius: 10px; border: 1px solid #e3e7ee; display: grid; place-items: center; color: #16202e"><svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2a10 10 0 0 0-3.2 19.5c.5.1.7-.2.7-.5v-1.7c-2.8.6-3.4-1.3-3.4-1.3-.5-1.2-1.1-1.5-1.1-1.5-.9-.6.1-.6.1-.6 1 .1 1.5 1 1.5 1 .9 1.5 2.4 1.1 2.9.8.1-.6.4-1.1.6-1.3-2.2-.3-4.6-1.1-4.6-5a3.9 3.9 0 0 1 1-2.7 3.6 3.6 0 0 1 .1-2.7s.8-.3 2.8 1a9.6 9.6 0 0 1 5 0c1.9-1.3 2.8-1 2.8-1 .5 1.4.2 2.4.1 2.7a3.9 3.9 0 0 1 1 2.7c0 3.9-2.4 4.7-4.6 5 .4.3.7.9.7 1.9V21c0 .3.2.6.7.5A10 10 0 0 0 12 2z"></path></svg></a>
+</div>
+</div>
+</header>
+<div role="progressbar" aria-label="Reading progress" aria-valuenow="22" aria-valuemin="0" aria-valuemax="100" style="height: 3px; background: #e3e7ee"><div style="width: 22%; height: 3px; background: #2f54d6"></div></div>
+<div style="max-width: 1320px; margin: 0 auto; padding: 32px 24px 80px; display: flex; flex-wrap: wrap; gap: 40px">
+<aside aria-label="Lessons" style="flex: 1 1 220px; max-width: 260px; min-width: 0">
+<p style="margin: 0; font: 700 18px 'Space Grotesk', 'Segoe UI', sans-serif; color: #2f54d6">Agents</p>
+<div style="margin: 10px 0 0; height: 6px; border-radius: 3px; background: #e3e7ee"><div style="width: 14%; height: 6px; border-radius: 3px; background: #2f54d6"></div></div>
+<p style="margin: 6px 0 0; font: 13px Inter, system-ui, sans-serif; color: #586174">1 of 7 lessons · 39 min total</p>
+<p style="margin: 18px 0 6px; font: 700 12px Inter, system-ui, sans-serif; letter-spacing: 0.08em; text-transform: uppercase; color: #586174">Foundations</p><a href="#" aria-current="page" style="display: flex; justify-content: space-between; gap: 8px; align-items: center; min-height: 40px; padding: 6px 10px; border-radius: 8px; text-decoration: none; font: 600 14px/1.35 Inter, system-ui, sans-serif; color: #2f54d6; background: #eef2ff"><span>What is an agent</span><span style="font: 500 12px Inter, system-ui, sans-serif; color: #586174">4′</span></a><a href="#" style="display: flex; justify-content: space-between; gap: 8px; align-items: center; min-height: 40px; padding: 6px 10px; border-radius: 8px; text-decoration: none; font: 500 14px/1.35 Inter, system-ui, sans-serif; color: #16202e; background: transparent"><span>Building agents with LangGraph</span><span style="font: 500 12px Inter, system-ui, sans-serif; color: #586174">9′</span></a><a href="#" style="display: flex; justify-content: space-between; gap: 8px; align-items: center; min-height: 40px; padding: 6px 10px; border-radius: 8px; text-decoration: none; font: 500 14px/1.35 Inter, system-ui, sans-serif; color: #16202e; background: transparent"><span>Tools and agentic search</span><span style="font: 500 12px Inter, system-ui, sans-serif; color: #586174">8′</span></a><p style="margin: 18px 0 6px; font: 700 12px Inter, system-ui, sans-serif; letter-spacing: 0.08em; text-transform: uppercase; color: #586174">Memory</p><a href="#" style="display: flex; justify-content: space-between; gap: 8px; align-items: center; min-height: 40px; padding: 6px 10px; border-radius: 8px; text-decoration: none; font: 500 14px/1.35 Inter, system-ui, sans-serif; color: #16202e; background: transparent"><span>Agent memory: overview</span><span style="font: 500 12px Inter, system-ui, sans-serif; color: #586174">4′</span></a><a href="#" style="display: flex; justify-content: space-between; gap: 8px; align-items: center; min-height: 40px; padding: 6px 10px; border-radius: 8px; text-decoration: none; font: 500 14px/1.35 Inter, system-ui, sans-serif; color: #16202e; background: transparent"><span>Short-term memory</span><span style="font: 500 12px Inter, system-ui, sans-serif; color: #586174">3′</span></a><a href="#" style="display: flex; justify-content: space-between; gap: 8px; align-items: center; min-height: 40px; padding: 6px 10px; border-radius: 8px; text-decoration: none; font: 500 14px/1.35 Inter, system-ui, sans-serif; color: #16202e; background: transparent"><span>Long-term memory</span><span style="font: 500 12px Inter, system-ui, sans-serif; color: #586174">6′</span></a><p style="margin: 18px 0 6px; font: 700 12px Inter, system-ui, sans-serif; letter-spacing: 0.08em; text-transform: uppercase; color: #586174">Control</p><a href="#" style="display: flex; justify-content: space-between; gap: 8px; align-items: center; min-height: 40px; padding: 6px 10px; border-radius: 8px; text-decoration: none; font: 500 14px/1.35 Inter, system-ui, sans-serif; color: #16202e; background: transparent"><span>Controlling a running agent</span><span style="font: 500 12px Inter, system-ui, sans-serif; color: #586174">5′</span></a>
+<div style="margin-top: 28px; padding-top: 18px; border-top: 1px solid #e3e7ee">
+<p style="margin: 0 0 6px; font: 700 12px Inter, system-ui, sans-serif; letter-spacing: 0.08em; text-transform: uppercase; color: #586174">On this page</p>
+<a href="#s0" style="display: flex; align-items: center; gap: 10px; min-height: 36px; text-decoration: none; font: 500 14px Inter, system-ui, sans-serif; color: #586174"><span style="width: 10px; height: 10px; border-radius: 50%; background: #2f54d6; border: 2px solid #2f54d6; box-sizing: border-box"></span>The ReAct loop</a><a href="#s1" style="display: flex; align-items: center; gap: 10px; min-height: 36px; text-decoration: none; font: 600 14px Inter, system-ui, sans-serif; color: #16202e"><span style="width: 10px; height: 10px; border-radius: 50%; background: #fff; border: 2px solid #2f54d6; box-sizing: border-box"></span>Who does what</a><a href="#s2" style="display: flex; align-items: center; gap: 10px; min-height: 36px; text-decoration: none; font: 500 14px Inter, system-ui, sans-serif; color: #586174"><span style="width: 10px; height: 10px; border-radius: 50%; background: #fff; border: 2px solid #c4cad6; box-sizing: border-box"></span>Key ideas</a><a href="#s3" style="display: flex; align-items: center; gap: 10px; min-height: 36px; text-decoration: none; font: 500 14px Inter, system-ui, sans-serif; color: #586174"><span style="width: 10px; height: 10px; border-radius: 50%; background: #fff; border: 2px solid #c4cad6; box-sizing: border-box"></span>Building one by hand</a><a href="#s4" style="display: flex; align-items: center; gap: 10px; min-height: 36px; text-decoration: none; font: 500 14px Inter, system-ui, sans-serif; color: #586174"><span style="width: 10px; height: 10px; border-radius: 50%; background: #fff; border: 2px solid #c4cad6; box-sizing: border-box"></span>Remember</a>
+</div>
+</aside>
+<main style="flex: 999 1 640px; min-width: 0">
+<div style="display: flex; flex-wrap: wrap; gap: 24px 40px; align-items: flex-start">
+<div style="flex: 999 1 520px; min-width: 0; max-width: 700px">
+<nav aria-label="Breadcrumb" style="font: 500 14px Inter, system-ui, sans-serif; color: #586174; display: flex; gap: 8px; flex-wrap: wrap"><a href="Main.dc.html" style="color: #586174">Home</a><span>/</span><a href="#" style="color: #586174">Agents</a><span>/</span><span>Foundations</span></nav>
+<h1 style="margin: 16px 0 12px; font: 700 clamp(2.2rem, 4.5vw, 3.2rem)/1.08 'Space Grotesk', 'Segoe UI', sans-serif; letter-spacing: -0.025em; font-family: 'Space Grotesk', 'Segoe UI', sans-serif">What is an agent</h1>
+<p style="margin: 0 0 18px; font: 21px/1.5 Inter, system-ui, sans-serif; color: #586174">An LLM in a loop with tools: it reasons, acts, observes, and repeats.</p>
+<div style="display: flex; flex-wrap: wrap; gap: 8px 16px; align-items: center; font: 500 14px Inter, system-ui, sans-serif; color: #586174"><span style="display: inline-flex; align-items: center; height: 24px; padding: 0 10px; border-radius: 999px; background: #eef2ff; color: #2f54d6; font: 600 12px Inter, system-ui, sans-serif">Agents</span><span>Lesson 1 of 7</span><span>·</span><span>4 min read</span><span>·</span><span>Updated 15 Nov 2026</span></div>
+<figure style="margin: 28px 0 0; border-radius: 18px; overflow: hidden; border: 1px solid #e3e7ee">
+<svg viewBox="0 0 520 300" role="img" aria-label="The ReAct loop: Question, then Thought, Action, Observation repeated until an Answer" style="display: block; width: 100%; height: auto; background: #eef2ff"><rect x="28" y="40" width="92" height="23" rx="11.5" fill="#ffffff"></rect><text x="74.0" y="55.82" font-family="Inter, sans-serif" font-size="12" font-weight="600" fill="#16202e" text-anchor="middle">Question</text><rect x="214" y="26" width="140" height="56" rx="10" fill="#2f54d6" stroke="#2f54d6" stroke-width="1.2"></rect><text x="284.0" y="51.0" font-family="Inter, sans-serif" font-size="13" font-weight="600" fill="#ffffff" text-anchor="middle">Thought</text><text x="284.0" y="67.0" font-family="Inter, sans-serif" font-size="11" font-weight="400" fill="#ffffff" text-anchor="middle">the LLM reasons</text><rect x="408" y="40" width="84" height="23" rx="11.5" fill="#0f7a52"></rect><text x="450.0" y="55.82" font-family="Inter, sans-serif" font-size="12" font-weight="600" fill="#fff" text-anchor="middle">Answer</text><defs><marker id="v-agent-m1" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#586174"></path></marker></defs><path d="M120 53 L210 53" fill="none" stroke="#586174" stroke-width="1.6" stroke-linecap="round" marker-end="url(#v-agent-m1)"></path><defs><marker id="v-agent-m2" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#0f7a52"></path></marker></defs><path d="M354 53 L404 53" fill="none" stroke="#0f7a52" stroke-width="1.6" stroke-linecap="round" marker-end="url(#v-agent-m2)"></path><rect x="366" y="192" width="136" height="56" rx="10" fill="#ffffff" stroke="#d9dee8" stroke-width="1.2"></rect><text x="434.0" y="217.0" font-family="Inter, sans-serif" font-size="13" font-weight="600" fill="#16202e" text-anchor="middle">Action</text><text x="434.0" y="233.0" font-family="Inter, sans-serif" font-size="11" font-weight="400" fill="#586174" text-anchor="middle">picks a tool</text><rect x="150" y="192" width="140" height="56" rx="10" fill="#ffffff" stroke="#d9dee8" stroke-width="1.2"></rect><text x="220.0" y="217.0" font-family="Inter, sans-serif" font-size="13" font-weight="600" fill="#16202e" text-anchor="middle">Observation</text><text x="220.0" y="233.0" font-family="Inter, sans-serif" font-size="11" font-weight="400" fill="#586174" text-anchor="middle">your code runs it</text><defs><marker id="v-agent-m3" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#2f54d6"></path></marker></defs><path d="M318 84 C 350 130, 405 145, 428 188" fill="none" stroke="#2f54d6" stroke-width="1.6" stroke-linecap="round" marker-end="url(#v-agent-m3)"></path><defs><marker id="v-agent-m4" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#2f54d6"></path></marker></defs><path d="M366 220 L294 220" fill="none" stroke="#2f54d6" stroke-width="1.6" stroke-linecap="round" marker-end="url(#v-agent-m4)"></path><defs><marker id="v-agent-m5" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#2f54d6"></path></marker></defs><path d="M200 190 C 190 140, 220 110, 244 86" fill="none" stroke="#2f54d6" stroke-width="1.6" stroke-linecap="round" marker-end="url(#v-agent-m5)"></path><text x="292" y="150" font-family="Inter, sans-serif" font-size="12" font-weight="500" fill="#586174" text-anchor="middle">repeat until done</text><text x="292" y="166" font-family="Inter, sans-serif" font-size="11" font-weight="400" fill="#586174" text-anchor="middle">(max_turns caps it)</text><rect x="26" y="270" width="10" height="10" rx="3" fill="#2f54d6" stroke="#2f54d6" stroke-width="1.2"></rect><text x="42" y="279" font-family="Inter, sans-serif" font-size="11" font-weight="500" fill="#16202e" text-anchor="start">the LLM decides</text><rect x="150" y="270" width="10" height="10" rx="3" fill="#ffffff" stroke="#d9dee8" stroke-width="1.2"></rect><text x="166" y="279" font-family="Inter, sans-serif" font-size="11" font-weight="500" fill="#16202e" text-anchor="start">your code executes</text></svg>
+<figcaption style="padding: 12px 18px; background: #fff; font: 14px Inter, system-ui, sans-serif; color: #586174; border-top: 1px solid #e3e7ee">The whole note in one picture: the model decides, your code executes, and the loop repeats until there is an answer.</figcaption>
+</figure>
+<section aria-label="In 30 seconds" style="margin: 28px 0 0; padding: 20px 24px; border-radius: 16px; background: #16202e; color: #fff; font-family: Inter, system-ui, sans-serif">
+<p style="margin: 0 0 10px; font: 700 12px Inter, system-ui, sans-serif; letter-spacing: 0.12em; text-transform: uppercase; color: #a9b8ff">In 30 seconds</p>
+<ul style="margin: 0; padding-left: 20px; font-size: 17px; line-height: 1.65">
+<li>An agent is an LLM placed in a <b>loop</b>: it reasons, picks an action, and your code runs it.</li>
+<li>The result goes back to the model, which decides what to do next, until it has an answer.</li>
+<li>Frameworks, memory and human approval are all built on this one loop.</li>
+</ul>
+</section></div>
+<div style="flex: 1 1 220px"></div>
+</div>
+<div style="display: flex; flex-wrap: wrap; gap: 24px 40px; align-items: flex-start">
+<div style="flex: 999 1 520px; min-width: 0; max-width: 700px"><h2 id="s0" style="margin: 56px 0 16px; font: 700 28px/1.2 'Space Grotesk', 'Segoe UI', sans-serif; letter-spacing: -0.015em; scroll-margin-top: 90px">The ReAct loop</h2>
+<p style="margin: 0 0 18px; font-size: 19px; line-height: 1.75"><b>ReAct</b> stands for <i>Reasoning + Acting</i>. The model alternates between thinking about what to do and doing it.</p>
+<div style="margin: 8px 0 0; padding: 18px 20px; border-radius: 14px; background: #eef2ff; font-family: Inter, system-ui, sans-serif">
+<p style="margin: 0 0 6px; font: 700 12px Inter, system-ui, sans-serif; letter-spacing: 0.1em; text-transform: uppercase; color: #2f54d6">Example</p>
+<p style="margin: 0 0 14px; font-size: 16px; line-height: 1.6">Asked <i>“What is the combined weight of a Border Collie and a Scottish Terrier?”</i></p>
+<div style="display: flex; flex-wrap: wrap; gap: 8px; align-items: center; font: 500 14px Inter, system-ui, sans-serif">
+<span style="padding: 8px 12px; border-radius: 10px; background: #fff">look up Border Collie → <b>37 lbs</b></span><span aria-hidden="true" style="color: #2f54d6">→</span>
+<span style="padding: 8px 12px; border-radius: 10px; background: #fff">look up Scottish Terrier → <b>20 lbs</b></span><span aria-hidden="true" style="color: #2f54d6">→</span>
+<span style="padding: 8px 12px; border-radius: 10px; background: #fff"><code style="font-family: 'JetBrains Mono', ui-monospace, monospace">37 + 20</code></span><span aria-hidden="true" style="color: #2f54d6">→</span>
+<span style="padding: 8px 12px; border-radius: 10px; background: #2f54d6; color: #fff; font-weight: 700">57 lbs</span>
+</div>
+</div></div>
+<aside style="flex: 1 1 220px; min-width: 0; align-self: flex-start; padding: 14px 16px; border-radius: 12px; background: #eef2ff; font: 14px/1.5 Inter, system-ui, sans-serif; color: #16202e">
+<p style="margin: 0 0 4px; font: 700 12px Inter, system-ui, sans-serif; letter-spacing: 0.08em; text-transform: uppercase; color: #2f54d6">Definition</p>
+<p style="margin: 0"><b>ReAct</b> — Yao et al., 2022. The pattern behind most agent frameworks today.</p>
+</aside>
+</div>
+<div style="display: flex; flex-wrap: wrap; gap: 24px 40px; align-items: flex-start">
+<div style="flex: 999 1 520px; min-width: 0; max-width: 700px"><h2 id="s1" style="margin: 56px 0 16px; font: 700 28px/1.2 'Space Grotesk', 'Segoe UI', sans-serif; letter-spacing: -0.015em; scroll-margin-top: 90px">Who does what</h2>
+<p style="margin: 0 0 18px; font-size: 19px; line-height: 1.75">The model never runs anything itself. It only <b>decides</b>. The surrounding code, the <i>runtime</i>, does everything else.</p>
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 14px; font-family: Inter, system-ui, sans-serif">
+<div style="padding: 18px 20px; border-radius: 14px; background: #2f54d6; color: #fff"><p style="margin: 0 0 10px; font: 700 18px 'Space Grotesk', 'Segoe UI', sans-serif">The LLM decides</p><ul style="margin: 0; padding-left: 18px; font-size: 15px; line-height: 1.7"><li>Reasons about the question</li><li>Chooses the next action and its input</li><li>Decides when it has the final answer</li></ul></div>
+<div style="padding: 18px 20px; border-radius: 14px; background: #fff; border: 1px solid #e3e7ee"><p style="margin: 0 0 10px; font: 700 18px 'Space Grotesk', 'Segoe UI', sans-serif">Your code executes</p><ul style="margin: 0; padding-left: 18px; font-size: 15px; line-height: 1.7; color: #16202e"><li>Reads the model’s reply</li><li>Checks the action exists, runs it</li><li>Sends back the observation, keeps the history, stops runaway loops</li></ul></div>
+</div></div>
+<aside style="flex: 1 1 220px; min-width: 0; align-self: flex-start; padding: 14px 16px; border-radius: 12px; background: #eef2ff; font: 14px/1.5 Inter, system-ui, sans-serif; color: #16202e">
+<p style="margin: 0 0 4px; font: 700 12px Inter, system-ui, sans-serif; letter-spacing: 0.08em; text-transform: uppercase; color: #2f54d6">Runtime</p>
+<p style="margin: 0">The code around the model: it parses the reply, runs the tool and keeps the history.</p>
+</aside>
+</div>
+<div style="display: flex; flex-wrap: wrap; gap: 24px 40px; align-items: flex-start">
+<div style="flex: 999 1 520px; min-width: 0; max-width: 700px"><h2 id="s2" style="margin: 56px 0 16px; font: 700 28px/1.2 'Space Grotesk', 'Segoe UI', sans-serif; letter-spacing: -0.015em; scroll-margin-top: 90px">Key ideas</h2>
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px"><div style="padding: 16px 18px; border: 1px solid #e3e7ee; border-radius: 12px; background: #fff; font-family: Inter, system-ui, sans-serif"><p style="margin: 0 0 6px; font: 600 14px 'JetBrains Mono', ui-monospace, monospace; color: #2f54d6">Message history</p><p style="margin: 0; font-size: 15px; line-height: 1.55; color: #586174">The agent’s working memory: system prompt, user turns, model replies and observations, in order.</p></div><div style="padding: 16px 18px; border: 1px solid #e3e7ee; border-radius: 12px; background: #fff; font-family: Inter, system-ui, sans-serif"><p style="margin: 0 0 6px; font: 600 14px 'JetBrains Mono', ui-monospace, monospace; color: #2f54d6">System prompt</p><p style="margin: 0; font-size: 15px; line-height: 1.55; color: #586174">Defines the loop format and lists the available actions. A worked example in it makes the format reliable.</p></div><div style="padding: 16px 18px; border: 1px solid #e3e7ee; border-radius: 12px; background: #fff; font-family: Inter, system-ui, sans-serif"><p style="margin: 0 0 6px; font: 600 14px 'JetBrains Mono', ui-monospace, monospace; color: #2f54d6">Tools</p><p style="margin: 0; font-size: 15px; line-height: 1.55; color: #586174">Python functions the model can ask for. A dictionary maps each name to its function.</p></div><div style="padding: 16px 18px; border: 1px solid #e3e7ee; border-radius: 12px; background: #fff; font-family: Inter, system-ui, sans-serif"><p style="margin: 0 0 6px; font: 600 14px 'JetBrains Mono', ui-monospace, monospace; color: #2f54d6">Turn limit</p><p style="margin: 0; font-size: 15px; line-height: 1.55; color: #586174">A maximum number of iterations, so the loop can never run forever.</p></div></div></div>
+<div style="flex: 1 1 220px"></div>
+</div>
+<div style="display: flex; flex-wrap: wrap; gap: 24px 40px; align-items: flex-start">
+<div style="flex: 999 1 520px; min-width: 0; max-width: 700px"><h2 id="s3" style="margin: 56px 0 16px; font: 700 28px/1.2 'Space Grotesk', 'Segoe UI', sans-serif; letter-spacing: -0.015em; scroll-margin-top: 90px">Building one by hand</h2>
+<p style="margin: 0 0 18px; font-size: 19px; line-height: 1.75">Writing the loop yourself once shows that there is no magic. Three pieces, each folded until you need it.</p>
+<details style="margin: 12px 0 0; border: 1px solid #e3e7ee; border-radius: 12px; background: #fff; overflow: hidden">
+<summary style="display: flex; align-items: center; gap: 10px; min-height: 48px; padding: 0 16px; font: 600 15px Inter, system-ui, sans-serif; color: #16202e"><span style="width: 26px; height: 26px; border-radius: 50%; background: #eef2ff; color: #2f54d6; display: inline-grid; place-items: center; font: 700 13px Inter, system-ui, sans-serif">1</span>The agent keeps the conversation and calls the model<span style="margin-left: auto; font: 500 12px 'JetBrains Mono', ui-monospace, monospace; color: #586174">python</span></summary>
+<pre style="margin: 0; padding: 16px 18px; background: #0f1730; color: #dbe4ff; font: 13px/1.6 'JetBrains Mono', ui-monospace, monospace; overflow-x: auto">from openai import OpenAI
+
+client = OpenAI()
+
+class Agent:
+    def __init__(self, system=&quot;&quot;):
+        self.messages = [{&quot;role&quot;: &quot;system&quot;, &quot;content&quot;: system}] if system else []
+
+    def __call__(self, message):
+        self.messages.append({&quot;role&quot;: &quot;user&quot;, &quot;content&quot;: message})
+        reply = client.chat.completions.create(model=&quot;gpt-5.4-mini&quot;, messages=self.messages)
+        result = reply.choices[0].message.content
+        self.messages.append({&quot;role&quot;: &quot;assistant&quot;, &quot;content&quot;: result})
+        return result</pre>
+</details>
+<details style="margin: 12px 0 0; border: 1px solid #e3e7ee; border-radius: 12px; background: #fff; overflow: hidden">
+<summary style="display: flex; align-items: center; gap: 10px; min-height: 48px; padding: 0 16px; font: 600 15px Inter, system-ui, sans-serif; color: #16202e"><span style="width: 26px; height: 26px; border-radius: 50%; background: #eef2ff; color: #2f54d6; display: inline-grid; place-items: center; font: 700 13px Inter, system-ui, sans-serif">2</span>The prompt teaches the format<span style="margin-left: auto; font: 500 12px 'JetBrains Mono', ui-monospace, monospace; color: #586174">text</span></summary>
+<pre style="margin: 0; padding: 16px 18px; background: #0f1730; color: #dbe4ff; font: 13px/1.6 'JetBrains Mono', ui-monospace, monospace; overflow-x: auto">You run in a loop of Thought, Action, PAUSE, Observation.
+At the end of the loop you output an Answer.
+Use Action to run one of the actions available to you, then return PAUSE.
+
+Your available actions are:
+calculate:            e.g. calculate: 4 * 7 / 3
+average_dog_weight:   e.g. average_dog_weight: Collie</pre>
+</details>
+<details open style="margin: 12px 0 0; border: 1px solid #e3e7ee; border-radius: 12px; background: #fff; overflow: hidden">
+<summary style="display: flex; align-items: center; gap: 10px; min-height: 48px; padding: 0 16px; font: 600 15px Inter, system-ui, sans-serif; color: #16202e"><span style="width: 26px; height: 26px; border-radius: 50%; background: #eef2ff; color: #2f54d6; display: inline-grid; place-items: center; font: 700 13px Inter, system-ui, sans-serif">3</span>The runtime parses the action, runs it, and loops<span style="margin-left: auto; font: 500 12px 'JetBrains Mono', ui-monospace, monospace; color: #586174">python</span></summary>
+<pre style="margin: 0; padding: 16px 18px; background: #0f1730; color: #dbe4ff; font: 13px/1.6 'JetBrains Mono', ui-monospace, monospace; overflow-x: auto">import re
+
+known_actions = {&quot;calculate&quot;: calculate, &quot;average_dog_weight&quot;: average_dog_weight}
+action_re = re.compile(r&quot;^Action: (\w+): (.*)$&quot;)
+
+def query(question, max_turns=5):
+    bot = Agent(prompt)
+    next_prompt = question
+    for _ in range(max_turns):
+        result = bot(next_prompt)
+        actions = [action_re.match(line) for line in result.split(&quot;\n&quot;) if action_re.match(line)]
+        if not actions:
+            return result                                   # no action: this is the answer
+        name, action_input = actions[0].groups()
+        if name not in known_actions:
+            raise ValueError(f&quot;Unknown action: {name}&quot;)
+        observation = known_actions[name](action_input)
+        next_prompt = f&quot;Observation: {observation}&quot;</pre>
+</details>
+<p style="margin: 0 0 18px; font-size: 19px; line-height: 1.75; margin-top: 20px">Parsing text with a regex is fragile. Modern models use <b>native tool calling</b> instead, and frameworks such as LangGraph take care of the loop.</p></div>
+<aside style="flex: 1 1 220px; min-width: 0; align-self: flex-start; padding: 14px 16px; border-radius: 12px; background: #fff3e2; font: 14px/1.5 Inter, system-ui, sans-serif; color: #16202e">
+<p style="margin: 0 0 4px; font: 700 12px Inter, system-ui, sans-serif; letter-spacing: 0.08em; text-transform: uppercase; color: #b45309">Watch out</p>
+<p style="margin: 0"><code style="font-family: 'JetBrains Mono', ui-monospace, monospace">eval()</code> in a demo calculator runs any Python code: never use it on untrusted input.</p>
+</aside>
+</div>
+<div style="display: flex; flex-wrap: wrap; gap: 24px 40px; align-items: flex-start">
+<div style="flex: 999 1 520px; min-width: 0; max-width: 700px"><section id="s4" aria-labelledby="rem" style="margin-top: 56px; padding: 24px 26px; border-radius: 18px; background: #e8f6ef; font-family: Inter, system-ui, sans-serif">
+<h2 id="rem" style="margin: 0 0 12px; font: 700 22px 'Space Grotesk', 'Segoe UI', sans-serif; color: #0f7a52">Remember</h2>
+<ul style="margin: 0; padding-left: 20px; font-size: 17px; line-height: 1.7">
+<li>Agent = LLM + loop + tools. The LLM <b>decides</b>, the code <b>executes</b>.</li>
+<li>The prompt is a contract between the model and the runtime.</li>
+<li>Always cap the loop and validate the action before running it.</li>
+</ul>
+</section>
+<h2 style="margin: 56px 0 16px; font: 700 28px/1.2 'Space Grotesk', 'Segoe UI', sans-serif; letter-spacing: -0.015em; scroll-margin-top: 90px">Check yourself</h2>
+<details style="border: 1px solid #e3e7ee; border-radius: 12px; background: #fff; padding: 0 18px; margin-top: 10px"><summary style="min-height: 52px; display: flex; align-items: center; font: 600 16px Inter, system-ui, sans-serif">Who actually runs the tool: the LLM or your code?</summary><p style="margin: 0 0 16px; font: 15px/1.6 Inter, system-ui, sans-serif; color: #586174">Your code. The model only returns which action to take and its input; the runtime checks it exists, runs it and sends back the observation.</p></details><details style="border: 1px solid #e3e7ee; border-radius: 12px; background: #fff; padding: 0 18px; margin-top: 10px"><summary style="min-height: 52px; display: flex; align-items: center; font: 600 16px Inter, system-ui, sans-serif">Why cap the loop with max_turns?</summary><p style="margin: 0 0 16px; font: 15px/1.6 Inter, system-ui, sans-serif; color: #586174">So a confused model can never loop forever, burning tokens and time.</p></details>
+<details style="margin-top: 40px; border-top: 1px solid #e3e7ee; padding-top: 8px; font-family: Inter, system-ui, sans-serif">
+<summary style="min-height: 48px; display: flex; align-items: center; font: 600 15px Inter, system-ui, sans-serif; color: #586174">Sources (3)</summary>
+<ul style="margin: 0 0 8px; padding-left: 20px; font-size: 14px; line-height: 1.8; color: #586174">
+<li><a href="https://learn.deeplearning.ai/courses/ai-agents-in-langgraph/">AI Agents in LangGraph</a>, DeepLearning.AI × LangChain</li>
+<li><a href="https://til.simonwillison.net/llms/python-react-pattern">A simple Python implementation of the ReAct pattern for LLMs</a>, Simon Willison</li>
+<li><a href="https://arxiv.org/abs/2210.03629">ReAct: Synergizing Reasoning and Acting in Language Models</a>, Yao et al., 2022</li>
+</ul>
+</details>
+<nav aria-label="Next lesson" style="margin-top: 32px; display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 14px; font-family: Inter, system-ui, sans-serif">
+<a href="Topic.dc.html" style="display: flex; flex-direction: column; gap: 4px; padding: 18px 20px; border: 1px solid #e3e7ee; border-radius: 14px; background: #fff; text-decoration: none; color: #16202e"><span style="font: 500 13px Inter, system-ui, sans-serif; color: #586174">← Back to</span><span style="font: 700 17px 'Space Grotesk', 'Segoe UI', sans-serif">Agents overview</span></a>
+<a href="#" style="display: flex; flex-direction: column; gap: 4px; padding: 18px 20px; border-radius: 14px; background: #2f54d6; text-decoration: none; color: #fff; text-align: right"><span style="font: 500 13px Inter, system-ui, sans-serif; color: #dbe4ff">Next · 9 min</span><span style="font: 700 17px 'Space Grotesk', 'Segoe UI', sans-serif">Building agents with LangGraph →</span></a>
+</nav></div>
+<div style="flex: 1 1 220px"></div>
+</div>
+</main>
+</div>
+<footer style="border-top: 1px solid #e3e7ee; background: #fff">
+<div style="max-width: 1240px; margin: 0 auto; padding: 32px 24px; display: flex; flex-wrap: wrap; justify-content: space-between; gap: 16px; color: #586174; font: 14px Inter, system-ui, sans-serif">
+<span>Carnet IA · notes written while learning</span>
+<span>Built with Quarto · <a href="https://github.com/SalouaAifqui/carnet-ia">GitHub</a></span>
+</div>
+</footer>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"bodyFont": {"editor": "enum", "options": ["serif", "sans"], "default": "serif", "section": "Reading"}, "$preview": {"width": 1440, "height": 3900}}'>
+class Component extends DCLogic {
+renderVals() {
+const f = (this.props.bodyFont ?? 'serif') === 'sans' ? "Inter, system-ui, sans-serif" : "'Source Serif 4', Georgia, serif";
+return { bodyFont: f };
+}
+}
+</script>
+</body>
+</html>

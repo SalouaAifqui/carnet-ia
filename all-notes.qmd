@@ -1,0 +1,23 @@
+---
+title: All notes
+subtitle: Every note on the site, the most recent first.
+body-classes: all-notes
+sidebar: false
+toc: false
+page-layout: full
+listing:
+  - id: all-notes
+    contents:
+      - "agents/*/*.qmd"
+      - "llms/*/*.qmd"
+      - "evaluation/*/*.qmd"
+      - "toolbox/*/*.qmd"
+    template: _templates/cards.ejs
+    sort: ["date desc", "title"]
+    fields: [title, subtitle, image, date]
+    template-params:
+      show-date: true
+---
+
+::: {#all-notes}
+:::

@@ -2,6 +2,7 @@
 title: What is an agent
 subtitle: 'An LLM in a loop with tools: it reasons, acts, observes, and repeats.'
 order: 1
+image: /assets/visuals/what-is-an-agent.svg
 date: 2026-11-15
 categories:
 - Agents

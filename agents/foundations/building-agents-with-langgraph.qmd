@@ -2,6 +2,7 @@
 title: Building agents with LangGraph
 subtitle: The building blocks, then five levels of agent design, from a simple tool loop to a full system.
 order: 2
+image: /assets/visuals/building-agents-with-langgraph.svg
 date: 2026-11-15
 categories:
 - Agents

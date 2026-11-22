@@ -1,6 +1,8 @@
 ---
 title: Traces and run inspection
 subtitle: How to inspect agent runs step by step and use traces as evidence for evaluation.
+order: 3
+image: /assets/visuals/traces-and-run-inspection.svg
 date: '2026-11-16'
 categories:
 - Evaluation & Guardrails

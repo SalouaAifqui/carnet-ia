@@ -1,6 +1,8 @@
 ---
 title: PII guardrails
 subtitle: Detect, redact, and block personal data before it leaks through an LLM app.
+order: 4
+image: /assets/visuals/pii-guardrails.svg
 date: '2026-11-17'
 categories:
 - Evaluation & Guardrails

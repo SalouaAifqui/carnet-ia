@@ -5,66 +5,117 @@ sidebar: false
 toc: false
 page-layout: full
 listing:
+  - id: start-here
+    contents:
+      - "agents/foundations/what-is-an-agent.qmd"
+      - "llms/how-llms-work/how-transformer-llms-work.qmd"
+      - "evaluation/guardrails/guardrails-for-llm-apps.qmd"
+    template: _templates/cards.ejs
+    sort: false
+    fields: [title, subtitle, image, date]
   - id: latest
     contents:
       - "agents/*/*.qmd"
       - "llms/*/*.qmd"
       - "evaluation/*/*.qmd"
       - "toolbox/*/*.qmd"
-    type: grid
-    grid-columns: 3
-    sort: ["date desc", "lesson desc"]
+    template: _templates/cards.ejs
+    sort: ["date desc", "title"]
     max-items: 3
-    fields: [categories, title, subtitle]
+    fields: [title, subtitle, image, date]
+    template-params:
+      show-date: true
 ---
 
 ```{=html}
-<section class="hero">
-  <p class="hero-eyebrow">A learning notebook on applied AI</p>
-  <h1 class="hero-title">Understand the models.<br>Build with them. Use them well.</h1>
-  <p class="hero-lede">Notes, code and practical tips, written while learning: how LLMs work, how to build agents, and how to evaluate and safeguard them.</p>
+<section class="home-hero">
+  <div class="hero-text">
+    <p class="hero-eyebrow">A learning notebook on applied AI</p>
+    <h1 class="hero-title">Understand the models.<br>Build with them.<br>Use them well.</h1>
+    <p class="hero-lede">Notes, code and practical tips, written while learning: how LLMs work, how to build agents, and how to evaluate and safeguard them. Each note opens with one picture that sums it up.</p>
+    <div class="hero-actions">
+      <a class="btn-dark" href="agents/foundations/what-is-an-agent.html">Start with “What is an agent” →</a>
+      <a class="btn-light" href="#topics">Browse the learning path</a>
+    </div>
+  </div>
+
+  <div class="learning-path" aria-labelledby="lp-label">
+    <p class="lp-label" id="lp-label">The learning path</p>
+    <a class="lp-step t-llms" href="llms/index.html">
+      <span class="lp-n">1</span>
+      <span class="lp-text"><span class="lp-name">LLMs</span><span class="lp-desc">How models work under the hood</span></span>
+      <span class="lp-stat" data-stat="summary" data-topic="llms"></span>
+    </a>
+    <div class="lp-link" aria-hidden="true"></div>
+    <a class="lp-step t-agents" href="agents/index.html">
+      <span class="lp-n">2</span>
+      <span class="lp-text"><span class="lp-name">Agents</span><span class="lp-desc">From a tool loop to full systems</span></span>
+      <span class="lp-stat" data-stat="summary" data-topic="agents"></span>
+    </a>
+    <div class="lp-link" aria-hidden="true"></div>
+    <a class="lp-step t-eval" href="evaluation/index.html">
+      <span class="lp-n">3</span>
+      <span class="lp-text"><span class="lp-name">Evaluation &amp; Guardrails</span><span class="lp-desc">Measure, then protect</span></span>
+      <span class="lp-stat" data-stat="summary" data-topic="evaluation"></span>
+    </a>
+    <div class="lp-link" aria-hidden="true"></div>
+    <a class="lp-step extra t-tools" href="toolbox/index.html">
+      <span class="lp-n">+</span>
+      <span class="lp-text"><span class="lp-name">Toolbox</span><span class="lp-desc">One card per framework, same format</span></span>
+      <span class="lp-stat" data-stat="summary" data-topic="toolbox"></span>
+    </a>
+  </div>
 </section>
 
-<section class="topics" aria-label="Topics">
-  <a class="topic-card t-llms" href="llms/index.html">
-    <span class="topic-icon" aria-hidden="true">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="5" width="14" height="14" rx="3"/><path d="M9 2v3M15 2v3M9 19v3M15 19v3M2 9h3M2 15h3M19 9h3M19 15h3"/><path d="M9.5 12h5M12 9.5v5"/></svg>
-    </span>
-    <span class="topic-name">LLMs</span>
-    <span class="topic-desc">How large language models work, foundation vs open-source models, and side-by-side comparisons.</span>
-    <span class="topic-tags"><span>Foundation models</span><span>Open-source models</span></span>
-  </a>
-
-  <a class="topic-card t-agents" href="agents/index.html">
-    <span class="topic-icon" aria-hidden="true">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="5" cy="12" r="2.5"/><circle cx="19" cy="5" r="2.5"/><circle cx="19" cy="19" r="2.5"/><path d="M7.3 11 16.8 6.1M7.3 13l9.5 4.9M19 7.5v9"/></svg>
-    </span>
-    <span class="topic-name">Agents</span>
-    <span class="topic-desc">From a simple tool loop to full systems with LangGraph: tools, memory, and keeping a human in control.</span>
-    <span class="topic-tags"><span>LangGraph</span><span>Memory</span><span>Human in the loop</span></span>
-  </a>
-
-  <a class="topic-card t-eval" href="evaluation/index.html">
-    <span class="topic-icon" aria-hidden="true">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/><path d="m14.5 8 2 2 4-4"/></svg>
-    </span>
-    <span class="topic-name">Evaluation &amp; Guardrails</span>
-    <span class="topic-desc">Measure whether models and agents are good enough, and stop bad answers before anyone sees them.</span>
-    <span class="topic-tags"><span>Evaluating LLMs</span><span>Evaluating agents</span><span>Guardrails</span></span>
-  </a>
-
-  <a class="topic-card t-tools" href="toolbox/index.html">
-    <span class="topic-icon" aria-hidden="true">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a4 4 0 0 0-5.4 5.2L3.5 17.3a1.8 1.8 0 0 0 2.5 2.5l5.8-5.8a4 4 0 0 0 5.2-5.4l-2.6 2.6-2.3-.4-.4-2.3z"/></svg>
-    </span>
-    <span class="topic-name">Toolbox</span>
-    <span class="topic-desc">The frameworks and tools that put these concepts into practice, each described the same way.</span>
-    <span class="topic-tags"><span>Frameworks</span><span>Platforms</span><span>Libraries</span></span>
-  </a>
-</section>
+<section class="home-section" aria-labelledby="start-here-title">
+  <div class="home-section-head">
+    <h2 id="start-here-title">Start here</h2>
+    <span>Three short notes, one per topic</span>
+  </div>
 ```
 
-## Latest notes {.section-title}
+::: {#start-here}
+:::
+
+```{=html}
+</section>
+
+<section class="home-section" id="topics" aria-labelledby="topics-title">
+  <div class="home-section-head"><h2 id="topics-title">Topics</h2></div>
+  <div class="topic-cards">
+    <a class="topic-card t-agents" href="agents/index.html">
+      <span class="tc-head"><span class="tc-name">Agents</span><span class="tc-count" data-stat="count" data-topic="agents"></span></span>
+      <span class="tc-desc">From a simple tool loop to full systems with LangGraph: tools, memory, and keeping a human in control.</span>
+      <ul data-first-notes="agents"></ul>
+    </a>
+    <a class="topic-card t-eval" href="evaluation/index.html">
+      <span class="tc-head"><span class="tc-name">Evaluation &amp; Guardrails</span><span class="tc-count" data-stat="count" data-topic="evaluation"></span></span>
+      <span class="tc-desc">Measure whether models and agents are good enough, and stop bad answers before anyone sees them.</span>
+      <ul data-first-notes="evaluation"></ul>
+    </a>
+    <a class="topic-card t-llms" href="llms/index.html">
+      <span class="tc-head"><span class="tc-name">LLMs</span><span class="tc-count" data-stat="count" data-topic="llms"></span></span>
+      <span class="tc-desc">How large language models work, foundation vs open-source models, and side-by-side comparisons.</span>
+      <ul data-first-notes="llms"></ul>
+    </a>
+    <a class="topic-card t-tools" href="toolbox/index.html">
+      <span class="tc-head"><span class="tc-name">Toolbox</span><span class="tc-count" data-stat="count" data-topic="toolbox"></span></span>
+      <span class="tc-desc">The frameworks and tools that put these concepts into practice, each described the same way.</span>
+      <ul data-first-notes="toolbox"></ul>
+    </a>
+  </div>
+</section>
+
+<section class="home-section" aria-labelledby="latest-title">
+  <div class="home-section-head">
+    <h2 id="latest-title">Latest notes</h2>
+    <a href="all-notes.html">All notes →</a>
+  </div>
+```
 
 ::: {#latest}
 :::
+
+```{=html}
+</section>
+```

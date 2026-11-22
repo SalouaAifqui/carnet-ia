@@ -1,6 +1,7 @@
 ---
 title: Claude skills in APIs and SDKs
 subtitle: How skills are wired into the Messages API and the Agent SDK.
+image: /assets/visuals/toolbox-card.svg
 date: '2026-11-22'
 categories:
 - Agents

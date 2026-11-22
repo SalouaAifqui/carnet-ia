@@ -2,6 +2,7 @@
 title: "Short-term memory"
 subtitle: "Checkpointers and threads: how an agent keeps a conversation going."
 order: 5
+image: /assets/visuals/short-term-memory.svg
 date: 2026-11-15
 categories: [Agents, Memory, LangGraph]
 aliases:

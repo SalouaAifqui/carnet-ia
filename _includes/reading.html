@@ -1,0 +1,193 @@
+<div class="reading-progress" role="progressbar" aria-label="Reading progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><span></span></div>
+<script>
+/* Carnet IA reading helpers. Every number comes from #carnet-data (written before the build by
+   _scripts/notes_index.py), so reading times are the same everywhere on the site. */
+function carnetReading() {
+  var el = document.getElementById("carnet-data");
+  var data = { topics: {}, notes: {} };
+  try { if (el) data = JSON.parse(el.textContent); } catch (e) {}
+  var notes = data.notes || {}, topics = data.topics || {};
+
+  function fmt(min) {
+    if (min < 60) return min + " min";
+    var h = Math.floor(min / 60), m = min % 60;
+    return h + " h" + (m ? " " + (m < 10 ? "0" : "") + m : "");
+  }
+  function keyOf(href) {
+    try {
+      var path = decodeURIComponent(new URL(href, location.href).pathname).replace(/\.html$/, "");
+      if (/\/$/.test(path)) path += "index";
+      for (var k in notes) { if (path === "/" + k || path.slice(-(k.length + 1)) === "/" + k) return k; }
+    } catch (e) {}
+    return null;
+  }
+  var MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+  function shortDate(iso) {
+    var m = /^(\d{4})-(\d{2})-(\d{2})/.exec(iso || "");
+    return m ? (+m[3]) + " " + MONTHS[+m[2] - 1] : "";
+  }
+  var here = keyOf(location.href);
+
+  /* 1. Reading progress bar (notes only) */
+  var bar = document.querySelector(".reading-progress");
+  if (bar && here) {
+    var fill = bar.firstElementChild, ticking = false;
+    var update = function () {
+      var doc = document.documentElement;
+      var max = doc.scrollHeight - doc.clientHeight;
+      var pct = max > 0 ? Math.min(100, Math.max(0, (doc.scrollTop || document.body.scrollTop) / max * 100)) : 100;
+      fill.style.width = pct + "%";
+      bar.setAttribute("aria-valuenow", String(Math.round(pct)));
+      ticking = false;
+    };
+    window.addEventListener("scroll", function () {
+      if (!ticking) { ticking = true; window.requestAnimationFrame(update); }
+    }, { passive: true });
+    window.addEventListener("resize", update);
+    update();
+    document.body.classList.add("has-progress");
+  } else if (bar) {
+    bar.remove();
+  }
+
+  /* 2. "On this page": sections already read get a filled dot */
+  var toc = document.querySelector("#TOC, nav[role='doc-toc']");
+  if (toc) {
+    var links = Array.prototype.slice.call(toc.querySelectorAll("a.nav-link"));
+    var mark = function () {
+      var active = -1;
+      links.forEach(function (a, i) { if (a.classList.contains("active")) active = i; });
+      links.forEach(function (a, i) { a.classList.toggle("read", active > -1 && i < active); });
+    };
+    new MutationObserver(mark).observe(toc, { subtree: true, attributes: true, attributeFilter: ["class"] });
+    mark();
+  }
+
+  /* 3. Sidebar: topic progress and the reading time of each lesson */
+  var sidebar = document.getElementById("quarto-sidebar");
+  if (sidebar) {
+    sidebar.querySelectorAll("a.sidebar-link").forEach(function (a) {
+      var k = keyOf(a.href);
+      if (k && !a.querySelector(".rt")) {
+        var s = document.createElement("span");
+        s.className = "rt";
+        s.textContent = notes[k].minutes + "′";
+        s.setAttribute("aria-label", notes[k].minutes + " minutes");
+        a.appendChild(s);
+      }
+    });
+    var topicKey = here ? notes[here].topic : null;
+    if (!topicKey) {
+      var m = /\/([a-z-]+)\/(index(\.html)?)?$/.exec(location.pathname);
+      if (m && topics[m[1]]) topicKey = m[1];
+    }
+    var topic = topicKey && topics[topicKey];
+    var menu = sidebar.querySelector(".sidebar-menu-container");
+    if (topic && menu && !sidebar.querySelector(".sb-topic")) {
+      var all = [];
+      topic.sections.forEach(function (s) { all = all.concat(s.notes); });
+      var pos = here ? all.indexOf(here) + 1 : 0;
+      var box = document.createElement("div");
+      box.className = "sb-topic t-" + ({ evaluation: "eval", toolbox: "tools" }[topicKey] || topicKey);
+      box.innerHTML = '<p class="sb-name"></p><div class="sb-bar" aria-hidden="true"><span></span></div><p class="sb-count"></p>';
+      box.querySelector(".sb-name").textContent = topic.title;
+      box.querySelector(".sb-bar span").style.width = (all.length ? pos / all.length * 100 : 0) + "%";
+      box.querySelector(".sb-count").textContent =
+        (pos ? pos + " of " + all.length + " lessons" : all.length + (all.length === 1 ? " lesson" : " lessons")) +
+        " · " + fmt(topic.minutes) + " total";
+      menu.insertBefore(box, menu.firstChild);
+    }
+  }
+
+  /* 4. Previous / next buttons */
+  var next = document.querySelector(".nav-page-next a");
+  if (next) {
+    var nk = keyOf(next.href);
+    var label = document.createElement("span");
+    label.className = "nav-page-label";
+    label.textContent = "Next" + (nk ? " · " + notes[nk].minutes + " min" : "");
+    next.insertBefore(label, next.firstChild);
+  }
+  var prev = document.querySelector(".nav-page-previous a");
+  if (prev) {
+    var label2 = document.createElement("span");
+    label2.className = "nav-page-label";
+    label2.textContent = keyOf(prev.href) ? "Previous" : "Back to";
+    prev.insertBefore(label2, prev.firstChild);
+  }
+
+  /* 5. Listings: reading time of each card (and its date on "latest" lists) */
+  document.querySelectorAll(".rt:empty").forEach(function (s) {
+    var a = s.closest("a");
+    var k = a && keyOf(a.href);
+    if (!k) return;
+    var text = notes[k].minutes + " min read";
+    if (s.classList.contains("with-date") && notes[k].date) text += " · " + shortDate(notes[k].date);
+    s.textContent = text;
+  });
+
+  /* 6. Counts: [data-stat] elements, e.g. data-topic="agents" or data-topic="evaluation" data-section="llms" */
+  document.querySelectorAll("[data-stat]").forEach(function (s) {
+    var t = topics[s.getAttribute("data-topic")];
+    if (!t) return;
+    var sec = s.getAttribute("data-section");
+    var src = sec ? t.sections.filter(function (x) { return x.folder === sec; })[0] : t;
+    if (!src) return;
+    var kind = s.getAttribute("data-stat");
+    var n = src.count, word = n === 1 ? " note" : " notes";
+    if (kind === "count") s.textContent = n + word;
+    else if (kind === "summary") s.textContent = n ? n + word + " · " + fmt(src.minutes) : "Coming soon";
+    else if (kind === "topic") {
+      var tracks = t.tracks ? t.sections.filter(function (x) { return !x.planned; }).length : 0;
+      s.textContent = n + word + " · about " + fmt(src.minutes) + " of reading" +
+        (tracks ? " · " + tracks + " tracks" : "");
+    }
+  });
+
+  /* 7. Home: the first notes of each topic, planned sections marked "soon" */
+  document.querySelectorAll("[data-first-notes]").forEach(function (ul) {
+    var t = topics[ul.getAttribute("data-first-notes")];
+    if (!t) return;
+    var items = [];
+    t.sections.forEach(function (s) {
+      if (s.planned) items.push({ text: s.title + " — soon", soon: true });
+      s.notes.forEach(function (k) { items.push({ text: notes[k].title }); });
+    });
+    items.filter(function (x) { return !x.soon; }).length >= 3 ?
+      (items = items.filter(function (x) { return !x.soon; })) : null;
+    items.slice(0, 3).forEach(function (x) {
+      var li = document.createElement("li");
+      li.textContent = x.text;
+      if (x.soon) li.className = "soon";
+      ul.appendChild(li);
+    });
+  });
+
+  /* 8. Topic pages: track labels, and one continuous numbering when the topic is a single path */
+  var topicPage = document.body.classList.contains("topic");
+  if (topicPage) {
+    var heads = Array.prototype.slice.call(document.querySelectorAll("h2.group-title"))
+      .filter(function (h) { return !h.closest("section.planned"); });
+    var isTracks = document.body.classList.contains("tracks");
+    if (isTracks) {
+      heads.forEach(function (h, i) {
+        var tag = document.createElement("span");
+        tag.className = "track-tag";
+        tag.textContent = "Track " + (i + 1) + " of " + heads.length;
+        h.appendChild(tag);
+      });
+    } else {
+      var n = 0;
+      document.querySelectorAll(".note-path .path-step").forEach(function (li) {
+        n += 1;
+        li.querySelector(".path-n").textContent = n;
+        li.classList.toggle("first", n === 1);
+        var start = li.querySelector(".start-here");
+        if (start && n !== 1) start.remove();
+      });
+    }
+  }
+}
+if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", carnetReading);
+else carnetReading();
+</script>

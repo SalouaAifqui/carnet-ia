@@ -1,6 +1,7 @@
 ---
 title: What skills are
 subtitle: Reusable instruction packages that extend an agent with specialized workflows.
+order: 8
 date: '2026-11-22'
 categories:
 - Agents

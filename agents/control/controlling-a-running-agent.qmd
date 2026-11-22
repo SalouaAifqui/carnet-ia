@@ -2,6 +2,7 @@
 title: "Controlling a running agent"
 subtitle: "Watch it with streaming, pause it for approval, edit its plans, and rewind it."
 order: 7
+image: /assets/visuals/controlling-a-running-agent.svg
 date: 2026-11-15
 categories: [Agents, Control, LangGraph, Human in the loop]
 aliases:

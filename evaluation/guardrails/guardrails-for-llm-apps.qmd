@@ -1,6 +1,8 @@
 ---
 title: Guardrails for LLM apps
 subtitle: Runtime validations that enforce safety, reliability, and policy at inference time.
+order: 1
+image: /assets/visuals/guardrails-for-llm-apps.svg
 date: '2026-11-17'
 categories:
 - Evaluation & Guardrails

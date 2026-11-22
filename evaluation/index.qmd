@@ -1,32 +1,33 @@
 ---
 title: Evaluation & Guardrails
-body-classes: topic t-eval
+body-classes: topic t-eval tracks
+path: tracks
 toc: false
 listing:
 - id: agents
   contents: agents/*.qmd
-  type: grid
-  grid-columns: 2
-  sort: date desc
+  template: ../_templates/path.ejs
+  sort: order
   fields:
   - title
   - subtitle
+  - image
 - id: llms
   contents: llms/*.qmd
-  type: grid
-  grid-columns: 2
-  sort: date desc
+  template: ../_templates/path.ejs
+  sort: order
   fields:
   - title
   - subtitle
+  - image
 - id: guardrails
   contents: guardrails/*.qmd
-  type: grid
-  grid-columns: 2
-  sort: date desc
+  template: ../_templates/path.ejs
+  sort: order
   fields:
   - title
   - subtitle
+  - image
 aliases:
 - /guardrails/index.html
 ---
@@ -37,6 +38,20 @@ aliases:
 # Evaluation & Guardrails {.topic-h1}
 
 How to know whether a model or an agent is good enough, and how to stop a bad answer before it reaches anyone: measuring quality on test sets, and enforcing rules on every request.
+
+[]{.topic-stats data-stat="topic" data-topic="evaluation"}
+:::
+
+::: {.track-cards}
+::: {.t-eval}
+[**Evaluating agents** []{.tc-stat data-stat="summary" data-topic="evaluation" data-section="agents"}](#evaluating-agents)
+:::
+::: {.t-eval}
+[**Evaluating LLMs** []{.tc-stat data-stat="summary" data-topic="evaluation" data-section="llms"}](#evaluating-llms)
+:::
+::: {.t-guardrails}
+[**Guardrails** []{.tc-stat data-stat="summary" data-topic="evaluation" data-section="guardrails"}](#guardrails)
+:::
 :::
 
 ::: {.compare}
@@ -58,15 +73,6 @@ How to know whether a model or an agent is good enough, and how to stop a bad an
 
 The two use the same tools in opposite directions. A guardrail is often an evaluator running live, like an LLM-as-a-judge that scores each answer before it is shown. And guardrails are themselves evaluated: choosing a threshold means counting false positives (good answers blocked) and false negatives (bad answers let through).
 
-## Evaluating LLMs {.group-title data-folder="llms"}
-
-::: {.group-meta}
-Evaluating models: benchmarks, test sets, metrics, LLM-as-a-judge, and comparing models for a given task.
-:::
-
-::: {#llms}
-:::
-
 ## Evaluating agents {.group-title data-folder="agents"}
 
 ::: {.group-meta}
@@ -74,6 +80,15 @@ Evaluating agents: final answers, the path they took, tool use, and behaviour ov
 :::
 
 ::: {#agents}
+:::
+
+## Evaluating LLMs {.group-title data-folder="llms"}
+
+::: {.group-meta}
+Evaluating models: benchmarks, test sets, metrics, LLM-as-a-judge, and comparing models for a given task.
+:::
+
+::: {#llms}
 :::
 
 ## Guardrails {.group-title data-folder="guardrails"}

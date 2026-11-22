@@ -1,6 +1,8 @@
 ---
 title: Validating evaluators
 subtitle: How to measure whether your code evaluators and LLM judges are trustworthy enough to use.
+order: 3
+image: /assets/visuals/validating-evaluators.svg
 date: '2026-11-16'
 categories:
 - Evaluation & Guardrails

@@ -1,0 +1,16 @@
+<%
+const esc = (s) => String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+let html = '<ol class="note-path">';
+items.forEach((item, i) => {
+  html += '<li class="path-step' + (i === 0 ? ' first' : '') + '" ' + metadataAttrs(item) + '>' +
+    '<span class="path-rail" aria-hidden="true"><span class="path-n">' + (i + 1) + '</span></span>' +
+    '<a class="path-card" href="' + esc(item.path) + '">' +
+    (item.image ? '<span class="path-thumb"><img src="' + esc(item.image) + '" alt="" loading="lazy"></span>' : '') +
+    '<span class="path-text"><span class="path-title">' + esc(item.title) + '</span>' +
+    (item.subtitle ? '<span class="path-sub">' + esc(item.subtitle) + '</span>' : '') +
+    '<span class="path-meta"><span class="rt"></span>' + (i === 0 ? '<span class="start-here"> · start here</span>' : '') +
+    '</span></span></a></li>';
+});
+html += '</ol>';
+%>
+<%= html %>

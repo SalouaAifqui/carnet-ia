@@ -2,6 +2,7 @@
 title: "Agent memory: overview"
 subtitle: "Short-term vs long-term, the two LangGraph mechanisms, and the three kinds of memory."
 order: 4
+image: /assets/visuals/memory-overview.svg
 date: 2026-11-15
 categories: [Agents, Memory, LangGraph]
 aliases:

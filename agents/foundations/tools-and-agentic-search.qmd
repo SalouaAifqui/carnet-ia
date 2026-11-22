@@ -2,6 +2,7 @@
 title: Tools and agentic search
 subtitle: How a model calls functions, where to find ready-made tools and prompts, and why agents need search built for machines.
 order: 3
+image: /assets/visuals/tools-and-agentic-search.svg
 date: 2026-11-15
 date-modified: 2026-11-15
 categories:

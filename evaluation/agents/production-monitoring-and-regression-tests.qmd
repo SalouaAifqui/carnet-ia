@@ -1,6 +1,8 @@
 ---
 title: Production monitoring and regression tests
 subtitle: How to learn from live traffic and turn real failures into lasting offline tests.
+order: 6
+image: /assets/visuals/production-monitoring-and-regression-tests.svg
 date: '2026-11-16'
 categories:
 - Evaluation & Guardrails

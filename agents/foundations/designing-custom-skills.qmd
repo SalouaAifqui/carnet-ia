@@ -1,6 +1,7 @@
 ---
 title: Designing custom skills
 subtitle: How to structure, constrain, and test skills so they behave predictably.
+order: 9
 date: '2026-11-22'
 categories:
 - Agents

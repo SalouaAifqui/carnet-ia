@@ -1,6 +1,8 @@
 ---
 title: Competitor-mention guardrails
 subtitle: Prevent branded or disallowed entities from appearing in model outputs.
+order: 6
+image: /assets/visuals/competitor-mention-guardrails.svg
 date: '2026-11-17'
 categories:
 - Evaluation & Guardrails
